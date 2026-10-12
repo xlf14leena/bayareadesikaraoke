@@ -30,6 +30,8 @@ Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdm
 
 A person must sign in once before they can be made a group admin.
 
+**View as.** Admins get a "View site as" switch under the header. Super users can view the site as the admin of any one group or as a singer; group admins can view it as a singer (or as the admin of one of their groups, if they run several). It only narrows what the person can do, and is re-checked against their real roles on every request (`getViewer` in `src/lib/roles.ts`), so it can never grant access. "Back to my view" restores their own roles.
+
 ## Recurring dates
 
 `src/lib/schedule.ts` turns a series' schedule (one time, weekly, every 2 weeks, or monthly such as "last Sunday") into event dates 8 weeks ahead, in Pacific time. Dates are topped up when an event is saved, when an admin opens its pages, and by a daily Vercel Cron call to `/api/cron/dates`. Saving an event updates future dates nobody has signed up for; dates with sign-ups keep their settings.
