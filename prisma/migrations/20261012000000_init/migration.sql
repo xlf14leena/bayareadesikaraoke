@@ -155,6 +155,7 @@ CREATE TABLE "SignUp" (
     "memoCode" TEXT NOT NULL,
     "amountDueCents" INTEGER NOT NULL,
     "screenshotKey" TEXT,
+    "registeredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "reservedUntil" TIMESTAMP(3),
     "waitlistedAt" TIMESTAMP(3),
     "addedByAdmin" BOOLEAN NOT NULL DEFAULT false,
@@ -179,7 +180,8 @@ CREATE TABLE "Song" (
     "artist" TEXT,
     "youtubeUrl" TEXT,
     "youtubeVideoId" TEXT,
-    "pickedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "enteredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "releasedAt" TIMESTAMP(3),
     "status" "SongStatus" NOT NULL DEFAULT 'ACTIVE',
     "rejectReason" TEXT,
 
@@ -229,7 +231,7 @@ CREATE INDEX "SignUp_eventDateId_status_idx" ON "SignUp"("eventDateId", "status"
 CREATE UNIQUE INDEX "SignUp_eventDateId_userId_key" ON "SignUp"("eventDateId", "userId");
 
 -- CreateIndex
-CREATE INDEX "Song_eventDateId_pickedAt_idx" ON "Song"("eventDateId", "pickedAt");
+CREATE INDEX "Song_eventDateId_enteredAt_idx" ON "Song"("eventDateId", "enteredAt");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

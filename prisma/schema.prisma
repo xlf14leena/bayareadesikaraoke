@@ -202,6 +202,7 @@ model SignUp {
   memoCode       String       @unique // e.g. BADK-7Q4M
   amountDueCents Int
   screenshotKey  String? // private storage key
+  registeredAt   DateTime     @default(now()) // when the person signed up for this date
   reservedUntil  DateTime?
   waitlistedAt   DateTime?
   addedByAdmin   Boolean      @default(false)
@@ -243,12 +244,16 @@ model Song {
   artist          String?
   youtubeUrl      String?
   youtubeVideoId  String?
-  pickedAt        DateTime   @default(now())
+  // When this song was entered or last edited. Priority goes by this time,
+  // not by registration time. Any edit releases this row and creates a new
+  // one, so the edit time becomes the new enteredAt and history is kept.
+  enteredAt       DateTime   @default(now())
+  releasedAt      DateTime?
   status          SongStatus @default(ACTIVE)
   rejectReason    String?
 
   signUp    SignUp    @relation(fields: [signUpId], references: [id], onDelete: Cascade)
   eventDate EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
 
-  @@index([eventDateId, pickedAt])
+  @@index([eventDateId, enteredAt])
 }
