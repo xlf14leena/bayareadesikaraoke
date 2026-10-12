@@ -27,7 +27,7 @@ export default async function SignInPage({
       >
         <button
           type="submit"
-          className="w-full rounded-full bg-rose-700 px-4 py-2.5 font-medium text-white hover:bg-rose-800"
+          className="w-full rounded-full bg-royal px-4 py-2.5 font-medium text-white hover:bg-cobalt"
         >
           Sign in with Google
         </button>
