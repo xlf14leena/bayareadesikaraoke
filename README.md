@@ -48,3 +48,7 @@ For Google sign-in locally, add `http://localhost:3000/api/auth/callback/google`
 ## Deploying
 
 Vercel runs `npm run vercel-build`, which applies pending migrations (`prisma migrate deploy`) before building.
+
+## Sample data
+
+`prisma/demo-data.sql` adds a demo group with the next four Saturday events, so the dashboard has something to show. Paste it into your database's SQL editor (Neon: SQL Editor) or run `psql "$DATABASE_URL" -f prisma/demo-data.sql`. It is safe to run more than once.
