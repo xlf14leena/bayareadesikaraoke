@@ -47,7 +47,7 @@ For Google sign-in locally, add `http://localhost:3000/api/auth/callback/google`
 
 ## Deploying
 
-Vercel runs `npm run vercel-build`, which applies pending migrations (`prisma migrate deploy`) before building.
+Vercel runs `npm run vercel-build`, which applies pending migrations (`prisma migrate deploy`) before building. Migrations use `DATABASE_URL_UNPOOLED` when it is set (Neon's direct connection; the Neon Vercel integration sets it), otherwise `DATABASE_URL`.
 
 ## Sample data
 
