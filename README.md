@@ -15,6 +15,25 @@ Stack: Next.js (App Router, TypeScript, Tailwind), Auth.js with Google sign-in, 
 
 Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdmin`, `requireSuperUser`, `canAdminGroup`).
 
+## Pages
+
+| Path | Who | What |
+| --- | --- | --- |
+| `/` | Everyone | Upcoming public event dates |
+| `/e/<date-id>` | Everyone (private: link holders, admins, people signed up) | Event page; signed-in members also see who's singing |
+| `/e/p/<token>` | Link holders | Private event link; opens the next date |
+| `/g/<slug>` | Everyone | Group page with its public dates |
+| `/admin` | Admins | Groups you manage; super users can add groups |
+| `/admin/groups/<id>` | Group admins | Events, group details, admins; super users can delete the group |
+| `/admin/events/<id>` | Group admins | Event schedule and settings, upcoming dates, private link |
+| `/admin/dates/<id>` | Group admins | Settings for one date, cancel or restore it, sign-up list |
+
+A person must sign in once before they can be made a group admin.
+
+## Recurring dates
+
+`src/lib/schedule.ts` turns a series' schedule (one time, weekly, every 2 weeks, or monthly such as "last Sunday") into event dates 8 weeks ahead, in Pacific time. Dates are topped up when an event is saved, when an admin opens its pages, and by a daily Vercel Cron call to `/api/cron/dates`. Saving an event updates future dates nobody has signed up for; dates with sign-ups keep their settings.
+
 ## Data model
 
 `prisma/schema.prisma` follows the product spec: User, Group, GroupAdmin, EventSeries, EventDate, SignUp, Song (plus Auth.js's Account, Session and VerificationToken). Rules from the spec that the database enforces:
@@ -44,6 +63,7 @@ For Google sign-in locally, add `http://localhost:3000/api/auth/callback/google`
 | `AUTH_SECRET` | Random secret for sessions (`npx auth secret`) |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth client |
 | `SUPER_USER_EMAILS` | Comma-separated emails that become super users |
+| `CRON_SECRET` | Optional; when set, `/api/cron/dates` only accepts Vercel Cron's calls |
 
 ## Deploying
 

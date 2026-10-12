@@ -37,3 +37,9 @@ export function formatDateBadge(d: Date): { month: string; day: string } {
   const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
   return { month: get("month"), day: get("day") };
 }
+
+// "19:00" -> "7:00 PM".
+export function formatClock(hm: string): string {
+  const [h, m] = hm.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
