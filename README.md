@@ -17,7 +17,12 @@ Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdm
 
 ## Data model
 
-`prisma/schema.prisma` follows the product spec: User, Group, GroupAdmin, EventSeries, EventDate, SignUp, Song (plus Auth.js's Account, Session and VerificationToken). The first migration adds partial unique indexes so a song title or YouTube video can be held by only one active pick per event date.
+`prisma/schema.prisma` follows the product spec: User, Group, GroupAdmin, EventSeries, EventDate, SignUp, Song (plus Auth.js's Account, Session and VerificationToken). Rules from the spec that the database enforces:
+
+- Singers and listeners have separate optional caps (`maxSingers`, `maxListeners`); when a role is full, new sign-ups get `WAITLISTED`, ordered by `waitlistedAt`.
+- One sign-up per account per event date (no guests).
+- Each singer has up to two songs per event date, one per round (`Song.round` is 1 or 2).
+- First pick wins: a song title or YouTube video can be held by only one active pick per event date, across both rounds (partial unique indexes in the first migration).
 
 ## Running locally
 

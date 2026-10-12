@@ -128,7 +128,8 @@ model EventSeries {
   // Pricing and capacity (USD cents)
   singerPriceCents        Int        @default(0)
   listenerPriceCents      Int        @default(0)
-  maxHeadcount            Int? // null = no cap (singers + listeners combined)
+  maxSingers              Int? // null = no cap
+  maxListeners            Int? // null = no cap
   bannerUrl               String?
   // Sign-up window, relative to each date's start (null = defaults in spec)
   signupOpensHoursBefore  Int?
@@ -156,7 +157,8 @@ model EventDate {
   theme              String
   singerPriceCents   Int
   listenerPriceCents Int
-  maxHeadcount       Int?
+  maxSingers         Int?
+  maxListeners       Int?
   bannerUrl          String?
   signupOpensAt      DateTime?
   signupClosesAt     DateTime?
@@ -180,6 +182,7 @@ enum AttendeeRole {
 }
 
 enum SignUpStatus {
+  WAITLISTED // event full for this role; waitlistedAt sets the order
   RESERVED // awaiting screenshot, 24 h
   UNDER_REVIEW
   CONFIRMED
@@ -200,6 +203,7 @@ model SignUp {
   amountDueCents Int
   screenshotKey  String? // private storage key
   reservedUntil  DateTime?
+  waitlistedAt   DateTime?
   addedByAdmin   Boolean      @default(false)
   paymentNote    String? // e.g. "cash at door"
   reviewedById   String?
@@ -213,7 +217,7 @@ model SignUp {
   reviewedBy User?     @relation("SignUpReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   songs      Song[]
 
-  // One sign-up per account per date
+  // one sign-up per account per date (no guest sign-ups)
   @@unique([eventDateId, userId])
   @@index([eventDateId, status])
 }
@@ -224,12 +228,16 @@ enum SongStatus {
   RELEASED
 }
 
-// First pick wins. Uniqueness among ACTIVE songs per event date is enforced by
-// partial unique indexes added in the migration SQL (Prisma can't express them).
+// First pick wins. A singer has up to two songs per event date, one per round.
+// Duplicates are checked across both rounds: uniqueness among ACTIVE songs per
+// event date (title and YouTube video) and one ACTIVE song per sign-up per round
+// are enforced by partial unique indexes in the migration SQL (Prisma can't
+// express them).
 model Song {
   id              String     @id @default(cuid())
   signUpId        String
   eventDateId     String
+  round           Int // 1 or 2
   title           String
   normalizedTitle String
   artist          String?

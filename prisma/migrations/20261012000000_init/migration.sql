@@ -14,7 +14,7 @@ CREATE TYPE "EventDateStatus" AS ENUM ('SCHEDULED', 'CANCELLED');
 CREATE TYPE "AttendeeRole" AS ENUM ('SINGER', 'LISTENER');
 
 -- CreateEnum
-CREATE TYPE "SignUpStatus" AS ENUM ('RESERVED', 'UNDER_REVIEW', 'CONFIRMED', 'REJECTED', 'EXPIRED', 'CANCELLED');
+CREATE TYPE "SignUpStatus" AS ENUM ('WAITLISTED', 'RESERVED', 'UNDER_REVIEW', 'CONFIRMED', 'REJECTED', 'EXPIRED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "SongStatus" AS ENUM ('ACTIVE', 'REJECTED', 'RELEASED');
@@ -111,7 +111,8 @@ CREATE TABLE "EventSeries" (
     "endDate" DATE,
     "singerPriceCents" INTEGER NOT NULL DEFAULT 0,
     "listenerPriceCents" INTEGER NOT NULL DEFAULT 0,
-    "maxHeadcount" INTEGER,
+    "maxSingers" INTEGER,
+    "maxListeners" INTEGER,
     "bannerUrl" TEXT,
     "signupOpensHoursBefore" INTEGER,
     "signupClosesHoursBefore" INTEGER,
@@ -130,7 +131,8 @@ CREATE TABLE "EventDate" (
     "theme" TEXT NOT NULL,
     "singerPriceCents" INTEGER NOT NULL,
     "listenerPriceCents" INTEGER NOT NULL,
-    "maxHeadcount" INTEGER,
+    "maxSingers" INTEGER,
+    "maxListeners" INTEGER,
     "bannerUrl" TEXT,
     "signupOpensAt" TIMESTAMP(3),
     "signupClosesAt" TIMESTAMP(3),
@@ -154,6 +156,7 @@ CREATE TABLE "SignUp" (
     "amountDueCents" INTEGER NOT NULL,
     "screenshotKey" TEXT,
     "reservedUntil" TIMESTAMP(3),
+    "waitlistedAt" TIMESTAMP(3),
     "addedByAdmin" BOOLEAN NOT NULL DEFAULT false,
     "paymentNote" TEXT,
     "reviewedById" TEXT,
@@ -170,6 +173,7 @@ CREATE TABLE "Song" (
     "id" TEXT NOT NULL,
     "signUpId" TEXT NOT NULL,
     "eventDateId" TEXT NOT NULL,
+    "round" INTEGER NOT NULL,
     "title" TEXT NOT NULL,
     "normalizedTitle" TEXT NOT NULL,
     "artist" TEXT,
@@ -261,7 +265,13 @@ ALTER TABLE "Song" ADD CONSTRAINT "Song_signUpId_fkey" FOREIGN KEY ("signUpId") 
 ALTER TABLE "Song" ADD CONSTRAINT "Song_eventDateId_fkey" FOREIGN KEY ("eventDateId") REFERENCES "EventDate"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 
+-- Two rounds per singer: round is 1 or 2, and a sign-up holds at most one
+-- active song per round.
+ALTER TABLE "Song" ADD CONSTRAINT "Song_round_check" CHECK ("round" IN (1, 2));
+CREATE UNIQUE INDEX "Song_active_round_per_signup" ON "Song"("signUpId", "round") WHERE "status" = 'ACTIVE';
+
 -- First pick wins: a song title or YouTube video can be held by only one
--- active pick per event date. Enforced here so simultaneous saves can't both win.
+-- active pick per event date, across both rounds. Enforced here so
+-- simultaneous saves can't both win.
 CREATE UNIQUE INDEX "Song_active_title_per_date" ON "Song"("eventDateId", "normalizedTitle") WHERE "status" = 'ACTIVE';
 CREATE UNIQUE INDEX "Song_active_video_per_date" ON "Song"("eventDateId", "youtubeVideoId") WHERE "status" = 'ACTIVE' AND "youtubeVideoId" IS NOT NULL;
