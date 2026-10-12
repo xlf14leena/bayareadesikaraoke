@@ -1,0 +1,246 @@
+// Data model for BayAreaDesiKaraoke. See the product spec, "Data model sketch".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- People and sign-in (Auth.js tables + app fields) ----------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  isSuperUser   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  adminOf  GroupAdmin[]
+  signUps  SignUp[]     @relation("SignUpUser")
+  reviewed SignUp[]     @relation("SignUpReviewer")
+}
+
+// Google account link (Auth.js). providerAccountId is the Google id.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- Groups ----------
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  bannerUrl   String?
+  zelleName   String?
+  zelleHandle String? // Zelle email or phone
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  admins GroupAdmin[]
+  series EventSeries[]
+}
+
+model GroupAdmin {
+  groupId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@index([userId])
+}
+
+// ---------- Events ----------
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum Frequency {
+  ONCE
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+// Template that generates EventDates. All times are Pacific (America/Los_Angeles).
+model EventSeries {
+  id                      String     @id @default(cuid())
+  groupId                 String
+  title                   String
+  description             String?
+  venueName               String
+  venueAddress            String
+  theme                   String
+  visibility              Visibility @default(PUBLIC)
+  privateToken            String?    @unique
+  // Schedule rule
+  frequency               Frequency  @default(ONCE)
+  monthlyWeekOfMonth      Int? // e.g. 2 for "2nd Saturday"; -1 for "last"
+  startTime               String // "19:00" local time
+  endTime                 String // "22:00" local time
+  firstDate               DateTime   @db.Date
+  endDate                 DateTime?  @db.Date
+  // Pricing and capacity (USD cents)
+  singerPriceCents        Int        @default(0)
+  listenerPriceCents      Int        @default(0)
+  maxHeadcount            Int? // null = no cap (singers + listeners combined)
+  bannerUrl               String?
+  // Sign-up window, relative to each date's start (null = defaults in spec)
+  signupOpensHoursBefore  Int?
+  signupClosesHoursBefore Int?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
+  group Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  dates EventDate[]
+
+  @@index([groupId])
+}
+
+enum EventDateStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+// One occurrence. Settings are copied from the series and editable per date.
+model EventDate {
+  id                 String          @id @default(cuid())
+  seriesId           String
+  startsAt           DateTime
+  endsAt             DateTime
+  theme              String
+  singerPriceCents   Int
+  listenerPriceCents Int
+  maxHeadcount       Int?
+  bannerUrl          String?
+  signupOpensAt      DateTime?
+  signupClosesAt     DateTime?
+  status             EventDateStatus @default(SCHEDULED)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  series  EventSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  signUps SignUp[]
+  songs   Song[]
+
+  @@unique([seriesId, startsAt])
+  @@index([startsAt])
+}
+
+// ---------- Sign-ups and songs ----------
+
+enum AttendeeRole {
+  SINGER
+  LISTENER
+}
+
+enum SignUpStatus {
+  RESERVED // awaiting screenshot, 24 h
+  UNDER_REVIEW
+  CONFIRMED
+  REJECTED // awaiting new screenshot, 24 h
+  EXPIRED
+  CANCELLED
+}
+
+model SignUp {
+  id             String       @id @default(cuid())
+  eventDateId    String
+  userId         String? // null when added by an admin without an account
+  displayName    String
+  email          String?
+  role           AttendeeRole
+  status         SignUpStatus @default(RESERVED)
+  memoCode       String       @unique // e.g. BADK-7Q4M
+  amountDueCents Int
+  screenshotKey  String? // private storage key
+  reservedUntil  DateTime?
+  addedByAdmin   Boolean      @default(false)
+  paymentNote    String? // e.g. "cash at door"
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewReason   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  eventDate  EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
+  user       User?     @relation("SignUpUser", fields: [userId], references: [id], onDelete: SetNull)
+  reviewedBy User?     @relation("SignUpReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  songs      Song[]
+
+  // One sign-up per account per date
+  @@unique([eventDateId, userId])
+  @@index([eventDateId, status])
+}
+
+enum SongStatus {
+  ACTIVE
+  REJECTED
+  RELEASED
+}
+
+// First pick wins. Uniqueness among ACTIVE songs per event date is enforced by
+// partial unique indexes added in the migration SQL (Prisma can't express them).
+model Song {
+  id              String     @id @default(cuid())
+  signUpId        String
+  eventDateId     String
+  title           String
+  normalizedTitle String
+  artist          String?
+  youtubeUrl      String?
+  youtubeVideoId  String?
+  pickedAt        DateTime   @default(now())
+  status          SongStatus @default(ACTIVE)
+  rejectReason    String?
+
+  signUp    SignUp    @relation(fields: [signUpId], references: [id], onDelete: Cascade)
+  eventDate EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
+
+  @@index([eventDateId, pickedAt])
+}
