@@ -23,7 +23,7 @@ Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdm
 - One sign-up per account per event date (no guests).
 - Each singer has up to two songs per event date, one per round (`Song.round` is 1 or 2).
 - First pick wins: a song title or YouTube video can be held by only one active pick per event date, across both rounds (partial unique indexes in the first migration).
-- `SignUp.registeredAt` records when someone signed up; `Song.enteredAt` records when a song was entered or last edited, and song priority goes by `enteredAt`. Editing a song releases the old row and creates a new one, so earlier picks are kept as history.
+- `SignUp.registeredAt` records when someone signed up; `Song.enteredAt` is the song time, and song priority goes by it. Changing a song's title releases the old row and creates a new one with a fresh time (earlier picks are kept as history); editing only the YouTube link or artist keeps the original time.
 
 ## Running locally
 

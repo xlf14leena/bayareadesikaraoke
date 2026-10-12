@@ -244,10 +244,12 @@ model Song {
   artist          String?
   youtubeUrl      String?
   youtubeVideoId  String?
-  // When this song was entered or last edited. Priority goes by this time,
-  // not by registration time. Any edit releases this row and creates a new
-  // one, so the edit time becomes the new enteredAt and history is kept.
+  // The song time: when this title was entered. Priority goes by this time,
+  // not by registration time. Changing the title releases this row and
+  // creates a new one with a fresh enteredAt (history is kept). Editing only
+  // the YouTube link or artist updates this row and keeps enteredAt.
   enteredAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
   releasedAt      DateTime?
   status          SongStatus @default(ACTIVE)
   rejectReason    String?

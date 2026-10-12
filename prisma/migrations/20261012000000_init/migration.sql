@@ -181,6 +181,7 @@ CREATE TABLE "Song" (
     "youtubeUrl" TEXT,
     "youtubeVideoId" TEXT,
     "enteredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "releasedAt" TIMESTAMP(3),
     "status" "SongStatus" NOT NULL DEFAULT 'ACTIVE',
     "rejectReason" TEXT,
