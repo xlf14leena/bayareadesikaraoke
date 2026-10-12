@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
+import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+// Hero photo: "Group of 5 people singing together inside of a karaoke room" by Singa Karaoke,
+// free to use under the Unsplash License.
+const HERO_PHOTO =
+  "https://images.unsplash.com/photo-1738156674456-97cdf7793bb7?auto=format&fit=crop&w=1400&q=70";
+const HERO_PHOTO_PAGE = "https://unsplash.com/photos/a-group-of-people-standing-next-to-each-other-zddcsUv2DUE";
 
 // Public dashboard: upcoming public event dates, soonest first.
 export default async function Home() {
@@ -17,47 +23,84 @@ export default async function Home() {
   });
 
   return (
-    <div>
-      <h1 className="mb-1 text-2xl font-bold sm:text-3xl">Upcoming karaoke nights</h1>
-      <p className="mb-6 text-gray-600">Public events from Bay Area Desi karaoke groups.</p>
+    <div className="space-y-8">
+      <section className="relative isolate h-56 overflow-hidden rounded-2xl bg-gradient-to-r from-royal via-cobalt to-lapis text-white sm:h-60">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={HERO_PHOTO}
+          alt="Friends singing together in a karaoke room"
+          className="absolute inset-y-0 right-0 -z-10 h-full w-full object-cover text-transparent sm:w-3/5"
+        />
+        <div className="absolute inset-0 -z-10 bg-royal/75 sm:bg-transparent sm:bg-gradient-to-r sm:from-royal sm:from-40% sm:via-royal/70 sm:via-55% sm:to-transparent" />
+        <div className="dot-grid absolute inset-0 -z-10" />
+        <div className="flex h-full flex-col justify-center gap-2 px-6 sm:px-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-kicker">
+            Gaana · Bajaana · Mehfil
+          </p>
+          <h1 className="max-w-[15ch] font-display text-3xl leading-tight text-balance sm:text-5xl">
+            Your weekend mehfil is calling
+          </h1>
+          <p className="max-w-[40ch] text-white/85">
+            Find a karaoke night near you and sing the songs you grew up with.
+          </p>
+        </div>
+        <a
+          href={HERO_PHOTO_PAGE}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute right-3 bottom-2 text-[11px] text-white/70 hover:text-white"
+        >
+          Photo: Singa Karaoke / Unsplash
+        </a>
+      </section>
 
-      {dates.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
-          No upcoming events yet. Check back soon.
-        </p>
-      ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {dates.map((d) => {
-            const banner = d.bannerUrl ?? d.series.bannerUrl ?? d.series.group.bannerUrl;
-            return (
-              <li key={d.id} className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
-                {banner ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={banner} alt="" className="h-32 w-full object-cover" />
-                ) : (
-                  <div className="h-32 w-full bg-gradient-to-br from-rose-500 to-amber-400" />
-                )}
-                <div className="space-y-1 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-rose-700">
-                    {d.series.group.name}
+      <section>
+        <h2 className="mb-4 font-display text-2xl text-royal sm:text-3xl">Upcoming karaoke nights</h2>
+
+        {dates.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-line bg-white p-8 text-center text-ink-muted">
+            No upcoming events yet. Check back soon.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {dates.map((d) => {
+              const banner = d.bannerUrl ?? d.series.bannerUrl ?? d.series.group.bannerUrl;
+              const badge = formatDateBadge(d.startsAt);
+              return (
+                <li
+                  key={d.id}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-white p-3 sm:flex-nowrap sm:p-4"
+                >
+                  <div className="w-16 shrink-0 rounded-xl bg-gold py-1.5 text-center text-gold-ink">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider">{badge.month}</p>
+                    <p className="font-display text-3xl leading-none">{badge.day}</p>
+                  </div>
+                  {banner && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={banner} alt="" className="hidden h-16 w-24 shrink-0 rounded-lg object-cover sm:block" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold leading-snug">
+                      {d.series.title}
+                      {d.theme && <span className="text-lapis"> · {d.theme}</span>}
+                    </h3>
+                    <p className="text-sm text-ink-muted">
+                      {d.series.group.name} · {formatEventDate(d.startsAt)},{" "}
+                      {formatEventTime(d.startsAt, d.endsAt)}
+                    </p>
+                    <p className="text-sm text-ink-muted">{d.series.venueName}</p>
+                  </div>
+                  <p className="w-full pl-20 text-sm text-ink-muted sm:w-auto sm:pl-0 sm:text-right sm:whitespace-nowrap">
+                    Singer <span className="font-semibold text-ink">{formatPrice(d.singerPriceCents)}</span>
+                    {" · "}
+                    Listener <span className="font-semibold text-ink">{formatPrice(d.listenerPriceCents)}</span>
                   </p>
-                  <h2 className="text-lg font-semibold leading-snug">{d.series.title}</h2>
-                  <p className="text-sm text-gray-700">
-                    {formatEventDate(d.startsAt)} · {formatEventTime(d.startsAt, d.endsAt)}
-                  </p>
-                  <p className="text-sm text-gray-600">{d.series.venueName}</p>
-                  <p className="text-sm">
-                    <span className="font-medium">Theme:</span> {d.theme}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    Singer {formatPrice(d.singerPriceCents)} · Listener {formatPrice(d.listenerPriceCents)}
-                  </p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

@@ -26,3 +26,14 @@ export function formatEventTime(start: Date, end: Date): string {
   });
   return `${f.format(start)} – ${f.format(end)}`;
 }
+
+// Month and day for the calendar badge, e.g. { month: "Oct", day: "17" }.
+export function formatDateBadge(d: Date): { month: string; day: string } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: TIME_ZONE,
+    month: "short",
+    day: "numeric",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return { month: get("month"), day: get("day") };
+}

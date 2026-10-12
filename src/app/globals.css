@@ -1,5 +1,34 @@
 @import "tailwindcss";
 
+/* Royal Indigo palette: indigo and cobalt with gold, like Jaipur blue pottery. */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-mist: #f3f3fb;
+  --color-ink: #1a1b45;
+  --color-ink-muted: #555785;
+  --color-line: #dcdcf0;
+  --color-royal: #23266e;
+  --color-cobalt: #2e3d97;
+  --color-lapis: #3a63c4;
+  --color-gold: #f0b93a;
+  --color-gold-ink: #2a1d05;
+  --color-kicker: #ffd27a;
+}
+
+/* Fonts come from next/font in layout.tsx. */
+@theme inline {
+  --font-sans: var(--font-hind), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-rozha), Georgia, "Times New Roman", serif;
+}
+
+@utility toran {
+  /* Row of marigold beads hanging from a thin indigo string. */
+  height: 14px;
+  background:
+    radial-gradient(circle at 10px 0, var(--color-gold) 7px, transparent 8px) 0 0 / 20px 14px repeat-x,
+    linear-gradient(var(--color-royal), var(--color-royal)) 0 0 / 100% 4px no-repeat;
+}
+
+@utility dot-grid {
+  background-image: radial-gradient(circle, rgb(255 255 255 / 0.09) 1.5px, transparent 2px);
+  background-size: 18px 18px;
 }
