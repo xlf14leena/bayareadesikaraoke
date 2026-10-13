@@ -115,7 +115,8 @@ model EventSeries {
   description             String?
   venueName               String
   venueAddress            String
-  theme                   String
+  theme                   String? // blank = no theme
+  themeRequired           Boolean    @default(true) // songs must fit the theme
   visibility              Visibility @default(PUBLIC)
   privateToken            String?    @unique
   // Schedule rule
@@ -146,6 +147,7 @@ model EventSeries {
 enum EventDateStatus {
   SCHEDULED
   CANCELLED
+  DELETED // removed by an admin; kept so the schedule doesn't create it again
 }
 
 // One occurrence. Settings are copied from the series and editable per date.
@@ -154,7 +156,11 @@ model EventDate {
   seriesId           String
   startsAt           DateTime
   endsAt             DateTime
-  theme              String
+  // Set when an admin moved this date: the schedule slot it came from.
+  originalStartsAt   DateTime?
+  theme              String?
+  themeRequired      Boolean         @default(true)
+  signupsOpen        Boolean         @default(false) // admin opens sign-ups per date
   singerPriceCents   Int
   listenerPriceCents Int
   maxSingers         Int?

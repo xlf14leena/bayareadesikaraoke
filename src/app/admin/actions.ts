@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin, requireSuperUser } from "@/lib/roles";
-import { syncSeriesDates } from "@/lib/schedule";
+import { syncSeriesDates, timesFor } from "@/lib/schedule";
 import {
   FormError,
   type FormState,
@@ -20,17 +20,26 @@ import {
   ymd,
 } from "@/lib/forms";
 
-async function attempt(fn: () => Promise<void>): Promise<FormState> {
+async function attempt(
+  fn: () => Promise<void>,
+  duplicate = "That web address is already taken. Try another.",
+): Promise<FormState> {
   try {
     await fn();
     return undefined;
   } catch (e) {
     if (e instanceof FormError) return { error: e.message };
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { error: "That web address is already taken. Try another." };
-    }
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { error: duplicate };
     throw e;
   }
+}
+
+/** Theme is optional; when set, the admin says whether songs must fit it. */
+function themeFields(form: FormData) {
+  return {
+    theme: optionalText(form, "theme", { max: 120 }),
+    themeRequired: form.get("themeRequired") === "on",
+  };
 }
 
 // ---------- Groups ----------
@@ -150,7 +159,7 @@ function seriesFields(form: FormData) {
     description: optionalText(form, "description", { max: 2000 }),
     venueName: text(form, "venueName", "Venue name", { max: 120 }),
     venueAddress: text(form, "venueAddress", "Venue address", { max: 200 }),
-    theme: text(form, "theme", "Theme", { max: 120 }),
+    ...themeFields(form),
     visibility,
     frequency,
     monthlyWeekOfMonth,
@@ -215,13 +224,14 @@ export async function updateSeries(seriesId: string, _prev: FormState, form: For
     // the series. Dates with sign-ups, and per-date edits to other settings, stay.
     const changed: Prisma.EventDateUpdateManyMutationInput = {};
     if (data.theme !== before.theme) changed.theme = data.theme;
+    if (data.themeRequired !== before.themeRequired) changed.themeRequired = data.themeRequired;
     if (data.singerPriceCents !== before.singerPriceCents) changed.singerPriceCents = data.singerPriceCents;
     if (data.listenerPriceCents !== before.listenerPriceCents) changed.listenerPriceCents = data.listenerPriceCents;
     if (data.maxSingers !== before.maxSingers) changed.maxSingers = data.maxSingers;
     if (data.maxListeners !== before.maxListeners) changed.maxListeners = data.maxListeners;
     if (Object.keys(changed).length) {
       await prisma.eventDate.updateMany({
-        where: { seriesId, startsAt: { gt: new Date() }, signUps: { none: {} } },
+        where: { seriesId, startsAt: { gt: new Date() }, status: { not: "DELETED" }, signUps: { none: {} } },
         data: changed,
       });
     }
@@ -251,7 +261,13 @@ export async function resetPrivateLink(seriesId: string): Promise<void> {
 async function dateGroup(dateId: string) {
   const d = await prisma.eventDate.findUnique({
     where: { id: dateId },
-    select: { series: { select: { groupId: true } } },
+    select: {
+      seriesId: true,
+      startsAt: true,
+      endsAt: true,
+      originalStartsAt: true,
+      series: { select: { groupId: true } },
+    },
   });
   if (!d) throw new FormError("That date no longer exists.");
   return d;
@@ -261,10 +277,24 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
   const d = await dateGroup(dateId);
   await requireGroupAdmin(d.series.groupId);
   const result = await attempt(async () => {
+    // Rescheduling: a new day or time moves this date and remembers the
+    // schedule slot it came from, so the schedule doesn't put it back.
+    const day = ymd(form, "date", "Date")!;
+    const startTime = hm(form, "startTime", "Start time");
+    const endTime = hm(form, "endTime", "End time");
+    if (startTime === endTime) throw new FormError("End time should be different from the start time.");
+    const { startsAt, endsAt } = timesFor({ startTime, endTime }, day);
+    const moved = startsAt.getTime() !== d.startsAt.getTime() || endsAt.getTime() !== d.endsAt.getTime();
+    const slot = d.originalStartsAt ?? d.startsAt;
+    const originalStartsAt = !moved ? d.originalStartsAt : startsAt.getTime() === slot.getTime() ? null : slot;
+
     await prisma.eventDate.update({
       where: { id: dateId },
       data: {
-        theme: text(form, "theme", "Theme", { max: 120 }),
+        startsAt,
+        endsAt,
+        originalStartsAt,
+        ...themeFields(form),
         singerPriceCents: price(form, "singerPrice", "Singer price"),
         listenerPriceCents: price(form, "listenerPrice", "Listener price"),
         maxSingers: optionalCap(form, "maxSingers", "Singer cap"),
@@ -272,10 +302,18 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
         bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
       },
     });
-  });
+  }, "This event already has a date starting at that time.");
   if (result) return result;
   revalidatePath(`/admin/dates/${dateId}`);
   return { ok: "Saved." };
+}
+
+export async function setSignupsOpen(dateId: string, open: boolean): Promise<void> {
+  const d = await dateGroup(dateId);
+  await requireGroupAdmin(d.series.groupId);
+  await prisma.eventDate.update({ where: { id: dateId }, data: { signupsOpen: open } });
+  revalidatePath(`/admin/dates/${dateId}`);
+  revalidatePath(`/admin/events/${d.seriesId}`);
 }
 
 export async function cancelDate(dateId: string): Promise<void> {
@@ -283,7 +321,7 @@ export async function cancelDate(dateId: string): Promise<void> {
   await requireGroupAdmin(d.series.groupId);
   // Spec: cancelling hides the date and cancels every sign-up. Refunds happen outside the app.
   await prisma.$transaction([
-    prisma.eventDate.update({ where: { id: dateId }, data: { status: "CANCELLED" } }),
+    prisma.eventDate.update({ where: { id: dateId }, data: { status: "CANCELLED", signupsOpen: false } }),
     prisma.signUp.updateMany({ where: { eventDateId: dateId }, data: { status: "CANCELLED" } }),
   ]);
   revalidatePath(`/admin/dates/${dateId}`);
@@ -294,4 +332,18 @@ export async function restoreDate(dateId: string): Promise<void> {
   await requireGroupAdmin(d.series.groupId);
   await prisma.eventDate.update({ where: { id: dateId }, data: { status: "SCHEDULED" } });
   revalidatePath(`/admin/dates/${dateId}`);
+}
+
+/**
+ * Removes one date. The row stays as DELETED (hidden everywhere) so the
+ * repeating schedule doesn't create that date again; its sign-ups are cancelled.
+ */
+export async function deleteDate(dateId: string): Promise<void> {
+  const d = await dateGroup(dateId);
+  await requireGroupAdmin(d.series.groupId);
+  await prisma.$transaction([
+    prisma.eventDate.update({ where: { id: dateId }, data: { status: "DELETED", signupsOpen: false } }),
+    prisma.signUp.updateMany({ where: { eventDateId: dateId }, data: { status: "CANCELLED" } }),
+  ]);
+  redirect(`/admin/events/${d.seriesId}`);
 }

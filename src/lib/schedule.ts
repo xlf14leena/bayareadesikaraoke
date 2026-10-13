@@ -177,6 +177,10 @@ export function describeSchedule(rule: ScheduleRule): string {
  * Creates the series' missing future dates (8 weeks ahead) and removes future
  * dates the schedule no longer produces, unless someone has signed up for
  * them. Dates without sign-ups also pick up a changed end time.
+ *
+ * Admin changes to single dates are kept: a moved date is matched to the
+ * schedule slot it came from (originalStartsAt) and never removed, and a
+ * deleted date stays as a DELETED row so its slot isn't created again.
  */
 export async function syncSeriesDates(seriesId: string, now = new Date()): Promise<void> {
   const series = await prisma.eventSeries.findUnique({ where: { id: seriesId } });
@@ -190,19 +194,28 @@ export async function syncSeriesDates(seriesId: string, now = new Date()): Promi
   }
 
   const existing = await prisma.eventDate.findMany({
-    where: { seriesId, startsAt: { gt: now } },
-    select: { id: true, startsAt: true, endsAt: true, _count: { select: { signUps: true } } },
+    where: { seriesId, OR: [{ startsAt: { gt: now } }, { originalStartsAt: { gt: now } }] },
+    select: {
+      id: true,
+      startsAt: true,
+      endsAt: true,
+      originalStartsAt: true,
+      status: true,
+      _count: { select: { signUps: true } },
+    },
   });
 
   const stale: string[] = [];
   for (const d of existing) {
-    const want = wanted.get(d.startsAt.getTime());
+    const slot = (d.originalStartsAt ?? d.startsAt).getTime();
+    const want = wanted.get(slot);
     if (want) {
-      wanted.delete(d.startsAt.getTime());
-      if (d._count.signUps === 0 && want.endsAt.getTime() !== d.endsAt.getTime()) {
+      wanted.delete(slot);
+      const untouched = !d.originalStartsAt && d.status !== "DELETED" && d._count.signUps === 0;
+      if (untouched && want.endsAt.getTime() !== d.endsAt.getTime()) {
         await prisma.eventDate.update({ where: { id: d.id }, data: { endsAt: want.endsAt } });
       }
-    } else if (d._count.signUps === 0) {
+    } else if (!d.originalStartsAt && d._count.signUps === 0) {
       stale.push(d.id);
     }
   }
@@ -215,6 +228,7 @@ export async function syncSeriesDates(seriesId: string, now = new Date()): Promi
         startsAt: t.startsAt,
         endsAt: t.endsAt,
         theme: series.theme,
+        themeRequired: series.themeRequired,
         singerPriceCents: series.singerPriceCents,
         listenerPriceCents: series.listenerPriceCents,
         maxSingers: series.maxSingers,

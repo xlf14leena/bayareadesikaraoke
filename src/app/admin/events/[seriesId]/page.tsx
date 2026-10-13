@@ -26,7 +26,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
     include: {
       group: true,
       dates: {
-        where: { startsAt: { gte: new Date() } },
+        where: { startsAt: { gte: new Date() }, status: { not: "DELETED" } },
         orderBy: { startsAt: "asc" },
         include: { signUps: { where: { status: { in: HOLDS_SPOT } }, select: { role: true } } },
       },
@@ -84,7 +84,13 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">
                       {formatEventDate(d.startsAt)}
-                      <span className="text-lapis"> · {d.theme}</span>
+                      {d.theme && <span className="text-lapis"> · {d.theme}</span>}
+                      {d.signupsOpen && d.status === "SCHEDULED" && (
+                        <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Sign-ups open</span>
+                      )}
+                      {d.originalStartsAt && (
+                        <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-xs font-medium text-ink-muted">Rescheduled</span>
+                      )}
                       {d.status === "CANCELLED" && (
                         <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Cancelled</span>
                       )}
