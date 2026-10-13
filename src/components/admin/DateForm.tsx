@@ -53,7 +53,7 @@ export default function DateForm({
           <input name="maxListeners" inputMode="numeric" defaultValue={date.maxListeners ?? ""} className={inputClass} />
         </Field>
       </div>
-      <Field label="Banner image link (optional)" hint="Blank uses the event's banner.">
+      <Field label="Banner image link (optional)" hint="Blank uses the event's banner, or the default singing photo.">
         <input name="bannerUrl" type="url" defaultValue={date.bannerUrl ?? ""} placeholder="https://…" className={inputClass} />
       </Field>
       <FormStatus state={state} pending={pending} label="Save this date" />

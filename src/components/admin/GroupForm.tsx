@@ -29,7 +29,7 @@ export default function GroupForm({ action, group }: { action: Action; group?: G
       <Field label="Description (optional)">
         <textarea name="description" rows={3} defaultValue={group?.description ?? ""} className={inputClass} />
       </Field>
-      <Field label="Banner image link (optional)" hint="Shown on the group page and used for events that have no banner of their own.">
+      <Field label="Banner image link (optional)" hint="Shown on the group page and used for events that have no banner of their own. Blank uses the default singing photo.">
         <input
           name="bannerUrl"
           type="url"
