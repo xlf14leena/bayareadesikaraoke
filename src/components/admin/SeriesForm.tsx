@@ -144,7 +144,7 @@ export default function SeriesForm({ action, series }: { action: Action; series?
             <input name="maxListeners" inputMode="numeric" defaultValue={series?.maxListeners ?? ""} className={inputClass} />
           </Field>
         </div>
-        <Field label="Banner image link (optional)" hint="Blank uses the group's banner.">
+        <Field label="Banner image link (optional)" hint="Blank uses the group's banner, or the default singing photo.">
           <input name="bannerUrl" type="url" defaultValue={series?.bannerUrl ?? ""} placeholder="https://…" className={inputClass} />
         </Field>
       </fieldset>

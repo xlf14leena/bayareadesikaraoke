@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
+import Banner from "@/components/Banner";
 import EventDateList from "@/components/EventDateList";
+import { bannerFor } from "@/lib/banner";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +24,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="space-y-6">
-      {group.bannerUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={group.bannerUrl} alt="" className="h-44 w-full rounded-2xl object-cover sm:h-64" />
-      )}
+      <Banner {...bannerFor(group.bannerUrl)} />
       <header>
         <h1 className="font-display text-3xl text-royal sm:text-4xl">{group.name}</h1>
         {group.description && <p className="mt-1 whitespace-pre-line text-ink-muted">{group.description}</p>}

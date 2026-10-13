@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { EventDate, EventSeries, Group } from "@prisma/client";
+import { bannerFor } from "@/lib/banner";
 import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
 export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
@@ -9,7 +10,7 @@ export default function EventDateList({ dates, query = "" }: { dates: ListedDate
   return (
     <ul className="space-y-3">
       {dates.map((d) => {
-        const banner = d.bannerUrl ?? d.series.bannerUrl ?? d.series.group.bannerUrl;
+        const banner = bannerFor(d.bannerUrl, d.series.bannerUrl, d.series.group.bannerUrl).src;
         const badge = formatDateBadge(d.startsAt);
         return (
           <li key={d.id}>
@@ -21,10 +22,8 @@ export default function EventDateList({ dates, query = "" }: { dates: ListedDate
                 <p className="text-[11px] font-semibold uppercase tracking-wider">{badge.month}</p>
                 <p className="font-display text-3xl leading-none">{badge.day}</p>
               </div>
-              {banner && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={banner} alt="" className="hidden h-16 w-24 shrink-0 rounded-lg object-cover sm:block" />
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={banner} alt="" className="hidden h-16 w-24 shrink-0 rounded-lg object-cover sm:block" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-semibold leading-snug">
                   {d.series.title}

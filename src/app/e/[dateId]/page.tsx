@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Banner from "@/components/Banner";
 import { notFound } from "next/navigation";
 import { primaryButton } from "@/components/ui";
 import { HOLDS_SPOT, mapUrl } from "@/lib/events";
 import { formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
+import { bannerFor } from "@/lib/banner";
 import { prisma } from "@/lib/prisma";
 import { canAdminGroup, getViewer } from "@/lib/roles";
 
@@ -61,7 +63,7 @@ export default async function EventPage({ params, searchParams }: Props) {
     ? await prisma.signUp.count({ where: { eventDateId: date.id, role: "LISTENER", status: "CONFIRMED" } })
     : 0;
 
-  const banner = date.bannerUrl ?? series.bannerUrl ?? series.group.bannerUrl;
+  const banner = bannerFor(date.bannerUrl, series.bannerUrl, series.group.bannerUrl);
   const cancelled = date.status === "CANCELLED";
   const past = date.endsAt < new Date();
   const here = `/e/${date.id}${k ? `?k=${encodeURIComponent(k)}` : ""}`;
@@ -69,14 +71,7 @@ export default async function EventPage({ params, searchParams }: Props) {
 
   return (
     <article className="space-y-6">
-      {banner ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={banner} alt="" className="h-44 w-full rounded-2xl object-cover sm:h-64" />
-      ) : (
-        <div className="h-24 overflow-hidden rounded-2xl bg-gradient-to-r from-royal via-cobalt to-lapis sm:h-32">
-          <div className="dot-grid h-full w-full" />
-        </div>
-      )}
+      <Banner {...banner} />
 
       <header>
         <p className="text-sm font-medium text-ink-muted">
