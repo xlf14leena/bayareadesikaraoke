@@ -67,7 +67,7 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ gro
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">
                       {s.title}
-                      <span className="text-lapis"> · {s.theme}</span>
+                      {s.theme && <span className="text-lapis"> · {s.theme}</span>}
                       {s.visibility === "PRIVATE" && (
                         <span className="ml-2 rounded-full bg-gold/30 px-2 py-0.5 text-xs font-medium text-gold-ink">Private</span>
                       )}

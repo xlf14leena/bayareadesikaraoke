@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EventSeries, Frequency } from "@prisma/client";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
+import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
 import { dollars, type FormState } from "@/lib/forms";
@@ -30,9 +31,11 @@ export default function SeriesForm({ action, series }: { action: Action; series?
         <Field label="Title" hint='For example "Saturday Night Sur".'>
           <input name="title" required maxLength={120} defaultValue={series?.title} className={inputClass} />
         </Field>
-        <Field label="Theme" hint="Songs should fit it. You can change it for a single date later.">
-          <input name="theme" required maxLength={120} defaultValue={series?.theme} placeholder="90s Bollywood" className={inputClass} />
-        </Field>
+        <ThemeFields
+          theme={series?.theme}
+          required={series?.themeRequired}
+          hint="Blank for no theme. You can change it for a single date later."
+        />
         <Field label="Description (optional)">
           <textarea name="description" rows={3} defaultValue={series?.description ?? ""} className={inputClass} />
         </Field>

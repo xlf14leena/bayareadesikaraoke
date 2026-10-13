@@ -34,7 +34,7 @@ A person must sign in once before they can be made a group admin.
 
 ## Recurring dates
 
-`src/lib/schedule.ts` turns a series' schedule (one time, weekly, every 2 weeks, or monthly such as "last Sunday") into event dates 8 weeks ahead, in Pacific time. Dates are topped up when an event is saved, when an admin opens its pages, and by a daily Vercel Cron call to `/api/cron/dates`. Saving an event updates future dates nobody has signed up for; dates with sign-ups keep their settings.
+`src/lib/schedule.ts` turns a series' schedule (one time, weekly, every 2 weeks, or monthly such as "last Sunday") into event dates 8 weeks ahead, in Pacific time. Dates are topped up when an event is saved, when an admin opens its pages, and by a daily Vercel Cron call to `/api/cron/dates`. Saving an event updates future dates nobody has signed up for; dates with sign-ups keep their settings. Admins can also change a single date: reschedule it (it keeps a link to its original slot in `originalStartsAt`, so the schedule doesn't add it back), delete it (kept as a hidden `DELETED` row for the same reason), set its theme (optional, and either required for songs or just a suggestion), and open or close its sign-ups (`signupsOpen`).
 
 ## Data model
 

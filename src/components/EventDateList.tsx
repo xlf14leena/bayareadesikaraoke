@@ -33,7 +33,14 @@ export default function EventDateList({ dates, query = "" }: { dates: ListedDate
                 <p className="text-sm text-ink-muted">
                   {d.series.group.name} · {formatEventDate(d.startsAt)}, {formatEventTime(d.startsAt, d.endsAt)}
                 </p>
-                <p className="text-sm text-ink-muted">{d.series.venueName}</p>
+                <p className="text-sm text-ink-muted">
+                  {d.series.venueName}
+                  {d.signupsOpen && (
+                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      Sign-ups open
+                    </span>
+                  )}
+                </p>
               </div>
               <p className="w-full pl-20 text-sm text-ink-muted sm:w-auto sm:pl-0 sm:text-right sm:whitespace-nowrap">
                 Singer <span className="font-semibold text-ink">{formatPrice(d.singerPriceCents)}</span>

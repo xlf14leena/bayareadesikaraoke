@@ -31,7 +31,7 @@ export default async function EventPage({ params, searchParams }: Props) {
   const { dateId } = await params;
   const { k } = await searchParams;
   const [date, viewer] = await Promise.all([load(dateId), getViewer()]);
-  if (!date) notFound();
+  if (!date || date.status === "DELETED") notFound();
   const { series } = date;
   const isAdmin = canAdminGroup(viewer, series.groupId);
 
@@ -86,7 +86,16 @@ export default async function EventPage({ params, searchParams }: Props) {
           {series.visibility === "PRIVATE" && <span> · Private event</span>}
         </p>
         <h1 className="font-display text-3xl leading-tight text-royal sm:text-4xl">{series.title}</h1>
-        <p className="text-lg text-lapis">Theme: {date.theme}</p>
+        {date.theme ? (
+          <p className="text-lg text-lapis">
+            Theme: {date.theme}
+            <span className="ml-2 text-sm text-ink-muted">
+              {date.themeRequired ? "· Songs must fit the theme" : "· Theme is optional"}
+            </span>
+          </p>
+        ) : (
+          <p className="text-lg text-ink-muted">No theme: sing anything you like</p>
+        )}
         {cancelled && (
           <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 font-medium text-red-700">This date has been cancelled.</p>
         )}
@@ -132,14 +141,21 @@ export default async function EventPage({ params, searchParams }: Props) {
         <aside className="space-y-3 rounded-xl border border-line bg-white p-4 sm:p-6">
           <PriceRow label="Singer" cents={date.singerPriceCents} taken={taken("SINGER")} cap={date.maxSingers} />
           <PriceRow label="Listener" cents={date.listenerPriceCents} taken={taken("LISTENER")} cap={date.maxListeners} />
-          {/* Sign-up button and the member's own status arrive with the sign-ups build step. */}
+          {/* The sign-up button and the member's own status arrive with the sign-ups build step. */}
           {!cancelled && !past &&
-            (viewer ? (
-              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">Sign-ups open soon.</p>
+            (!date.signupsOpen ? (
+              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">Sign-ups aren&apos;t open yet.</p>
+            ) : viewer ? (
+              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                Sign-ups are open. Online sign-up is coming soon.
+              </p>
             ) : (
-              <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className={`${primaryButton} w-full`}>
-                Sign in to sign up
-              </Link>
+              <>
+                <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
+                <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className={`${primaryButton} w-full`}>
+                  Sign in to sign up
+                </Link>
+              </>
             ))}
         </aside>
       </div>
