@@ -6,7 +6,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import CopyLink from "@/components/admin/CopyLink";
 import SeriesForm from "@/components/admin/SeriesForm";
 import { cardClass } from "@/components/ui";
-import { HOLDS_SPOT, spotsLabel } from "@/lib/events";
+import { HOLDS_SPOT, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
@@ -79,14 +79,18 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
             {series.dates.map((d) => {
               const singers = d.signUps.filter((s) => s.role === "SINGER").length;
               const listeners = d.signUps.length - singers;
+              const settings = settingsFor(d, series);
               return (
                 <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">
                       {formatEventDate(d.startsAt)}
-                      {d.theme && <span className="text-lapis"> · {d.theme}</span>}
+                      {settings.theme && <span className="text-lapis"> · {settings.theme}</span>}
                       {d.signupsOpen && d.status === "SCHEDULED" && (
                         <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Sign-ups open</span>
+                      )}
+                      {d.overrides.length > 0 && (
+                        <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-xs font-medium text-ink-muted">Custom settings</span>
                       )}
                       {d.originalStartsAt && (
                         <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-xs font-medium text-ink-muted">Rescheduled</span>
@@ -96,8 +100,8 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
                       )}
                     </p>
                     <p className="text-sm text-ink-muted">
-                      {formatEventTime(d.startsAt, d.endsAt)} · Singers {spotsLabel(singers, d.maxSingers)} · Listeners{" "}
-                      {spotsLabel(listeners, d.maxListeners)}
+                      {formatEventTime(d.startsAt, d.endsAt)} · Singers {spotsLabel(singers, settings.maxSingers)} · Listeners{" "}
+                      {spotsLabel(listeners, settings.maxListeners)}
                     </p>
                   </div>
                   <div className="flex gap-3 text-sm font-medium">
@@ -121,7 +125,8 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
       <section className={cardClass}>
         <h2 className="mb-1 text-xl font-semibold">Event settings</h2>
         <p className="mb-4 text-sm text-ink-muted">
-          Changes apply to future dates nobody has signed up for yet. Dates with sign-ups keep their settings; edit them one at a time.
+          These are the template for every date. A date uses them unless you change a setting for that date; people
+          who already registered keep the price they signed up at.
         </p>
         <SeriesForm action={updateSeries.bind(null, series.id)} series={series} />
       </section>

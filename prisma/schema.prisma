@@ -150,7 +150,10 @@ enum EventDateStatus {
   DELETED // removed by an admin; kept so the schedule doesn't create it again
 }
 
-// One occurrence. Settings are copied from the series and editable per date.
+// One occurrence. The series is its template: the date uses the series' theme,
+// description, prices and caps unless that setting is listed in overrides
+// ("theme", "description", "pricing", "capacity"), in which case the date's
+// own columns apply. See settingsFor in src/lib/events.ts.
 model EventDate {
   id                 String          @id @default(cuid())
   seriesId           String
@@ -158,14 +161,16 @@ model EventDate {
   endsAt             DateTime
   // Set when an admin moved this date: the schedule slot it came from.
   originalStartsAt   DateTime?
+  overrides          String[]        @default([])
   theme              String?
   themeRequired      Boolean         @default(true)
+  description        String?
   signupsOpen        Boolean         @default(false) // admin opens sign-ups per date
-  singerPriceCents   Int
-  listenerPriceCents Int
+  singerPriceCents   Int?
+  listenerPriceCents Int?
   maxSingers         Int?
   maxListeners       Int?
-  bannerUrl          String?
+  bannerUrl          String? // null = the series' banner
   signupOpensAt      DateTime?
   signupClosesAt     DateTime?
   status             EventDateStatus @default(SCHEDULED)

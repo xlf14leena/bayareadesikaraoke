@@ -122,10 +122,22 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
 
       <section className={cardClass}>
         <h2 className="mb-1 text-xl font-semibold">Settings for this date</h2>
-        <p className="mb-4 text-sm text-ink-muted">These override the event settings for this date only.</p>
+        <p className="mb-4 text-sm text-ink-muted">
+          This date uses the event settings. Tick &ldquo;Change for this date&rdquo; to override one for this date
+          only; later changes to the event settings won&apos;t touch it.
+        </p>
         <DateForm
           action={updateDate.bind(null, date.id)}
           date={date}
+          template={{
+            theme: series.theme,
+            themeRequired: series.themeRequired,
+            description: series.description,
+            singerPriceCents: series.singerPriceCents,
+            listenerPriceCents: series.listenerPriceCents,
+            maxSingers: series.maxSingers,
+            maxListeners: series.maxListeners,
+          }}
           when={{
             day: pacificDateOf(date.startsAt),
             startTime: pacificTimeOf(date.startsAt),

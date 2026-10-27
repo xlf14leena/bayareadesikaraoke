@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { EventDate, EventSeries, Group } from "@prisma/client";
 import { bannerFor } from "@/lib/banner";
+import { settingsFor } from "@/lib/events";
 import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
 export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
@@ -12,6 +13,7 @@ export default function EventDateList({ dates, query = "" }: { dates: ListedDate
       {dates.map((d) => {
         const banner = bannerFor(d.bannerUrl, d.series.bannerUrl, d.series.group.bannerUrl).src;
         const badge = formatDateBadge(d.startsAt);
+        const settings = settingsFor(d, d.series);
         return (
           <li key={d.id}>
             <Link
@@ -27,7 +29,7 @@ export default function EventDateList({ dates, query = "" }: { dates: ListedDate
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-semibold leading-snug">
                   {d.series.title}
-                  {d.theme && <span className="text-lapis"> · {d.theme}</span>}
+                  {settings.theme && <span className="text-lapis"> · {settings.theme}</span>}
                 </h3>
                 <p className="text-sm text-ink-muted">
                   {d.series.group.name} · {formatEventDate(d.startsAt)}, {formatEventTime(d.startsAt, d.endsAt)}
@@ -42,9 +44,9 @@ export default function EventDateList({ dates, query = "" }: { dates: ListedDate
                 </p>
               </div>
               <p className="w-full pl-20 text-sm text-ink-muted sm:w-auto sm:pl-0 sm:text-right sm:whitespace-nowrap">
-                Singer <span className="font-semibold text-ink">{formatPrice(d.singerPriceCents)}</span>
+                Singer <span className="font-semibold text-ink">{formatPrice(settings.singerPriceCents)}</span>
                 {" · "}
-                Listener <span className="font-semibold text-ink">{formatPrice(d.listenerPriceCents)}</span>
+                Listener <span className="font-semibold text-ink">{formatPrice(settings.listenerPriceCents)}</span>
               </p>
             </Link>
           </li>
