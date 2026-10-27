@@ -87,7 +87,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
                       {formatEventDate(d.startsAt)}
                       {settings.theme && <span className="text-lapis"> · {settings.theme}</span>}
                       {d.signupsOpen && d.status === "SCHEDULED" && (
-                        <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Registration open</span>
+                        <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Sign-ups open</span>
                       )}
                       {d.overrides.length > 0 && (
                         <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-xs font-medium text-ink-muted">Custom settings</span>

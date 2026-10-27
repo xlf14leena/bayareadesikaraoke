@@ -224,7 +224,7 @@ export async function syncSeriesDates(seriesId: string, now = new Date()): Promi
   if (wanted.size) {
     await prisma.eventDate.createMany({
       // New dates follow the series' settings until an admin overrides them,
-      // and stay closed for registration until an admin allows it.
+      // and stay closed until an admin opens sign-ups.
       data: [...wanted.values()].map((t) => ({ seriesId, startsAt: t.startsAt, endsAt: t.endsAt })),
       skipDuplicates: true,
     });

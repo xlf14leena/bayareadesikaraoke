@@ -165,7 +165,7 @@ model EventDate {
   theme              String?
   themeRequired      Boolean         @default(true)
   description        String?
-  signupsOpen        Boolean         @default(false) // admin allows registration per date
+  signupsOpen        Boolean         @default(false) // admin opens sign-ups per date
   singerPriceCents   Int?
   listenerPriceCents Int?
   maxSingers         Int?

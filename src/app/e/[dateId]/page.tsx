@@ -145,7 +145,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           {/* The sign-up button and the member's own status arrive with the sign-ups build step. */}
           {!cancelled && !past &&
             (!date.signupsOpen ? (
-              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">Registration isn&apos;t open yet.</p>
+              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">Sign-ups aren&apos;t open yet.</p>
             ) : viewer ? (
               <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
                 Sign-ups are open. Online sign-up is coming soon.

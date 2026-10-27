@@ -75,17 +75,17 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         <section className={`${cardClass} flex flex-wrap items-center justify-between gap-3`}>
           <div>
             <h2 className="text-xl font-semibold">
-              {date.signupsOpen ? "Registration is open" : "Registration is not open yet"}
+              {date.signupsOpen ? "Sign-ups are open" : "Sign-ups are not open yet"}
             </h2>
             <p className="text-sm text-ink-muted">
               {date.signupsOpen
-                ? "People can register for this date."
-                : "Nobody can register for this date until you allow registration."}
+                ? "The event page tells people they can sign up for this date."
+                : "Open sign-ups when you're ready for people to sign up for this date."}
             </p>
           </div>
           <form action={setSignupsOpen.bind(null, date.id, !date.signupsOpen)}>
             <button type="submit" className={date.signupsOpen ? secondaryButton : primaryButton}>
-              {date.signupsOpen ? "Stop registration" : "Allow registration"}
+              {date.signupsOpen ? "Close sign-ups" : "Open sign-ups"}
             </button>
           </form>
         </section>
