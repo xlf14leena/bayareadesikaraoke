@@ -3,7 +3,7 @@ import Link from "next/link";
 import Banner from "@/components/Banner";
 import { notFound } from "next/navigation";
 import { primaryButton } from "@/components/ui";
-import { HOLDS_SPOT, mapUrl } from "@/lib/events";
+import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
 import { formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { bannerFor } from "@/lib/banner";
 import { prisma } from "@/lib/prisma";
@@ -36,6 +36,7 @@ export default async function EventPage({ params, searchParams }: Props) {
   if (!date || date.status === "DELETED") notFound();
   const { series } = date;
   const isAdmin = canAdminGroup(viewer, series.groupId);
+  const settings = settingsFor(date, series);
 
   if (series.visibility === "PRIVATE" && !isAdmin) {
     const hasKey = !!k && k === series.privateToken;
@@ -81,11 +82,11 @@ export default async function EventPage({ params, searchParams }: Props) {
           {series.visibility === "PRIVATE" && <span> · Private event</span>}
         </p>
         <h1 className="font-display text-3xl leading-tight text-royal sm:text-4xl">{series.title}</h1>
-        {date.theme ? (
+        {settings.theme ? (
           <p className="text-lg text-lapis">
-            Theme: {date.theme}
+            Theme: {settings.theme}
             <span className="ml-2 text-sm text-ink-muted">
-              {date.themeRequired ? "· Songs must fit the theme" : "· Theme is optional"}
+              {settings.themeRequired ? "· Songs must fit the theme" : "· Theme is optional"}
             </span>
           </p>
         ) : (
@@ -130,16 +131,21 @@ export default async function EventPage({ params, searchParams }: Props) {
               </dd>
             </div>
           </dl>
-          {series.description && <p className="whitespace-pre-line text-ink">{series.description}</p>}
+          {settings.description && (
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">About this event</h2>
+              <p className="whitespace-pre-line text-ink">{settings.description}</p>
+            </div>
+          )}
         </div>
 
         <aside className="space-y-3 rounded-xl border border-line bg-white p-4 sm:p-6">
-          <PriceRow label="Singer" cents={date.singerPriceCents} taken={taken("SINGER")} cap={date.maxSingers} />
-          <PriceRow label="Listener" cents={date.listenerPriceCents} taken={taken("LISTENER")} cap={date.maxListeners} />
+          <PriceRow label="Singer" cents={settings.singerPriceCents} taken={taken("SINGER")} cap={settings.maxSingers} />
+          <PriceRow label="Listener" cents={settings.listenerPriceCents} taken={taken("LISTENER")} cap={settings.maxListeners} />
           {/* The sign-up button and the member's own status arrive with the sign-ups build step. */}
           {!cancelled && !past &&
             (!date.signupsOpen ? (
-              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">Sign-ups aren&apos;t open yet.</p>
+              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">Registration isn&apos;t open yet.</p>
             ) : viewer ? (
               <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
                 Sign-ups are open. Online sign-up is coming soon.

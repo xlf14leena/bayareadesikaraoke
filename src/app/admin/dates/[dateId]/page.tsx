@@ -75,17 +75,17 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         <section className={`${cardClass} flex flex-wrap items-center justify-between gap-3`}>
           <div>
             <h2 className="text-xl font-semibold">
-              {date.signupsOpen ? "Sign-ups are open" : "Sign-ups are not open yet"}
+              {date.signupsOpen ? "Registration is open" : "Registration is not open yet"}
             </h2>
             <p className="text-sm text-ink-muted">
               {date.signupsOpen
-                ? "The event page tells people they can sign up for this date."
-                : "Open sign-ups when you're ready for people to sign up for this date."}
+                ? "People can register for this date."
+                : "Nobody can register for this date until you allow registration."}
             </p>
           </div>
           <form action={setSignupsOpen.bind(null, date.id, !date.signupsOpen)}>
             <button type="submit" className={date.signupsOpen ? secondaryButton : primaryButton}>
-              {date.signupsOpen ? "Close sign-ups" : "Open sign-ups"}
+              {date.signupsOpen ? "Stop registration" : "Allow registration"}
             </button>
           </form>
         </section>
@@ -122,10 +122,22 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
 
       <section className={cardClass}>
         <h2 className="mb-1 text-xl font-semibold">Settings for this date</h2>
-        <p className="mb-4 text-sm text-ink-muted">These override the event settings for this date only.</p>
+        <p className="mb-4 text-sm text-ink-muted">
+          This date uses the event settings. Tick &ldquo;Change for this date&rdquo; to override one for this date
+          only; later changes to the event settings won&apos;t touch it.
+        </p>
         <DateForm
           action={updateDate.bind(null, date.id)}
           date={date}
+          template={{
+            theme: series.theme,
+            themeRequired: series.themeRequired,
+            description: series.description,
+            singerPriceCents: series.singerPriceCents,
+            listenerPriceCents: series.listenerPriceCents,
+            maxSingers: series.maxSingers,
+            maxListeners: series.maxListeners,
+          }}
           when={{
             day: pacificDateOf(date.startsAt),
             startTime: pacificTimeOf(date.startsAt),

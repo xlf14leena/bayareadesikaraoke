@@ -2,6 +2,7 @@
 
 import { randomBytes } from "node:crypto";
 import { Prisma, type Frequency, type Visibility } from "@prisma/client";
+import { OVERRIDE_KEYS, type OverrideKey } from "@/lib/events";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -219,27 +220,12 @@ export async function updateSeries(seriesId: string, _prev: FormState, form: For
         privateToken: data.visibility === "PRIVATE" ? (before.privateToken ?? newPrivateToken()) : before.privateToken,
       },
     });
-
-    // Future dates nobody has signed up for take the settings that changed on
-    // the series. Dates with sign-ups, and per-date edits to other settings, stay.
-    const changed: Prisma.EventDateUpdateManyMutationInput = {};
-    if (data.theme !== before.theme) changed.theme = data.theme;
-    if (data.themeRequired !== before.themeRequired) changed.themeRequired = data.themeRequired;
-    if (data.singerPriceCents !== before.singerPriceCents) changed.singerPriceCents = data.singerPriceCents;
-    if (data.listenerPriceCents !== before.listenerPriceCents) changed.listenerPriceCents = data.listenerPriceCents;
-    if (data.maxSingers !== before.maxSingers) changed.maxSingers = data.maxSingers;
-    if (data.maxListeners !== before.maxListeners) changed.maxListeners = data.maxListeners;
-    if (Object.keys(changed).length) {
-      await prisma.eventDate.updateMany({
-        where: { seriesId, startsAt: { gt: new Date() }, status: { not: "DELETED" }, signUps: { none: {} } },
-        data: changed,
-      });
-    }
+    // Dates follow these settings unless they override them, so there's nothing to copy.
     await syncSeriesDates(seriesId);
   });
   if (result) return result;
   revalidatePath(`/admin/events/${seriesId}`);
-  return { ok: "Saved. Future dates without sign-ups were updated." };
+  return { ok: "Saved. Dates that don't override a setting now use the new one." };
 }
 
 export async function deleteSeries(seriesId: string): Promise<void> {
@@ -288,17 +274,24 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
     const slot = d.originalStartsAt ?? d.startsAt;
     const originalStartsAt = !moved ? d.originalStartsAt : startsAt.getTime() === slot.getTime() ? null : slot;
 
+    // Settings the admin chose to change for this date; the rest follow the event.
+    const custom = form.getAll("custom").map(String);
+    const overrides = OVERRIDE_KEYS.filter((k) => custom.includes(k));
+    const own = (key: OverrideKey) => overrides.includes(key);
+
     await prisma.eventDate.update({
       where: { id: dateId },
       data: {
         startsAt,
         endsAt,
         originalStartsAt,
-        ...themeFields(form),
-        singerPriceCents: price(form, "singerPrice", "Singer price"),
-        listenerPriceCents: price(form, "listenerPrice", "Listener price"),
-        maxSingers: optionalCap(form, "maxSingers", "Singer cap"),
-        maxListeners: optionalCap(form, "maxListeners", "Listener cap"),
+        overrides,
+        ...(own("theme") ? themeFields(form) : { theme: null, themeRequired: true }),
+        description: own("description") ? optionalText(form, "description", { max: 2000 }) : null,
+        singerPriceCents: own("pricing") ? price(form, "singerPrice", "Singer price") : null,
+        listenerPriceCents: own("pricing") ? price(form, "listenerPrice", "Listener price") : null,
+        maxSingers: own("capacity") ? optionalCap(form, "maxSingers", "Singer cap") : null,
+        maxListeners: own("capacity") ? optionalCap(form, "maxListeners", "Listener cap") : null,
         bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
       },
     });
