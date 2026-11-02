@@ -43,3 +43,15 @@ export function formatClock(hm: string): string {
   const [h, m] = hm.split(":").map(Number);
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
+
+// "Tue, Nov 3, 7:05 PM" in Pacific time.
+export function formatDateTime(d: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: TIME_ZONE,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(d);
+}

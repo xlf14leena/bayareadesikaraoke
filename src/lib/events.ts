@@ -3,6 +3,16 @@ import type { EventDate, EventSeries, SignUpStatus } from "@prisma/client";
 // Sign-up statuses that hold a spot under the cap (spec: "Holding a spot under the cap").
 export const HOLDS_SPOT: SignUpStatus[] = ["RESERVED", "UNDER_REVIEW", "CONFIRMED", "REJECTED"];
 
+export const STATUS_LABEL: Record<SignUpStatus, string> = {
+  WAITLISTED: "Waitlisted",
+  RESERVED: "Reserved, awaiting payment",
+  UNDER_REVIEW: "Payment under review",
+  CONFIRMED: "Confirmed",
+  REJECTED: "Payment rejected",
+  EXPIRED: "Expired",
+  CANCELLED: "Cancelled",
+};
+
 // Settings a date can override; anything not listed in date.overrides comes from the series.
 export const OVERRIDE_KEYS = ["theme", "description", "pricing", "capacity"] as const;
 export type OverrideKey = (typeof OVERRIDE_KEYS)[number];

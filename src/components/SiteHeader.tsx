@@ -19,6 +19,9 @@ export default async function SiteHeader() {
 
         {viewer ? (
           <div className="flex items-center gap-3 text-sm">
+            <Link href="/me" className="whitespace-nowrap font-medium text-ink hover:text-cobalt">
+              My events
+            </Link>
             {isAnyAdmin(viewer) && (
               <Link href="/admin" className="font-medium text-ink hover:text-cobalt">
                 Admin

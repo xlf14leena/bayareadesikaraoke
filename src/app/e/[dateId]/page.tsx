@@ -3,8 +3,12 @@ import Link from "next/link";
 import Banner from "@/components/Banner";
 import { notFound } from "next/navigation";
 import { primaryButton } from "@/components/ui";
-import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
+import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
 import { formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
+import { ENDED, acceptingSignUps, settle, stillEditable } from "@/lib/signups";
+import SignUpForm from "@/components/signup/SignUpForm";
+import YourSignUp from "@/components/signup/YourSignUp";
+import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
 import { prisma } from "@/lib/prisma";
 import { canAdminGroup, getViewer } from "@/lib/roles";
@@ -45,6 +49,31 @@ export default async function EventPage({ params, searchParams }: Props) {
     if (!hasKey && !signedUp) notFound();
   }
 
+  // Expire overdue 24-hour holds and fill freed spots from the waitlist before counting.
+  if (date.status === "SCHEDULED" && date.endsAt > new Date()) await settle(date.id);
+
+  const mine = viewer
+    ? await prisma.signUp.findUnique({
+        where: { eventDateId_userId: { eventDateId: date.id, userId: viewer.id } },
+        include: {
+          songs: { where: { status: { in: ["ACTIVE", "REJECTED"] } }, orderBy: { enteredAt: "desc" } },
+          screenshot: { select: { uploadedAt: true } },
+        },
+      })
+    : null;
+  const myActive = mine && !ENDED.includes(mine.status) ? mine : null;
+  const waitlistPosition =
+    myActive?.status === "WAITLISTED"
+      ? (await prisma.signUp.count({
+          where: {
+            eventDateId: date.id,
+            role: myActive.role,
+            status: "WAITLISTED",
+            waitlistedAt: { lt: myActive.waitlistedAt ?? new Date() },
+          },
+        })) + 1
+      : null;
+
   const [held, singers] = await Promise.all([
     prisma.signUp.groupBy({
       by: ["role"],
@@ -68,6 +97,7 @@ export default async function EventPage({ params, searchParams }: Props) {
   const cancelled = date.status === "CANCELLED";
   const past = date.endsAt < new Date();
   const here = `/e/${date.id}${k ? `?k=${encodeURIComponent(k)}` : ""}`;
+  const accepting = acceptingSignUps(date);
   const rounds = [1, 2].map((r) => singers.filter((s) => s.round === r)).filter((list) => list.length > 0);
 
   return (
@@ -142,24 +172,64 @@ export default async function EventPage({ params, searchParams }: Props) {
         <aside className="space-y-3 rounded-xl border border-line bg-white p-4 sm:p-6">
           <PriceRow label="Singer" cents={settings.singerPriceCents} taken={taken("SINGER")} cap={settings.maxSingers} />
           <PriceRow label="Listener" cents={settings.listenerPriceCents} taken={taken("LISTENER")} cap={settings.maxListeners} />
-          {/* The sign-up button and the member's own status arrive with the sign-ups build step. */}
-          {!cancelled && !past &&
-            (!date.signupsOpen ? (
-              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">Sign-ups aren&apos;t open yet.</p>
-            ) : viewer ? (
-              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
-                Sign-ups are open. Online sign-up is coming soon.
-              </p>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
-                <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className={`${primaryButton} w-full`}>
-                  Sign in to sign up
-                </Link>
-              </>
-            ))}
+          {cancelled || past ? null : myActive ? (
+            <a
+              href="#your-sign-up"
+              className="block rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 hover:underline"
+            >
+              You&apos;re signed up: {STATUS_LABEL[myActive.status].toLowerCase()}. See your sign-up ↓
+            </a>
+          ) : !accepting ? (
+            <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">
+              {date.signupsOpen ? "Sign-ups for this date are closed." : "Sign-ups aren't open yet."}
+            </p>
+          ) : viewer ? (
+            <>
+              {mine && (
+                <p className="text-sm text-ink-muted">
+                  {mine.status === "EXPIRED"
+                    ? "Your earlier hold ran out. You can sign up again."
+                    : "Your earlier sign-up was cancelled. You can sign up again."}
+                </p>
+              )}
+              <SignUpForm
+                action={signUpForDate.bind(null, date.id, k ?? null)}
+                defaultName={mine?.displayName ?? viewer.name ?? ""}
+                options={[
+                  {
+                    role: "SINGER",
+                    label: "Sing",
+                    price: formatPrice(settings.singerPriceCents),
+                    full: settings.maxSingers != null && taken("SINGER") >= settings.maxSingers,
+                  },
+                  {
+                    role: "LISTENER",
+                    label: "Listen",
+                    price: formatPrice(settings.listenerPriceCents),
+                    full: settings.maxListeners != null && taken("LISTENER") >= settings.maxListeners,
+                  },
+                ]}
+              />
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
+              <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className={`${primaryButton} w-full`}>
+                Sign in to sign up
+              </Link>
+            </>
+          )}
         </aside>
       </div>
+
+      {myActive && !cancelled && (
+        <YourSignUp
+          signUp={myActive}
+          group={series.group}
+          waitlistPosition={waitlistPosition}
+          editable={stillEditable(date)}
+        />
+      )}
 
       <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
         <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>

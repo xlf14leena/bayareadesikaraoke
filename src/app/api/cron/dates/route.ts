@@ -1,8 +1,10 @@
 import { syncAllSeries } from "@/lib/schedule";
+import { settleAll } from "@/lib/signups";
 
 export const dynamic = "force-dynamic";
 
-// Daily Vercel Cron (vercel.json): keeps recurring events generated 8 weeks ahead.
+// Daily Vercel Cron (vercel.json): keeps recurring events generated 8 weeks ahead,
+// and expires overdue 24-hour holds (pages also do this whenever a date is opened).
 // Vercel sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET is set.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -10,5 +12,6 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
   await syncAllSeries();
-  return Response.json({ ok: true });
+  const settled = await settleAll();
+  return Response.json({ ok: true, settled });
 }
