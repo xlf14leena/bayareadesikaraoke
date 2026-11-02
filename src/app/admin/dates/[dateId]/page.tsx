@@ -4,39 +4,54 @@ import Breadcrumbs from "@/app/admin/Breadcrumbs";
 import { cancelDate, deleteDate, restoreDate, setSignupsOpen, updateDate } from "@/app/admin/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import DateForm from "@/components/admin/DateForm";
+import { approvePayment, addPerson, cancelSignUp, rejectPayment, rejectSong } from "@/app/admin/signup-actions";
+import AddPersonForm from "@/components/admin/AddPersonForm";
+import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
-import { formatClock, formatEventDate, formatEventTime } from "@/lib/format";
+import type { SignUp, Song } from "@prisma/client";
+import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
+import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
+import { settle } from "@/lib/signups";
 import { pacificDateOf, pacificTimeOf } from "@/lib/schedule";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_LABEL: Record<string, string> = {
-  WAITLISTED: "Waitlisted",
-  RESERVED: "Reserved",
-  UNDER_REVIEW: "Payment under review",
-  CONFIRMED: "Confirmed",
-  REJECTED: "Payment rejected",
-  EXPIRED: "Expired",
-  CANCELLED: "Cancelled",
-};
-
 export default async function DateAdminPage({ params }: { params: Promise<{ dateId: string }> }) {
   const { dateId } = await params;
+  const found = await prisma.eventDate.findUnique({ where: { id: dateId }, select: { status: true, series: { select: { groupId: true } } } });
+  if (!found || found.status === "DELETED") notFound();
+  await requireGroupAdmin(found.series.groupId, `/admin/dates/${dateId}`);
+  if (found.status === "SCHEDULED") await settle(dateId);
   const date = await prisma.eventDate.findUnique({
     where: { id: dateId },
     include: {
       series: { include: { group: true } },
       signUps: {
         orderBy: { registeredAt: "asc" },
-        include: { songs: { where: { status: "ACTIVE" }, orderBy: { round: "asc" } } },
+        include: {
+          songs: { where: { status: { in: ["ACTIVE", "REJECTED"] } }, orderBy: [{ round: "asc" }, { enteredAt: "asc" }] },
+          screenshot: { select: { uploadedAt: true, contentType: true } },
+          reviewedBy: { select: { name: true } },
+        },
       },
     },
   });
-  if (!date || date.status === "DELETED") notFound();
-  await requireGroupAdmin(date.series.groupId, `/admin/dates/${dateId}`);
+  if (!date) notFound();
   const { series } = date;
+  const settings = settingsFor(date, series);
+  const by = (statuses: string[]) => date.signUps.filter((s) => statuses.includes(s.status));
+  const review = by(["UNDER_REVIEW"]).sort(
+    (a, b) => (a.screenshot?.uploadedAt.getTime() ?? 0) - (b.screenshot?.uploadedAt.getTime() ?? 0),
+  );
+  const awaiting = by(["RESERVED", "REJECTED"]);
+  const confirmed = by(["CONFIRMED"]).sort((a, b) => (a.role === b.role ? 0 : a.role === "SINGER" ? -1 : 1));
+  const waitlist = by(["WAITLISTED"]).sort(
+    (a, b) => (a.waitlistedAt?.getTime() ?? 0) - (b.waitlistedAt?.getTime() ?? 0),
+  );
+  const ended = by(["EXPIRED", "CANCELLED"]);
+  const held = (role: string) => date.signUps.filter((s) => s.role === role && HOLDS_SPOT.includes(s.status)).length;
   const viewHref = `/e/${date.id}${series.visibility === "PRIVATE" && series.privateToken ? `?k=${series.privateToken}` : ""}`;
 
   return (
@@ -91,34 +106,46 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         </section>
       )}
 
-      <section className={cardClass}>
-        <h2 className="mb-1 text-xl font-semibold">Sign-ups</h2>
-        <p className="mb-4 text-sm text-ink-muted">
-          Payment review and adding people by hand are coming in the next build step.
-        </p>
-        {date.signUps.length === 0 ? (
-          <p className="text-sm text-ink-muted">Nobody has signed up yet.</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {date.signUps.map((s) => (
-              <li key={s.id} className="py-2">
-                <p className="font-medium">
-                  {s.displayName}{" "}
-                  <span className="text-sm font-normal text-ink-muted">
-                    · {s.role === "SINGER" ? "Singer" : "Listener"} · {STATUS_LABEL[s.status]}
-                  </span>
-                </p>
-                {s.songs.map((song) => (
-                  <p key={song.id} className="text-sm text-ink-muted">
-                    Round {song.round}: {song.title}
-                    {song.artist && ` (${song.artist})`}
-                  </p>
-                ))}
-              </li>
-            ))}
-          </ul>
+      <section className={`${cardClass} space-y-6`}>
+        <div>
+          <h2 className="mb-1 text-xl font-semibold">Sign-ups</h2>
+          <p className="text-sm text-ink-muted">
+            Singers {spotsLabel(held("SINGER"), settings.maxSingers)} · Listeners{" "}
+            {spotsLabel(held("LISTENER"), settings.maxListeners)} (counting held spots). Match each screenshot&apos;s
+            memo code and amount in your bank app before approving.
+          </p>
+        </div>
+
+        <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} theme={settings.theme} />
+        <SignUpGroup
+          title="Waiting for payment"
+          empty="Nobody is waiting to pay."
+          list={awaiting}
+          theme={settings.theme}
+        />
+        <SignUpGroup title="Confirmed" empty="Nobody is confirmed yet." list={confirmed} theme={settings.theme} />
+        {waitlist.length > 0 && <SignUpGroup title="Waitlist" empty="" list={waitlist} theme={settings.theme} />}
+        {ended.length > 0 && (
+          <details>
+            <summary className="cursor-pointer text-sm font-medium text-ink-muted">
+              Expired or cancelled ({ended.length})
+            </summary>
+            <div className="mt-3">
+              <SignUpGroup title="" empty="" list={ended} theme={settings.theme} />
+            </div>
+          </details>
         )}
       </section>
+
+      {date.status === "SCHEDULED" && (
+        <section className={cardClass}>
+          <h2 className="mb-1 text-xl font-semibold">Add someone by hand</h2>
+          <p className="mb-4 text-sm text-ink-muted">
+            For people who paid in person or don&apos;t use the site. They&apos;re confirmed right away.
+          </p>
+          <AddPersonForm action={addPerson.bind(null, date.id)} />
+        </section>
+      )}
 
       <section className={cardClass}>
         <h2 className="mb-1 text-xl font-semibold">Settings for this date</h2>
@@ -188,5 +215,139 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         />
       </section>
     </div>
+  );
+}
+
+type Row = SignUp & {
+  songs: Song[];
+  screenshot: { uploadedAt: Date; contentType: string } | null;
+  reviewedBy: { name: string | null } | null;
+};
+
+function SignUpGroup({ title, empty, list, theme }: { title: string; empty: string; list: Row[]; theme: string | null }) {
+  return (
+    <div>
+      {title && (
+        <h3 className="mb-2 font-semibold text-royal">
+          {title} {list.length > 0 && <span className="font-normal text-ink-muted">({list.length})</span>}
+        </h3>
+      )}
+      {list.length === 0 ? (
+        <p className="text-sm text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="space-y-3">
+          {list.map((s) => (
+            <SignUpRow key={s.id} s={s} theme={theme} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SignUpRow({ s, theme }: { s: Row; theme: string | null }) {
+  const active = s.songs.filter((x) => x.status === "ACTIVE");
+  const rejected = s.songs.filter((x) => x.status === "REJECTED");
+  const shot = s.screenshot ? `/api/screenshots/${s.id}` : null;
+  const showsImage = shot && !/hei[cf]/.test(s.screenshot!.contentType);
+  return (
+    <li className="rounded-lg border border-line p-3">
+      <div className="flex flex-wrap gap-4">
+        {shot && (
+          <a href={shot} target="_blank" rel="noopener noreferrer" className="shrink-0">
+            {showsImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={shot} alt={`Payment screenshot from ${s.displayName}`} className="h-32 w-24 rounded border border-line object-cover" />
+            ) : (
+              <span className="flex h-32 w-24 items-center justify-center rounded border border-line p-2 text-center text-xs text-cobalt">
+                Open screenshot (HEIC)
+              </span>
+            )}
+          </a>
+        )}
+        <div className="min-w-0 flex-1 space-y-1 text-sm">
+          <p className="text-base font-medium">
+            {s.displayName}{" "}
+            <span className="text-sm font-normal text-ink-muted">
+              · {s.role === "SINGER" ? "Singer" : "Listener"} · {STATUS_LABEL[s.status]}
+              {s.addedByAdmin && " · added by an admin"}
+            </span>
+          </p>
+          {s.email && <p className="text-ink-muted">{s.email}</p>}
+          <p>
+            Memo <span className="font-mono font-semibold">{s.memoCode}</span> · {formatPrice(s.amountDueCents)} · Signed
+            up {formatDateTime(s.registeredAt)}
+          </p>
+          {s.screenshot && <p className="text-ink-muted">Screenshot sent {formatDateTime(s.screenshot.uploadedAt)}</p>}
+          {s.reservedUntil && <p className="text-ink-muted">Held until {formatDateTime(s.reservedUntil)}</p>}
+          {s.waitlistedAt && s.status === "WAITLISTED" && (
+            <p className="text-ink-muted">On the waitlist since {formatDateTime(s.waitlistedAt)}</p>
+          )}
+          {s.reviewReason && <p className="text-red-700">Payment rejected: {s.reviewReason}</p>}
+          {s.paymentNote && <p className="text-ink-muted">Paid: {s.paymentNote}</p>}
+          {s.reviewedAt && s.status === "CONFIRMED" && (
+            <p className="text-ink-muted">
+              Confirmed {formatDateTime(s.reviewedAt)}
+              {s.reviewedBy?.name && ` by ${s.reviewedBy.name}`}
+            </p>
+          )}
+          {active.map((song) => {
+            const isNew = s.status === "CONFIRMED" && !!s.reviewedAt && song.enteredAt > s.reviewedAt;
+            return (
+              <div key={song.id} className="rounded bg-mist px-2 py-1">
+                <p>
+                  Round {song.round}: <span className="font-medium">{song.title}</span>
+                  {song.artist && ` (${song.artist})`}
+                  {song.youtubeUrl && (
+                    <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-cobalt hover:underline">
+                      Track
+                    </a>
+                  )}
+                  {isNew && (
+                    <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs font-medium text-gold-ink">New song</span>
+                  )}
+                </p>
+                <p className="text-xs text-ink-muted">Song time {formatDateTime(song.enteredAt)}</p>
+                <ReasonForm
+                  action={rejectSong.bind(null, song.id)}
+                  label="Reject song"
+                  placeholder={theme ? `e.g. doesn't fit "${theme}"` : "Reason"}
+                />
+              </div>
+            );
+          })}
+          {rejected.map((song) => (
+            <p key={song.id} className="text-xs text-ink-muted line-through">
+              Round {song.round}: {song.title} (rejected{song.rejectReason && `: ${song.rejectReason}`})
+            </p>
+          ))}
+          <div className="flex flex-wrap items-start gap-3 pt-1">
+            {["UNDER_REVIEW", "REJECTED", "RESERVED"].includes(s.status) && (
+              <form action={approvePayment.bind(null, s.id)}>
+                <button type="submit" className={primaryButton}>
+                  {s.status === "UNDER_REVIEW" ? "Approve payment" : "Mark as paid"}
+                </button>
+              </form>
+            )}
+            {s.status === "UNDER_REVIEW" && (
+              <div className="min-w-60 flex-1">
+                <ReasonForm
+                  action={rejectPayment.bind(null, s.id)}
+                  label="Reject payment"
+                  placeholder="e.g. amount was $15, expected $20"
+                />
+              </div>
+            )}
+            {!["EXPIRED", "CANCELLED"].includes(s.status) && (
+              <ConfirmButton
+                action={cancelSignUp.bind(null, s.id)}
+                label="Cancel sign-up"
+                confirm={`Cancel ${s.displayName}'s sign-up? Their spot and songs are released to the waitlist.`}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </li>
   );
 }

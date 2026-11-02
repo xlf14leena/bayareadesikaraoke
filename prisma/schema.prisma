@@ -212,7 +212,7 @@ model SignUp {
   status         SignUpStatus @default(RESERVED)
   memoCode       String       @unique // e.g. BADK-7Q4M
   amountDueCents Int
-  screenshotKey  String? // private storage key
+  screenshotKey  String? // unused; the screenshot lives in PaymentScreenshot
   registeredAt   DateTime     @default(now()) // when the person signed up for this date
   reservedUntil  DateTime?
   waitlistedAt   DateTime?
@@ -228,10 +228,23 @@ model SignUp {
   user       User?     @relation("SignUpUser", fields: [userId], references: [id], onDelete: SetNull)
   reviewedBy User?     @relation("SignUpReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   songs      Song[]
+  screenshot PaymentScreenshot?
 
   // one sign-up per account per date (no guest sign-ups)
   @@unique([eventDateId, userId])
   @@index([eventDateId, status])
+}
+
+// The Zelle payment screenshot for a sign-up, kept in the database so it stays
+// private: only the person, that group's admins and super users can open it
+// (src/app/api/screenshots/[signUpId]/route.ts). A new upload replaces it.
+model PaymentScreenshot {
+  signUpId    String   @id
+  contentType String
+  bytes       Bytes
+  uploadedAt  DateTime @default(now())
+
+  signUp SignUp @relation(fields: [signUpId], references: [id], onDelete: Cascade)
 }
 
 enum SongStatus {

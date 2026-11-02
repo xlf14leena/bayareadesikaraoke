@@ -20,13 +20,14 @@ Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdm
 | Path | Who | What |
 | --- | --- | --- |
 | `/` | Everyone | Upcoming public event dates |
-| `/e/<date-id>` | Everyone (private: link holders, admins, people signed up) | Event page; signed-in members also see who's singing |
+| `/e/<date-id>` | Everyone (private: link holders, admins, people signed up) | Event page; signed-in members sign up, pay, pick songs and see who's singing |
+| `/me` | Members | My events: their sign-ups with status and songs |
 | `/e/p/<token>` | Link holders | Private event link; opens the next date |
 | `/g/<slug>` | Everyone | Group page with its public dates |
 | `/admin` | Admins | Groups you manage; super users can add groups |
 | `/admin/groups/<id>` | Group admins | Events, group details, admins; super users can delete the group |
 | `/admin/events/<id>` | Group admins | Event schedule and settings, upcoming dates, private link |
-| `/admin/dates/<id>` | Group admins | Settings for one date, cancel or restore it, sign-up list |
+| `/admin/dates/<id>` | Group admins | Settings for one date, cancel or restore it, payment review, add people by hand |
 
 A person must sign in once before they can be made a group admin.
 
@@ -35,6 +36,18 @@ A person must sign in once before they can be made a group admin.
 ## Recurring dates
 
 `src/lib/schedule.ts` turns a series' schedule (one time, weekly, every 2 weeks, or monthly such as "last Sunday") into event dates 8 weeks ahead, in Pacific time. Dates are topped up when an event is saved, when an admin opens its pages, and by a daily Vercel Cron call to `/api/cron/dates`. Saving an event updates future dates nobody has signed up for; dates with sign-ups keep their settings. Admins can also change a single date: reschedule it (it keeps a link to its original slot in `originalStartsAt`, so the schedule doesn't add it back), delete it (kept as a hidden `DELETED` row for the same reason), set its theme (optional, and either required for songs or just a suggestion), and open or close its sign-ups (`signupsOpen`).
+
+## Sign-ups
+
+`src/lib/signups.ts` holds the rules; member actions are in `src/app/e/[dateId]/actions.ts` and admin actions in `src/app/admin/signup-actions.ts`.
+
+- A member picks singer or listener. A paid spot is **Reserved** for 24 hours and the page shows the group's Zelle details, the amount and a memo code (`BADK-XXXX`). A free spot is confirmed at once. When a role is full they join its waitlist instead.
+- Uploading a payment screenshot moves the sign-up to **Payment under review** and holds the spot until an admin decides. Admins approve, reject with a reason (the person gets 24 hours to upload a new one), or cancel.
+- Screenshots are stored in Postgres (`PaymentScreenshot`) rather than a file service, so there is nothing else to set up and they stay private: `/api/screenshots/<sign-up-id>` serves one only to its uploader and that group's admins. The page shrinks photos to a JPEG before upload, and uploads are capped at 4 MB (Vercel's request limit is 4.5 MB).
+- Overdue holds expire, and freed spots go to the next person on that role's waitlist, whenever the event page or its admin page is opened, and in the daily cron as a backstop (`settleDate`). Every change to who holds a spot runs under a per-date Postgres advisory lock, so two people can't both take the last spot.
+- Singers pick one song per round, until sign-ups close (the date's start). Admins can reject a song with a reason; songs added after a payment was approved are marked "New song".
+- Admins can add people by hand (confirmed at once, with an optional payment note). Going over a cap needs a tick. If an email is given, the sign-up joins that person's account when they sign in with Google.
+- Emails are not sent yet; they come in the next step.
 
 ## Data model
 
