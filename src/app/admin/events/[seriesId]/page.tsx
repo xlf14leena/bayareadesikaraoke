@@ -28,7 +28,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
       dates: {
         where: { startsAt: { gte: new Date() }, status: { not: "DELETED" } },
         orderBy: { startsAt: "asc" },
-        include: { signUps: { where: { status: { in: HOLDS_SPOT } }, select: { role: true } } },
+        include: { signUps: { where: { status: { in: HOLDS_SPOT } }, select: { role: true, status: true } } },
       },
     },
   });
@@ -79,6 +79,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
             {series.dates.map((d) => {
               const singers = d.signUps.filter((s) => s.role === "SINGER").length;
               const listeners = d.signUps.length - singers;
+              const toReview = d.signUps.filter((s) => s.status === "UNDER_REVIEW").length;
               const settings = settingsFor(d, series);
               return (
                 <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
@@ -88,6 +89,14 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
                       {settings.theme && <span className="text-lapis"> · {settings.theme}</span>}
                       {d.signupsOpen && d.status === "SCHEDULED" && (
                         <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Sign-ups open</span>
+                      )}
+                      {toReview > 0 && (
+                        <Link
+                          href={`/admin/dates/${d.id}`}
+                          className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:underline"
+                        >
+                          {toReview} {toReview === 1 ? "payment" : "payments"} to review
+                        </Link>
                       )}
                       {d.overrides.length > 0 && (
                         <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-xs font-medium text-ink-muted">Custom settings</span>
@@ -112,7 +121,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
                       View
                     </Link>
                     <Link href={`/admin/dates/${d.id}`} className="text-cobalt hover:underline">
-                      Edit
+                      Sign-ups and settings
                     </Link>
                   </div>
                 </li>

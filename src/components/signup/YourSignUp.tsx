@@ -65,7 +65,7 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable }
         <p>
           Thanks! The organizers will check your payment
           {signUp.screenshot && <> (screenshot sent {formatDateTime(signUp.screenshot.uploadedAt)})</>}. Your spot is
-          held while they review it.
+          held while they review it. Once they approve it, you and your songs show on the singer list below.
         </p>
       )}
 

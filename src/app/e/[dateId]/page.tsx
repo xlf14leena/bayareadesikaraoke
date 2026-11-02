@@ -98,6 +98,9 @@ export default async function EventPage({ params, searchParams }: Props) {
   const past = date.endsAt < new Date();
   const here = `/e/${date.id}${k ? `?k=${encodeURIComponent(k)}` : ""}`;
   const accepting = acceptingSignUps(date);
+  const toReview = isAdmin
+    ? await prisma.signUp.count({ where: { eventDateId: date.id, status: "UNDER_REVIEW" } })
+    : 0;
   const rounds = [1, 2].map((r) => singers.filter((s) => s.round === r)).filter((list) => list.length > 0);
 
   return (
@@ -126,10 +129,18 @@ export default async function EventPage({ params, searchParams }: Props) {
           <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 font-medium text-red-700">This date has been cancelled.</p>
         )}
         {isAdmin && (
-          <p className="mt-2 text-sm">
+          <p className="mt-2 flex flex-wrap items-center gap-3 text-sm">
             <Link href={`/admin/dates/${date.id}`} className="font-medium text-cobalt hover:underline">
-              Manage this date →
+              Manage this date and its sign-ups →
             </Link>
+            {toReview > 0 && (
+              <Link
+                href={`/admin/dates/${date.id}`}
+                className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-800 hover:underline"
+              >
+                {toReview} {toReview === 1 ? "payment" : "payments"} to review
+              </Link>
+            )}
           </p>
         )}
       </header>
@@ -241,7 +252,9 @@ export default async function EventPage({ params, searchParams }: Props) {
             to see who has signed up and the songs they picked.
           </p>
         ) : rounds.length === 0 ? (
-          <p className="text-ink-muted">No confirmed singers yet.</p>
+          <p className="text-ink-muted">
+            No confirmed singers yet. Singers show here once the organizers approve their payment.
+          </p>
         ) : (
           <div className="space-y-4">
             {rounds.map((list) => (
