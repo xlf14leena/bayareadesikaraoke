@@ -5,6 +5,7 @@ import { CAN_CHECK_IN, canOpenCheckIn, checkInOpensAt, newCheckInSecret } from "
 import { FormError } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
+import { settle, withDateLock } from "@/lib/signups";
 
 // Admin side of in-person check-in (src/lib/checkin.ts).
 
@@ -57,15 +58,26 @@ export async function adminCheckIn(signUpId: string): Promise<void> {
     where: { id: signUpId, checkedInAt: null },
     data: { checkedInAt: new Date(), checkInMethod: "ADMIN", checkedInById: viewer.id },
   });
+  await settle(signUp.eventDateId); // hands out check-in-order slots
   refresh(signUp.eventDateId);
 }
 
-/** Undoes a check-in, for example one made by mistake or from somewhere other than the venue. */
+/** Undoes a check-in, for example one made by mistake or from somewhere other than the venue. Frees their slots. */
 export async function undoCheckIn(signUpId: string): Promise<void> {
   const { signUp } = await adminSignUp(signUpId);
-  await prisma.signUp.update({
-    where: { id: signUpId },
-    data: { checkedInAt: null, checkInMethod: null, checkedInById: null },
+  await withDateLock(signUp.eventDateId, async (tx) => {
+    await tx.signUp.update({
+      where: { id: signUpId },
+      data: { checkedInAt: null, checkInMethod: null, checkedInById: null },
+    });
+    await tx.roundSlot.deleteMany({ where: { signUpId } });
   });
+  refresh(signUp.eventDateId);
+}
+
+/** Frees a singer's slot in a round where singers pick, so they (or someone else) can pick it again. */
+export async function clearSlot(signUpId: string, round: number): Promise<void> {
+  const { signUp } = await adminSignUp(signUpId);
+  await prisma.roundSlot.deleteMany({ where: { signUpId, round, method: "PICK" } });
   refresh(signUp.eventDateId);
 }

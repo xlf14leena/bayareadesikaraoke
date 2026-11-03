@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { Prisma, type AttendeeRole, type EventDate, type EventSeries, type SignUpStatus } from "@prisma/client";
+import { fillCheckInOrderSlots } from "@/lib/slots";
 import { HOLDS_SPOT, settingsFor } from "@/lib/events";
 import { FormError } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
@@ -76,13 +77,14 @@ export async function newMemoCode(tx: Tx): Promise<string> {
   }
 }
 
-/** Frees the songs of sign-ups that no longer hold a spot. */
+/** Frees the songs and singing slots of sign-ups that no longer hold a spot. */
 export async function releaseSongs(tx: Tx, signUpIds: string[]) {
   if (signUpIds.length === 0) return;
   await tx.song.updateMany({
     where: { signUpId: { in: signUpIds }, status: "ACTIVE" },
     data: { status: "RELEASED", releasedAt: new Date() },
   });
+  await tx.roundSlot.deleteMany({ where: { signUpId: { in: signUpIds } } });
 }
 
 /**
@@ -128,6 +130,8 @@ export async function settleDate(tx: Tx, dateId: string) {
       free--;
     }
   }
+  // Singers who checked in get their place in check-in-order rounds.
+  await fillCheckInOrderSlots(tx, dateId, date.series);
 }
 
 /** settleDate in its own locked transaction. */

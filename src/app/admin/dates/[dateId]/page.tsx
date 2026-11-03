@@ -7,6 +7,9 @@ import DateForm from "@/components/admin/DateForm";
 import { approvePayment, addPerson, cancelSignUp, rejectPayment, rejectSong } from "@/app/admin/signup-actions";
 import AddPersonForm from "@/components/admin/AddPersonForm";
 import CheckInPanel from "@/components/checkin/CheckInPanel";
+import RunningOrder from "@/components/checkin/RunningOrder";
+import { CAN_CHECK_IN } from "@/lib/checkin";
+import { ROUNDS, slotModeFor } from "@/lib/slots";
 import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
@@ -59,6 +62,23 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   );
   const ended = by(["EXPIRED", "CANCELLED"]);
   const held = (role: string) => date.signUps.filter((s) => s.role === role && HOLDS_SPOT.includes(s.status)).length;
+  const slotRows = await prisma.roundSlot.findMany({ where: { eventDateId: date.id }, orderBy: [{ round: "asc" }, { slot: "asc" }] });
+  const arrivedSingers = date.signUps.filter(
+    (s) => s.role === "SINGER" && s.checkedInAt && CAN_CHECK_IN.includes(s.status),
+  );
+  const runningOrder = ROUNDS.map((round) => {
+    const inRound = slotRows.filter((r) => r.round === round);
+    return {
+      round,
+      mode: slotModeFor(series, round),
+      rows: inRound.map((r) => {
+        const s = date.signUps.find((x) => x.id === r.signUpId);
+        const song = s?.songs.find((x) => x.round === round && x.status === "ACTIVE");
+        return { slot: r.slot, signUpId: r.signUpId, name: s?.displayName ?? "?", song: song?.title ?? null, method: r.method };
+      }),
+      waiting: arrivedSingers.filter((s) => !inRound.some((r) => r.signUpId === s.id)).map((s) => s.displayName),
+    };
+  });
   const viewHref = eventPath(date, series.visibility === "PRIVATE" ? series.privateToken : null);
 
   return (
@@ -114,6 +134,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
       )}
 
       <CheckInPanel date={date} signUps={date.signUps} />
+
+      {(slotRows.length > 0 || arrivedSingers.length > 0) && <RunningOrder rounds={runningOrder} seriesId={series.id} />}
 
       <section className={`${cardClass} space-y-6`}>
         <div>

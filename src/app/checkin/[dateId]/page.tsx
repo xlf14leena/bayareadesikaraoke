@@ -3,6 +3,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import CheckInButton from "@/components/checkin/CheckInButton";
+import YourSlots from "@/components/checkin/YourSlots";
+import { singerRounds } from "@/lib/slots";
 import { cardClass } from "@/components/ui";
 import { CAN_CHECK_IN, PASS_COOKIE, checkInIsOpen, checkInOpensAt, passIsValid } from "@/lib/checkin";
 import { eventPath } from "@/lib/event-url";
@@ -35,6 +37,11 @@ export default async function CheckInPage({ params, searchParams }: Props) {
   const at = (d: Date) => formatClock(pacificTimeOf(d));
   // No private key here: people signed up can open a private event page without it.
   const eventHref = eventPath(date);
+
+  const rounds =
+    signUp?.checkedInAt && signUp.role === "SINGER" && CAN_CHECK_IN.includes(signUp.status) && date.endsAt > new Date()
+      ? await singerRounds(prisma, dateId, signUp.id, date.series)
+      : null;
 
   let body: React.ReactNode;
   if (signUp?.checkedInAt) {
@@ -97,6 +104,7 @@ export default async function CheckInPage({ params, searchParams }: Props) {
         </div>
         {body}
       </div>
+      {rounds && <YourSlots dateId={dateId} rounds={rounds} />}
       <p className="text-center text-sm">
         <Link href={eventHref} className="font-medium text-cobalt hover:underline">
           Go to the event page →

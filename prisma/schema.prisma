@@ -108,6 +108,11 @@ enum Frequency {
   MONTHLY
 }
 
+enum SlotMode {
+  PICK // a checked-in singer picks any free slot
+  CHECKIN_ORDER // slots go out in the order singers check in
+}
+
 // Template that generates EventDates. All times are Pacific (America/Los_Angeles).
 model EventSeries {
   id                      String     @id @default(cuid())
@@ -136,6 +141,9 @@ model EventSeries {
   // Sign-up window, relative to each date's start (null = defaults in spec)
   signupOpensHoursBefore  Int?
   signupClosesHoursBefore Int?
+  // How singers get their place in each round once they check in (src/lib/slots.ts)
+  round1SlotMode          SlotMode   @default(PICK)
+  round2SlotMode          SlotMode   @default(CHECKIN_ORDER)
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
 
@@ -186,6 +194,7 @@ model EventDate {
   series  EventSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
   signUps SignUp[]
   songs   Song[]
+  slots   RoundSlot[]
 
   @@unique([seriesId, startsAt])
   @@index([startsAt])
@@ -246,6 +255,7 @@ model SignUp {
   songs       Song[]             @relation("SongSinger")
   duetSongs   Song[]             @relation("DuetPartner") // other singers' duets that name this person
   screenshot  PaymentScreenshot?
+  roundSlots  RoundSlot[]
 
   // one sign-up per account per date (no guest sign-ups)
   @@unique([eventDateId, userId])
@@ -302,4 +312,22 @@ model Song {
   eventDate   EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
 
   @@index([eventDateId, enteredAt])
+}
+
+// A checked-in singer's place in a round's running order (slot 1 sings
+// first). One singer per slot and one slot per singer per round. Freed when
+// the sign-up ends or its check-in is undone.
+model RoundSlot {
+  eventDateId String
+  round       Int // 1 or 2
+  slot        Int // 1, 2, 3...
+  signUpId    String
+  method      SlotMode // picked by the singer, or given in check-in order
+  assignedAt  DateTime @default(now())
+
+  eventDate EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
+  signUp    SignUp    @relation(fields: [signUpId], references: [id], onDelete: Cascade)
+
+  @@id([eventDateId, round, slot])
+  @@unique([signUpId, round])
 }
