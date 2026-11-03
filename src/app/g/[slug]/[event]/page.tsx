@@ -13,6 +13,7 @@ import YourSignUp from "@/components/signup/YourSignUp";
 import YourSlots from "@/components/checkin/YourSlots";
 import LiveRefresh from "@/components/checkin/LiveRefresh";
 import PublicRunningOrder from "@/components/checkin/PublicRunningOrder";
+import EventComments from "@/components/comments/EventComments";
 import { singerRounds } from "@/lib/slots";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
@@ -419,6 +420,8 @@ export default async function EventPage({ params, searchParams }: Props) {
           )}
         </section>
       )}
+
+      <EventComments date={date} viewer={viewer} isAdmin={isAdmin} privateKey={k ?? null} here={here} />
     </article>
   );
 }
