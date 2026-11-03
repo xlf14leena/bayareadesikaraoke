@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Banner from "@/components/Banner";
+import SectionLinks from "@/components/SectionLinks";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton } from "@/components/ui";
 import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
@@ -175,10 +176,22 @@ export default async function EventPage({ params, searchParams }: Props) {
   }));
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
   const showLineup = date.signupsOpen || rounds.length > 0 || confirmedListeners > 0;
+  const showSlots = !!myRounds && !cancelled;
+  const showMine = !!myActive && !cancelled;
+  const showOrder = runningOrder.length > 0 && !cancelled;
+  // Jump links under the banner, in page order, for the sections that are showing.
+  const sectionLinks = [
+    { id: "details", label: "Details", show: true },
+    { id: "your-slots", label: "Your slots", show: showSlots },
+    { id: "your-sign-up", label: "Your sign-up", show: showMine },
+    { id: "running-order", label: "Running order", show: showOrder },
+    { id: "whos-singing", label: "Who's singing", show: showLineup },
+  ].filter((l) => l.show);
 
   return (
     <article className="space-y-6">
       <Banner {...banner} />
+      <SectionLinks links={sectionLinks} />
 
       <header>
         <p className="text-sm font-medium text-ink-muted">
@@ -218,7 +231,7 @@ export default async function EventPage({ params, searchParams }: Props) {
         )}
       </header>
 
-      <section className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
+      <section id="details" className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
         <dl className="grid gap-5 sm:grid-cols-3">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
@@ -341,9 +354,9 @@ export default async function EventPage({ params, searchParams }: Props) {
         )
       )}
 
-      {myRounds && !cancelled && <YourSlots dateId={date.id} rounds={myRounds} />}
+      {showSlots && myRounds && <YourSlots dateId={date.id} rounds={myRounds} />}
 
-      {myActive && !cancelled && (
+      {showMine && myActive && (
         <YourSignUp
           signUp={myActive}
           group={series.group}
@@ -354,7 +367,7 @@ export default async function EventPage({ params, searchParams }: Props) {
         />
       )}
 
-      {runningOrder.length > 0 && !cancelled && (
+      {showOrder && (
         <PublicRunningOrder
           rows={runningOrder}
           mySignUpId={myActive?.id ?? null}
@@ -364,7 +377,7 @@ export default async function EventPage({ params, searchParams }: Props) {
       {runningOrder.length > 0 && !cancelled && !past && <LiveRefresh everyMs={20000} />}
 
       {showLineup && (
-        <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
+        <section id="whos-singing" className="rounded-xl border border-line bg-white p-4 sm:p-6">
           <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
           {!viewer ? (
             <p className="text-ink-muted">
