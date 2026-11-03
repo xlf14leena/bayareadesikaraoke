@@ -1,5 +1,5 @@
 import type { Group, SignUp, Song } from "@prisma/client";
-import { leaveSignUp, saveSongs, uploadScreenshot } from "@/app/e/[dateId]/actions";
+import { leaveSignUp, saveSongs, uploadScreenshot } from "@/app/g/[slug]/[event]/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ScreenshotForm from "@/components/signup/ScreenshotForm";
 import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";

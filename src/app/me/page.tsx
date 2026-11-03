@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { cardClass } from "@/components/ui";
+import { eventPath } from "@/lib/event-url";
 import { STATUS_LABEL } from "@/lib/events";
 import { formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -63,7 +64,7 @@ function List({ title, list, empty }: { title: string; list: Item[]; empty: stri
             const d = s.eventDate;
             return (
               <li key={s.id}>
-                <Link href={`/e/${d.id}`} className={`${cardClass} block transition hover:border-lapis`}>
+                <Link href={eventPath(d)} className={`${cardClass} block transition hover:border-lapis`}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <p className="text-sm text-ink-muted">{d.series.group.name}</p>

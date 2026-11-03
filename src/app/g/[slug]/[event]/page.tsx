@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Banner from "@/components/Banner";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { primaryButton } from "@/components/ui";
 import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
 import { formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
@@ -10,14 +10,18 @@ import SignUpForm from "@/components/signup/SignUpForm";
 import YourSignUp from "@/components/signup/YourSignUp";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
+import { eventPath, eventSegment, findEventDate } from "@/lib/event-url";
 import { prisma } from "@/lib/prisma";
 import { canAdminGroup, getViewer } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ dateId: string }>; searchParams: Promise<{ k?: string }> };
+type Props = { params: Promise<{ slug: string; event: string }>; searchParams: Promise<{ k?: string }> };
 
-async function load(dateId: string) {
+// The URL is /g/<group>/<YYYY-MM-DD>-<title> (src/lib/event-url.ts).
+async function load({ slug, event }: { slug: string; event: string }) {
+  const dateId = await findEventDate(slug, decodeURIComponent(event));
+  if (!dateId) return null;
   return prisma.eventDate.findUnique({
     where: { id: dateId },
     include: { series: { include: { group: true } } },
@@ -25,7 +29,7 @@ async function load(dateId: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const date = await load((await params).dateId);
+  const date = await load(await params);
   if (!date || date.series.visibility === "PRIVATE") return { title: "Bay Area Desi Karaoke" };
   return { title: `${date.series.title} · ${formatEventDate(date.startsAt)} · Bay Area Desi Karaoke` };
 }
@@ -34,9 +38,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // events open only with the link's key, for the group's admins, or for people
 // who signed up.
 export default async function EventPage({ params, searchParams }: Props) {
-  const { dateId } = await params;
+  const route = await params;
   const { k } = await searchParams;
-  const [date, viewer] = await Promise.all([load(dateId), getViewer()]);
+  const [date, viewer] = await Promise.all([load(route), getViewer()]);
   if (!date || date.status === "DELETED") notFound();
   const { series } = date;
   const isAdmin = canAdminGroup(viewer, series.groupId);
@@ -48,6 +52,8 @@ export default async function EventPage({ params, searchParams }: Props) {
       !!viewer && (await prisma.signUp.count({ where: { eventDateId: date.id, userId: viewer.id } })) > 0;
     if (!hasKey && !signedUp) notFound();
   }
+  // A renamed series or moved date still opens at its old link; show the current one.
+  if (decodeURIComponent(route.event) !== eventSegment(date)) redirect(eventPath(date, k));
 
   // Expire overdue 24-hour holds and fill freed spots from the waitlist before counting.
   if (date.status === "SCHEDULED" && date.endsAt > new Date()) await settle(date.id);
@@ -118,7 +124,7 @@ export default async function EventPage({ params, searchParams }: Props) {
   const banner = bannerFor(date.bannerUrl, series.bannerUrl, series.group.bannerUrl);
   const cancelled = date.status === "CANCELLED";
   const past = date.endsAt < new Date();
-  const here = `/e/${date.id}${k ? `?k=${encodeURIComponent(k)}` : ""}`;
+  const here = eventPath(date, k);
   const accepting = acceptingSignUps(date);
   const toReview = isAdmin
     ? await prisma.signUp.count({ where: { eventDateId: date.id, status: "UNDER_REVIEW" } })

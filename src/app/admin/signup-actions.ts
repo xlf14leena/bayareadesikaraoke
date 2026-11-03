@@ -44,7 +44,7 @@ async function adminSignUp(signUpId: string) {
 
 function refresh(dateId: string) {
   revalidatePath(`/admin/dates/${dateId}`);
-  revalidatePath(`/e/${dateId}`);
+  revalidatePath("/g/[slug]/[event]", "page");
   revalidatePath("/me");
 }
 

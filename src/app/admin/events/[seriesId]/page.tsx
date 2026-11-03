@@ -6,6 +6,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import CopyLink from "@/components/admin/CopyLink";
 import SeriesForm from "@/components/admin/SeriesForm";
 import { cardClass } from "@/components/ui";
+import { eventPath } from "@/lib/event-url";
 import { HOLDS_SPOT, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -115,7 +116,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
                   </div>
                   <div className="flex gap-3 text-sm font-medium">
                     <Link
-                      href={`/e/${d.id}${series.privateToken && series.visibility === "PRIVATE" ? `?k=${series.privateToken}` : ""}`}
+                      href={eventPath({ ...d, series }, series.visibility === "PRIVATE" ? series.privateToken : null)}
                       className="text-cobalt hover:underline"
                     >
                       View
