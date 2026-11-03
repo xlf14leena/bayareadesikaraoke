@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { SlotMode } from "@prisma/client";
-import { clearNowSinging, clearSlot, setNowSinging, stepNowSinging } from "@/app/admin/checkin-actions";
+import { clearNowSinging, clearSlot, setNowSinging, startRound, stepNowSinging } from "@/app/admin/checkin-actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { SLOT_MODE_LABEL } from "@/lib/slots";
@@ -54,6 +54,15 @@ export default function RunningOrder({
               {now ? "Next singer ▶" : "Start with the first singer ▶"}
             </button>
           </form>
+          {rounds
+            .filter((r) => r.round !== now?.round && r.rows.length > 0)
+            .map((r) => (
+              <form key={r.round} action={startRound.bind(null, dateId, r.round)}>
+                <button type="submit" className={secondaryButton}>
+                  Start round {r.round}
+                </button>
+              </form>
+            ))}
           {now && (
             <>
               <form action={stepNowSinging.bind(null, dateId, -1)}>
@@ -70,7 +79,8 @@ export default function RunningOrder({
           )}
         </div>
         <p className="text-xs text-ink-muted">
-          Signed-in guests see this on the event page. After the last slot of round 1, Next moves on to round 2.
+          Signed-in guests see this on the event page. A round starts at its first taken slot, so if that is #7,
+          nobody can pick an earlier slot afterwards. After the last slot of round 1, Next moves on to round 2.
         </p>
       </div>
       <div className="space-y-3">
