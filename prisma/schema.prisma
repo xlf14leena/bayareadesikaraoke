@@ -24,9 +24,10 @@ model User {
   accounts Account[]
   sessions Session[]
   adminOf  GroupAdmin[]
-  signUps  SignUp[]     @relation("SignUpUser")
-  reviewed SignUp[]     @relation("SignUpReviewer")
-  checkIns SignUp[]     @relation("SignUpCheckedInBy")
+  signUps  SignUp[]        @relation("SignUpUser")
+  reviewed SignUp[]        @relation("SignUpReviewer")
+  checkIns SignUp[]        @relation("SignUpCheckedInBy")
+  comments EventComment[]
   feedback EventFeedback[]
 }
 
@@ -192,13 +193,16 @@ model EventDate {
   // Who's singing right now, set by an admin from the running order (round and slot)
   nowRound           Int?
   nowSlot            Int?
+  // Comments and questions on the event page; an admin can turn them off per date
+  commentsEnabled    Boolean         @default(true)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
-  series  EventSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
-  signUps SignUp[]
-  songs   Song[]
-  slots   RoundSlot[]
+  series   EventSeries     @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  signUps  SignUp[]
+  songs    Song[]
+  slots    RoundSlot[]
+  comments EventComment[]
   feedback EventFeedback[]
 
   @@unique([seriesId, startsAt])
@@ -356,4 +360,29 @@ model EventFeedback {
 
   @@unique([eventDateId, userId])
   @@index([userId])
+}
+
+// ---------- Comments ----------
+
+// A comment or question on an event date's page, from a signed-in member.
+// A reply (parentId set) answers a top-level comment; replies don't nest
+// further. The author or the group's admins can delete it, which deletes its
+// replies too (src/app/g/[slug]/[event]/comment-actions.ts).
+model EventComment {
+  id          String   @id @default(cuid())
+  eventDateId String
+  userId      String? // null once the account is deleted; authorName stays
+  authorName  String
+  parentId    String?
+  isQuestion  Boolean  @default(false)
+  body        String
+  createdAt   DateTime @default(now())
+
+  eventDate EventDate      @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parent    EventComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   EventComment[] @relation("CommentReplies")
+
+  @@index([eventDateId, createdAt])
+  @@index([parentId])
 }
