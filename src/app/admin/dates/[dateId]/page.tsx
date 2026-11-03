@@ -135,7 +135,14 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
 
       <CheckInPanel date={date} signUps={date.signUps} />
 
-      {(slotRows.length > 0 || arrivedSingers.length > 0) && <RunningOrder rounds={runningOrder} seriesId={series.id} />}
+      {(slotRows.length > 0 || arrivedSingers.length > 0) && (
+        <RunningOrder
+          rounds={runningOrder}
+          seriesId={series.id}
+          dateId={date.id}
+          now={date.nowRound != null && date.nowSlot != null ? { round: date.nowRound, slot: date.nowSlot } : null}
+        />
+      )}
 
       <section className={`${cardClass} space-y-6`}>
         <div>

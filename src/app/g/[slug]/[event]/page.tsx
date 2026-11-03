@@ -355,7 +355,11 @@ export default async function EventPage({ params, searchParams }: Props) {
       )}
 
       {runningOrder.length > 0 && !cancelled && (
-        <PublicRunningOrder rows={runningOrder} mySignUpId={myActive?.id ?? null} />
+        <PublicRunningOrder
+          rows={runningOrder}
+          mySignUpId={myActive?.id ?? null}
+          now={date.nowRound != null && date.nowSlot != null && !past ? { round: date.nowRound, slot: date.nowSlot } : null}
+        />
       )}
       {runningOrder.length > 0 && !cancelled && !past && <LiveRefresh everyMs={20000} />}
 
