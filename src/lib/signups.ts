@@ -131,7 +131,7 @@ export async function settleDate(tx: Tx, dateId: string) {
     }
   }
   // Singers who checked in get their place in check-in-order rounds.
-  await fillCheckInOrderSlots(tx, dateId, date.series);
+  await fillCheckInOrderSlots(tx, dateId, date.series, date);
 }
 
 /** settleDate in its own locked transaction. */
