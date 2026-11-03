@@ -62,7 +62,11 @@ export default async function EventPage({ params, searchParams }: Props) {
     ? await prisma.signUp.findUnique({
         where: { eventDateId_userId: { eventDateId: date.id, userId: viewer.id } },
         include: {
-          songs: { where: { status: { in: ["ACTIVE", "REJECTED"] } }, orderBy: { enteredAt: "desc" } },
+          songs: {
+            where: { status: { in: ["ACTIVE", "REJECTED"] } },
+            orderBy: { enteredAt: "desc" },
+            include: { duetPartner: { select: { displayName: true } } },
+          },
           screenshot: { select: { uploadedAt: true } },
         },
       })
@@ -90,10 +94,28 @@ export default async function EventPage({ params, searchParams }: Props) {
       ? prisma.song.findMany({
           where: { eventDateId: date.id, status: "ACTIVE", signUp: { status: "CONFIRMED" } },
           orderBy: [{ round: "asc" }, { enteredAt: "asc" }],
-          include: { signUp: { select: { displayName: true } } },
+          include: {
+            signUp: { select: { displayName: true } },
+            duetPartner: { select: { displayName: true, status: true } },
+          },
         })
       : Promise.resolve([]),
   ]);
+  // Duet partners: other singers holding a spot on this date, and duets that name me.
+  const [partnerSignUps, invites] = myActive
+    ? await Promise.all([
+        prisma.signUp.findMany({
+          where: { eventDateId: date.id, role: "SINGER", status: { in: HOLDS_SPOT }, id: { not: myActive.id } },
+          orderBy: { displayName: "asc" },
+          select: { id: true, displayName: true },
+        }),
+        prisma.song.findMany({
+          where: { duetPartnerId: myActive.id, status: "ACTIVE", signUp: { status: { in: HOLDS_SPOT } } },
+          orderBy: { round: "asc" },
+          select: { round: true, title: true, signUp: { select: { displayName: true } } },
+        }),
+      ])
+    : [[], []];
   const taken = (role: "SINGER" | "LISTENER") => held.find((h) => h.role === role)?._count ?? 0;
   const confirmedListeners = viewer
     ? await prisma.signUp.count({ where: { eventDateId: date.id, role: "LISTENER", status: "CONFIRMED" } })
@@ -151,93 +173,113 @@ export default async function EventPage({ params, searchParams }: Props) {
         )}
       </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-4 rounded-xl border border-line bg-white p-4 sm:p-6 md:col-span-2">
-          <dl className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
-              <dd>
-                {formatEventDate(date.startsAt)}
-                <br />
-                {formatEventTime(date.startsAt, date.endsAt)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Where</dt>
-              <dd>
-                {series.venueName}
-                <br />
-                <a
-                  href={mapUrl(series.venueAddress)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-cobalt hover:underline"
-                >
-                  {series.venueAddress}
-                </a>
-              </dd>
-            </div>
-          </dl>
-          {settings.description && (
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">About this event</h2>
-              <p className="whitespace-pre-line text-ink">{settings.description}</p>
-            </div>
-          )}
-        </div>
-
-        <aside className="space-y-3 rounded-xl border border-line bg-white p-4 sm:p-6">
-          <PriceRow label="Singer" cents={settings.singerPriceCents} taken={taken("SINGER")} cap={settings.maxSingers} />
-          <PriceRow label="Listener" cents={settings.listenerPriceCents} taken={taken("LISTENER")} cap={settings.maxListeners} />
-          {cancelled || past ? null : myActive ? (
-            <a
-              href="#your-sign-up"
-              className="block rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 hover:underline"
-            >
-              You&apos;re signed up: {STATUS_LABEL[myActive.status].toLowerCase()}. See your sign-up ↓
-            </a>
-          ) : !accepting ? (
-            <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">
-              {date.signupsOpen ? "Sign-ups for this date are closed." : "Sign-ups aren't open yet."}
-            </p>
-          ) : viewer ? (
-            <>
-              {mine && (
-                <p className="text-sm text-ink-muted">
-                  {mine.status === "EXPIRED"
-                    ? "Your earlier hold ran out. You can sign up again."
-                    : "Your earlier sign-up was cancelled. You can sign up again."}
-                </p>
-              )}
-              <SignUpForm
-                action={signUpForDate.bind(null, date.id, k ?? null)}
-                defaultName={mine?.displayName ?? viewer.name ?? ""}
-                options={[
-                  {
-                    role: "SINGER",
-                    label: "Sing",
-                    price: formatPrice(settings.singerPriceCents),
-                    full: settings.maxSingers != null && taken("SINGER") >= settings.maxSingers,
-                  },
-                  {
-                    role: "LISTENER",
-                    label: "Listen",
-                    price: formatPrice(settings.listenerPriceCents),
-                    full: settings.maxListeners != null && taken("LISTENER") >= settings.maxListeners,
-                  },
-                ]}
+      <section className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
+        <dl className="grid gap-5 sm:grid-cols-3">
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
+            <dd>
+              {formatEventDate(date.startsAt)}
+              <br />
+              {formatEventTime(date.startsAt, date.endsAt)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Where</dt>
+            <dd>
+              {series.venueName}
+              <br />
+              <a
+                href={mapUrl(series.venueAddress)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cobalt hover:underline"
+              >
+                {series.venueAddress}
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Price</dt>
+            <dd className="max-w-xs space-y-1">
+              <PriceRow
+                label="Singer"
+                cents={settings.singerPriceCents}
+                taken={taken("SINGER")}
+                cap={settings.maxSingers}
               />
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
-              <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className={`${primaryButton} w-full`}>
-                Sign in to sign up
-              </Link>
-            </>
-          )}
-        </aside>
-      </div>
+              <PriceRow
+                label="Listener"
+                cents={settings.listenerPriceCents}
+                taken={taken("LISTENER")}
+                cap={settings.maxListeners}
+              />
+            </dd>
+          </div>
+        </dl>
+        {settings.description && (
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">About this event</h2>
+            <p className="whitespace-pre-line text-ink">{settings.description}</p>
+          </div>
+        )}
+
+        {cancelled || past ? null : (
+          <div className="space-y-3 border-t border-line pt-5">
+            {myActive ? (
+              <a
+                href="#your-sign-up"
+                className="block rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 hover:underline"
+              >
+                You&apos;re signed up: {STATUS_LABEL[myActive.status].toLowerCase()}. See your sign-up ↓
+              </a>
+            ) : !accepting ? (
+              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">
+                {date.signupsOpen ? "Sign-ups for this date are closed." : "Sign-ups aren't open yet."}
+              </p>
+            ) : viewer ? (
+              <>
+                {mine && (
+                  <p className="text-sm text-ink-muted">
+                    {mine.status === "EXPIRED"
+                      ? "Your earlier hold ran out. You can sign up again."
+                      : "Your earlier sign-up was cancelled. You can sign up again."}
+                  </p>
+                )}
+                <div className="max-w-md">
+                  <SignUpForm
+                    action={signUpForDate.bind(null, date.id, k ?? null)}
+                    defaultName={mine?.displayName ?? viewer.name ?? ""}
+                    options={[
+                      {
+                        role: "SINGER",
+                        label: "Sing",
+                        price: formatPrice(settings.singerPriceCents),
+                        full: settings.maxSingers != null && taken("SINGER") >= settings.maxSingers,
+                      },
+                      {
+                        role: "LISTENER",
+                        label: "Listen",
+                        price: formatPrice(settings.listenerPriceCents),
+                        full: settings.maxListeners != null && taken("LISTENER") >= settings.maxListeners,
+                      },
+                    ]}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
+                <Link
+                  href={`/signin?callbackUrl=${encodeURIComponent(here)}`}
+                  className={`${primaryButton} w-full sm:w-auto`}
+                >
+                  Sign in to sign up
+                </Link>
+              </>
+            )}
+          </div>
+        )}
+      </section>
 
       {myActive && !cancelled && (
         <YourSignUp
@@ -245,6 +287,8 @@ export default async function EventPage({ params, searchParams }: Props) {
           group={series.group}
           waitlistPosition={waitlistPosition}
           editable={stillEditable(date)}
+          partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName }))}
+          duetInvites={invites.map((i) => ({ round: i.round, title: i.title, singer: i.signUp.displayName }))}
         />
       )}
 
@@ -274,6 +318,10 @@ export default async function EventPage({ params, searchParams }: Props) {
                         {" "}
                         · {s.title}
                         {s.artist && ` (${s.artist})`}
+                        {s.duet &&
+                          (s.duetPartner && HOLDS_SPOT.includes(s.duetPartner.status)
+                            ? ` · duet with ${s.duetPartner.displayName}`
+                            : " · duet")}
                       </span>
                       {s.youtubeUrl && (
                         <a

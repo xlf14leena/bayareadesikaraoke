@@ -2,14 +2,20 @@ import type { Group, SignUp, Song } from "@prisma/client";
 import { leaveSignUp, saveSongs, uploadScreenshot } from "@/app/g/[slug]/[event]/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ScreenshotForm from "@/components/signup/ScreenshotForm";
-import SongsForm, { type SongDefaults } from "@/components/signup/SongsForm";
-import { cardClass } from "@/components/ui";
+import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";
 import { STATUS_LABEL } from "@/lib/events";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { PICKS_SONGS } from "@/lib/signups";
 
 type Props = {
-  signUp: SignUp & { songs: Song[]; screenshot: { uploadedAt: Date } | null };
+  signUp: SignUp & {
+    songs: (Song & { duetPartner: { displayName: string } | null })[];
+    screenshot: { uploadedAt: Date } | null;
+  };
+  /** People signed up for this date who can be picked as a duet partner. */
+  partners: DuetPartnerOption[];
+  /** Other singers' duets on this date that name this person as the partner. */
+  duetInvites: { round: number; title: string; singer: string }[];
   group: Pick<Group, "name" | "zelleName" | "zelleHandle">;
   waitlistPosition: number | null;
   editable: boolean;
@@ -24,7 +30,7 @@ const TONE: Record<string, string> = {
 };
 
 /** The signed-in person's own sign-up for this date: status, how to pay, and their songs. */
-export default function YourSignUp({ signUp, group, waitlistPosition, editable }: Props) {
+export default function YourSignUp({ signUp, group, waitlistPosition, editable, partners, duetInvites }: Props) {
   const role = signUp.role === "SINGER" ? "singer" : "listener";
   const needsProof = signUp.status === "RESERVED" || signUp.status === "REJECTED";
   const active = signUp.songs.filter((s) => s.status === "ACTIVE");
@@ -32,19 +38,28 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable }
     (s) => s.status === "REJECTED" && !active.some((a) => a.round === s.round),
   );
   const defaults: Record<number, SongDefaults | undefined> = {};
-  for (const s of active) defaults[s.round] = { title: s.title, artist: s.artist ?? "", youtubeUrl: s.youtubeUrl ?? "" };
+  for (const s of active) {
+    defaults[s.round] = {
+      title: s.title,
+      artist: s.artist ?? "",
+      youtubeUrl: s.youtubeUrl ?? "",
+      duet: s.duet,
+      duetPartnerId: s.duetPartnerId,
+    };
+  }
+  const sorted = [...active].sort((a, b) => a.round - b.round);
   const canLeave = ["WAITLISTED", "RESERVED", "REJECTED", "UNDER_REVIEW"].includes(signUp.status);
 
   return (
-    <section id="your-sign-up" className={`${cardClass} space-y-5`}>
-      <div>
-        <h2 className="text-xl font-semibold">Your sign-up</h2>
-        <p className={`mt-2 inline-block rounded-full px-3 py-1 text-sm font-medium ${TONE[signUp.status] ?? "bg-mist"}`}>
+    <section id="your-sign-up" className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 className="text-lg font-semibold">Your sign-up</h2>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${TONE[signUp.status] ?? "bg-mist"}`}>
           {STATUS_LABEL[signUp.status]} · {role}
-        </p>
-        <p className="mt-2 text-sm text-ink-muted">
-          Signed up as {signUp.displayName} on {formatDateTime(signUp.registeredAt)}.
-        </p>
+        </span>
+        <span className="text-xs text-ink-muted">
+          as {signUp.displayName} · {formatDateTime(signUp.registeredAt)}
+        </span>
       </div>
 
       {signUp.status === "WAITLISTED" && (
@@ -55,7 +70,7 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable }
       )}
 
       {signUp.status === "CONFIRMED" && (
-        <p>
+        <p className="text-sm">
           You&apos;re in! {signUp.role === "SINGER" ? "Your songs show on the singer list below." : "See you there."}
           {signUp.paymentNote && <span className="text-ink-muted"> ({signUp.paymentNote})</span>}
         </p>
@@ -144,36 +159,67 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable }
         </details>
       )}
 
+      {duetInvites.length > 0 && (
+        <ul className="space-y-1 rounded-lg bg-lapis/5 px-3 py-2">
+          {duetInvites.map((d) => (
+            <li key={`${d.round}-${d.singer}`}>
+              {d.singer} picked you as their duet partner for round {d.round}: &ldquo;{d.title}&rdquo;
+            </li>
+          ))}
+        </ul>
+      )}
+
       {signUp.role === "SINGER" && PICKS_SONGS.includes(signUp.status) && (
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-semibold">Your songs</h3>
-            <p className="text-sm text-ink-muted">
+        <details open={!active.length || rejected.length > 0} className="group rounded-lg border border-line">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 space-y-0.5">
+              <span className="block font-semibold">Your songs</span>
+              {sorted.length ? (
+                sorted.map((s) => (
+                  <span key={s.id} className="flex items-baseline gap-2 text-ink-muted">
+                    <span className="shrink-0 text-xs font-semibold text-royal">Round {s.round}</span>
+                    <span className="truncate">
+                      {s.title}
+                      {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}` : " · duet")}
+                    </span>
+                  </span>
+                ))
+              ) : (
+                <span className="block text-ink-muted">No songs picked yet</span>
+              )}
+            </span>
+            <span aria-hidden className="shrink-0 text-cobalt transition-transform group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <div className="space-y-3 border-t border-line p-3">
+            <p className="text-xs text-ink-muted">
               Pick one song per round. First pick wins: a song someone already picked for this date can&apos;t be
               picked again. You can change your songs until sign-ups close.
             </p>
+            {rejected.map((s) => (
+              <p key={s.id} className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+                The organizers turned down your round {s.round} song &ldquo;{s.title}&rdquo;
+                {s.rejectReason && <>: {s.rejectReason}</>}. Please pick another.
+              </p>
+            ))}
+            {editable ? (
+              <SongsForm action={saveSongs.bind(null, signUp.id)} defaults={defaults} partners={partners} />
+            ) : active.length ? (
+              <ul className="text-sm">
+                {active.map((s) => (
+                  <li key={s.id}>
+                    Round {s.round}: {s.title}
+                    {s.artist && ` (${s.artist})`}
+                    {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}` : " · duet")}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-ink-muted">No songs picked.</p>
+            )}
           </div>
-          {rejected.map((s) => (
-            <p key={s.id} className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
-              The organizers turned down your round {s.round} song &ldquo;{s.title}&rdquo;
-              {s.rejectReason && <>: {s.rejectReason}</>}. Please pick another.
-            </p>
-          ))}
-          {editable ? (
-            <SongsForm action={saveSongs.bind(null, signUp.id)} defaults={defaults} />
-          ) : active.length ? (
-            <ul className="text-sm">
-              {active.map((s) => (
-                <li key={s.id}>
-                  Round {s.round}: {s.title}
-                  {s.artist && ` (${s.artist})`}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-ink-muted">No songs picked.</p>
-          )}
-        </div>
+        </details>
       )}
 
       {canLeave && (
@@ -188,7 +234,7 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable }
         />
       )}
       {signUp.status === "CONFIRMED" && (
-        <p className="text-sm text-ink-muted">Can&apos;t make it? Contact the organizers to cancel.</p>
+        <p className="text-xs text-ink-muted">Can&apos;t make it? Contact the organizers to cancel.</p>
       )}
     </section>
   );
