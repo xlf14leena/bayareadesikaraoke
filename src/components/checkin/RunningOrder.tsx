@@ -27,12 +27,20 @@ export default function RunningOrder({ rounds, seriesId }: { rounds: RunningOrde
           in the event settings.
         </p>
       </div>
-      <div className="grid gap-5 md:grid-cols-2">
-        {rounds.map((r) => (
-          <div key={r.round} className="space-y-2">
-            <h3 className="font-semibold text-royal">
-              Round {r.round} <span className="text-sm font-normal text-ink-muted">· {SLOT_MODE_LABEL[r.mode]}</span>
-            </h3>
+      <div className="space-y-3">
+        {rounds.map((r, i) => (
+          <details key={r.round} open={i === 0} className="group space-y-2">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg bg-mist px-3 py-2 font-semibold text-royal [&::-webkit-details-marker]:hidden">
+              <span>
+                Round {r.round}{" "}
+                <span className="text-sm font-normal text-ink-muted">
+                  · {SLOT_MODE_LABEL[r.mode]} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
+                </span>
+              </span>
+              <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">
+                ▾
+              </span>
+            </summary>
             {r.rows.length === 0 ? (
               <p className="text-sm text-ink-muted">No slots taken yet.</p>
             ) : (
@@ -72,7 +80,7 @@ export default function RunningOrder({ rounds, seriesId }: { rounds: RunningOrde
             {r.waiting.length > 0 && (
               <p className="text-sm text-amber-800">Checked in, no slot picked yet: {r.waiting.join(", ")}</p>
             )}
-          </div>
+          </details>
         ))}
       </div>
     </section>

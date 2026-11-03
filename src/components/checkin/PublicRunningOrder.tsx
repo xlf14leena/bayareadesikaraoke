@@ -22,11 +22,22 @@ export default function PublicRunningOrder({ rows, mySignUpId }: { rows: PublicO
     <section id="running-order" className="rounded-xl border border-line bg-white p-4 sm:p-6">
       <h2 className="mb-1 text-xl font-semibold">Running order</h2>
       <p className="mb-4 text-sm text-ink-muted">Singers get a slot after they check in at the venue.</p>
-      <div className="grid gap-5 md:grid-cols-2">
-        {rounds.map((list) => (
-          <div key={list[0].round}>
-            <h3 className="mb-2 font-semibold text-royal">Round {list[0].round}</h3>
-            <ol className="divide-y divide-line rounded-lg border border-line">
+      <div className="space-y-3">
+        {rounds.map((list, i) => (
+          // One round sings at a time, so only the first is open; the others expand on tap.
+          <details key={list[0].round} open={i === 0} className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg bg-mist px-3 py-2 font-semibold text-royal [&::-webkit-details-marker]:hidden">
+              <span>
+                Round {list[0].round}{" "}
+                <span className="text-sm font-normal text-ink-muted">
+                  · {list.length} {list.length === 1 ? "singer" : "singers"}
+                </span>
+              </span>
+              <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">
+                ▾
+              </span>
+            </summary>
+            <ol className="mt-2 divide-y divide-line rounded-lg border border-line">
               {list.map((row) => {
                 const mine = row.signUpId === mySignUpId;
                 const { song } = row;
@@ -71,7 +82,7 @@ export default function PublicRunningOrder({ rows, mySignUpId }: { rows: PublicO
                 );
               })}
             </ol>
-          </div>
+          </details>
         ))}
       </div>
     </section>
