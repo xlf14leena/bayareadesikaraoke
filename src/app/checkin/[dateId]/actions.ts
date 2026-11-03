@@ -52,7 +52,7 @@ export async function pickSlot(dateId: string, round: number, _prev: FormState, 
     const date = await tx.eventDate.findUnique({ where: { id: dateId }, include: { series: true } });
     if (!date || date.status !== "SCHEDULED" || date.endsAt < new Date()) return { error: "This event is over." };
     if (!ROUNDS.includes(round as 1 | 2) || slotModeFor(date.series, round) !== "PICK") {
-      return { error: "Slots for this round go in check-in order." };
+      return { error: "Slots for this round are given out automatically when you check in." };
     }
     const signUp = await tx.signUp.findUnique({
       where: { eventDateId_userId: { eventDateId: dateId, userId: viewer.id } },

@@ -167,6 +167,7 @@ export default function SeriesForm({ action, series }: { action: Action; series?
               >
                 <option value="PICK">Singers pick a free slot</option>
                 <option value="CHECKIN_ORDER">Slots go in check-in order</option>
+                <option value="PAYMENT_ORDER">Slots go in payment order (first to pay sings first)</option>
               </select>
             </Field>
           ))}
