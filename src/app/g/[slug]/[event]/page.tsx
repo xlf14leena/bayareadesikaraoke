@@ -13,6 +13,7 @@ import YourSignUp from "@/components/signup/YourSignUp";
 import YourSlots from "@/components/checkin/YourSlots";
 import LiveRefresh from "@/components/checkin/LiveRefresh";
 import PublicRunningOrder from "@/components/checkin/PublicRunningOrder";
+import FeedbackPrompt from "@/components/feedback/FeedbackPrompt";
 import { singerRounds } from "@/lib/slots";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
@@ -325,6 +326,8 @@ export default async function EventPage({ params, searchParams }: Props) {
           </div>
         )}
       </section>
+
+      <FeedbackPrompt date={date} viewer={viewer} isAdmin={isAdmin} privateKey={k ?? null} />
 
       {myActive?.checkedInAt ? (
         <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
