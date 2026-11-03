@@ -130,6 +130,8 @@ export default async function EventPage({ params, searchParams }: Props) {
     ? await prisma.signUp.count({ where: { eventDateId: date.id, status: "UNDER_REVIEW" } })
     : 0;
   const rounds = [1, 2].map((r) => singers.filter((s) => s.round === r)).filter((list) => list.length > 0);
+  // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
+  const showLineup = date.signupsOpen || rounds.length > 0 || confirmedListeners > 0;
 
   return (
     <article className="space-y-6">
@@ -292,60 +294,62 @@ export default async function EventPage({ params, searchParams }: Props) {
         />
       )}
 
-      <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
-        <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
-        {!viewer ? (
-          <p className="text-ink-muted">
-            <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className="font-medium text-cobalt hover:underline">
-              Sign in
-            </Link>{" "}
-            to see who has signed up and the songs they picked.
-          </p>
-        ) : rounds.length === 0 ? (
-          <p className="text-ink-muted">
-            No confirmed singers yet. Singers show here once the organizers approve their payment.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {rounds.map((list) => (
-              <div key={list[0].round}>
-                {rounds.length > 1 && <h3 className="mb-1 font-semibold text-royal">Round {list[0].round}</h3>}
-                <ol className="list-decimal space-y-1 pl-5">
-                  {list.map((s) => (
-                    <li key={s.id}>
-                      <span className="font-medium">{s.signUp.displayName}</span>
-                      <span className="text-ink-muted">
-                        {" "}
-                        · {s.title}
-                        {s.artist && ` (${s.artist})`}
-                        {s.duet &&
-                          (s.duetPartner && HOLDS_SPOT.includes(s.duetPartner.status)
-                            ? ` · duet with ${s.duetPartner.displayName}`
-                            : " · duet")}
-                      </span>
-                      {s.youtubeUrl && (
-                        <a
-                          href={s.youtubeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ml-2 text-sm text-cobalt hover:underline"
-                        >
-                          Track
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
-          </div>
-        )}
-        {viewer && (
-          <p className="mt-4 text-sm text-ink-muted">
-            {confirmedListeners} {confirmedListeners === 1 ? "listener" : "listeners"} coming.
-          </p>
-        )}
-      </section>
+      {showLineup && (
+        <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
+          <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
+          {!viewer ? (
+            <p className="text-ink-muted">
+              <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className="font-medium text-cobalt hover:underline">
+                Sign in
+              </Link>{" "}
+              to see who has signed up and the songs they picked.
+            </p>
+          ) : rounds.length === 0 ? (
+            <p className="text-ink-muted">
+              No confirmed singers yet. Singers show here once the organizers approve their payment.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {rounds.map((list) => (
+                <div key={list[0].round}>
+                  {rounds.length > 1 && <h3 className="mb-1 font-semibold text-royal">Round {list[0].round}</h3>}
+                  <ol className="list-decimal space-y-1 pl-5">
+                    {list.map((s) => (
+                      <li key={s.id}>
+                        <span className="font-medium">{s.signUp.displayName}</span>
+                        <span className="text-ink-muted">
+                          {" "}
+                          · {s.title}
+                          {s.artist && ` (${s.artist})`}
+                          {s.duet &&
+                            (s.duetPartner && HOLDS_SPOT.includes(s.duetPartner.status)
+                              ? ` · duet with ${s.duetPartner.displayName}`
+                              : " · duet")}
+                        </span>
+                        {s.youtubeUrl && (
+                          <a
+                            href={s.youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-sm text-cobalt hover:underline"
+                          >
+                            Track
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ))}
+            </div>
+          )}
+          {viewer && (
+            <p className="mt-4 text-sm text-ink-muted">
+              {confirmedListeners} {confirmedListeners === 1 ? "listener" : "listeners"} coming.
+            </p>
+          )}
+        </section>
+      )}
     </article>
   );
 }
