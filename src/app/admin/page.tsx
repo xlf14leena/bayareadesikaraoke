@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAnyAdmin } from "@/lib/roles";
-import { primaryButton } from "@/components/ui";
+import { primaryButton, secondaryButton } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +24,14 @@ export default async function AdminPage() {
           </p>
         </div>
         {viewer.isSuperUser && (
-          <Link href="/admin/groups/new" className={primaryButton}>
-            New group
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin/users" className={secondaryButton}>
+              Signed-in users
+            </Link>
+            <Link href="/admin/groups/new" className={primaryButton}>
+              New group
+            </Link>
+          </div>
         )}
       </div>
       {groups.length === 0 ? (
