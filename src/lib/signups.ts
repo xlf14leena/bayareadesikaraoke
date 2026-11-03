@@ -4,6 +4,7 @@ import { fillCheckInOrderSlots } from "@/lib/slots";
 import { HOLDS_SPOT, settingsFor } from "@/lib/events";
 import { FormError } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
+import { looksAlike, songKey } from "@/lib/song-match";
 
 // Sign-up rules from the spec ("Sign-up and Zelle payment", "Songs"):
 // - A reserved or rejected spot is held for 24 hours, then expires.
@@ -161,16 +162,6 @@ export async function settleAll() {
 
 // ---------- Songs ----------
 
-/** Lowercase, without punctuation or extra spaces, so "Tujhe Dekha To!" matches "tujhe dekha to". */
-export function normalizeTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
-}
-
 /** The video id of a YouTube link, or null if it isn't one. */
 export function youtubeVideoId(raw: string): string | null {
   let u: URL;
@@ -198,6 +189,8 @@ export type SongInput = {
   youtubeUrl: string | null;
   duet: boolean;
   duetPartnerId: string | null;
+  /** The song key the singer confirmed is a different song from a close match ("different1" field). */
+  confirmedDifferent: string | null;
 };
 
 /** Reads round N's song fields ("title1", "artist1", "youtube1", "kind1" = solo|duet, "partner1" = sign-up id). Blank title = no song. */
@@ -207,6 +200,7 @@ export function songInput(form: FormData, round: number): SongInput | null {
   const youtubeUrl = String(form.get(`youtube${round}`) ?? "").trim() || null;
   const duet = form.get(`kind${round}`) === "duet";
   const duetPartnerId = (duet && String(form.get(`partner${round}`) ?? "").trim()) || null;
+  const confirmedDifferent = String(form.get(`different${round}`) ?? "") || null;
   if (!title) {
     if (artist || youtubeUrl) throw new FormError(`Add the song title for round ${round}.`);
     return null;
@@ -216,12 +210,15 @@ export function songInput(form: FormData, round: number): SongInput | null {
   if (youtubeUrl && !youtubeVideoId(youtubeUrl)) {
     throw new FormError(`The round ${round} track should be a YouTube link, like https://youtu.be/…`);
   }
-  if (!normalizeTitle(title)) throw new FormError("The song title needs at least one letter or number.");
-  return { title, artist, youtubeUrl, duet, duetPartnerId };
+  if (!songKey(title)) throw new FormError("The song title needs at least one letter or number.");
+  return { title, artist, youtubeUrl, duet, duetPartnerId, confirmedDifferent };
 }
 
 /**
- * Sets a sign-up's song for one round, first pick wins. Changing the title
+ * Sets a sign-up's song for one round, first pick wins. The same song (same
+ * song key or same YouTube video) is blocked; a close title (a typo, an extra
+ * word) is refused with a nearMatch until the singer confirms it's a
+ * different song. Changing the title
  * releases the old song and gives the new one a fresh song time; changing
  * only the artist, link or solo/duet keeps the song time. null clears the round.
  */
@@ -253,26 +250,39 @@ export async function setSong(
       throw new FormError(`Pick a duet partner for round ${round} from the singers signed up for this date.`);
     }
   }
-  const normalizedTitle = normalizeTitle(input.title);
+  const normalizedTitle = songKey(input.title);
   const videoId = input.youtubeUrl ? youtubeVideoId(input.youtubeUrl) : null;
-  const sameSong = current && current.normalizedTitle === normalizedTitle;
-
-  const clash = await tx.song.findFirst({
-    where: {
-      eventDateId: signUp.eventDateId,
-      status: "ACTIVE",
-      id: current ? { not: current.id } : undefined,
-      OR: [{ normalizedTitle }, ...(videoId ? [{ youtubeVideoId: videoId }] : [])],
-    },
+  // Compare keys from the titles, not the stored column, so songs saved
+  // before a matching rule changed are checked by today's rules. The date
+  // lock makes this check safe; the unique indexes are a backstop.
+  const sameSong = !!current && songKey(current.title) === normalizedTitle;
+  const others = await tx.song.findMany({
+    where: { eventDateId: signUp.eventDateId, status: "ACTIVE", id: current ? { not: current.id } : undefined },
+    select: { title: true, round: true, signUpId: true, youtubeVideoId: true },
+    orderBy: { enteredAt: "asc" },
   });
+  const sameTitle = others.find((o) => songKey(o.title) === normalizedTitle);
+  const clash = sameTitle ?? (videoId ? others.find((o) => o.youtubeVideoId === videoId) : undefined);
   if (clash) {
     const mine = clash.signUpId === signUp.id;
-    const what = clash.normalizedTitle === normalizedTitle ? `"${input.title}"` : "That YouTube track";
+    const what = sameTitle ? `"${input.title}"` : "That YouTube track";
+    const as = sameTitle && clash.title !== input.title ? ` (as "${clash.title}")` : "";
     throw new FormError(
       mine
-        ? `${what} is already your round ${clash.round} song. Pick a different one.`
-        : `${what} is already picked for this event. Please choose another song.`,
+        ? `${what} is already your round ${clash.round} song${as}. Pick a different one.`
+        : `${what} is already picked for this event${as}. Please choose another song.`,
     );
+  }
+  if (!sameSong && input.confirmedDifferent !== normalizedTitle) {
+    const near = others.find((o) => looksAlike(o.title, input.title));
+    if (near) {
+      const whose = near.signUpId === signUp.id ? `your round ${near.round} song` : "a song someone already picked";
+      throw new FormError(
+        `Round ${round}: "${input.title}" looks a lot like "${near.title}", ${whose}. ` +
+          `Change it, or tick "It's a different song" and save again.`,
+        { round, key: normalizedTitle },
+      );
+    }
   }
 
   try {
@@ -281,6 +291,7 @@ export async function setSong(
         where: { id: current.id },
         data: {
           title: input.title,
+          normalizedTitle,
           artist: input.artist,
           youtubeUrl: input.youtubeUrl,
           youtubeVideoId: videoId,

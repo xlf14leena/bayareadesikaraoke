@@ -1,9 +1,20 @@
 // Helpers for reading admin form fields. Each throws FormError with a message
 // the form shows next to its submit button.
 
-export class FormError extends Error {}
+export class FormError extends Error {
+  constructor(
+    message: string,
+    /** Set when a song title is close to one already picked; the form then offers "It's a different song". */
+    readonly nearMatch?: NearMatch,
+  ) {
+    super(message);
+  }
+}
 
-export type FormState = { error?: string; ok?: string } | undefined;
+/** A round whose title looks like a song already picked. key is the title's song key, sent back to confirm. */
+export type NearMatch = { round: number; key: string };
+
+export type FormState = { error?: string; ok?: string; nearMatch?: NearMatch } | undefined;
 
 export function text(form: FormData, name: string, label: string, opts: { max?: number } = {}): string {
   const v = String(form.get(name) ?? "").trim();

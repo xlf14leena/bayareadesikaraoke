@@ -5,7 +5,7 @@ import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
-import type { FormState } from "@/lib/forms";
+import type { FormState, NearMatch } from "@/lib/forms";
 
 export type SongDefaults = {
   title: string;
@@ -21,20 +21,30 @@ export type DuetPartnerOption = { id: string; name: string };
 /**
  * Song title, film or artist, YouTube track, and solo or duet for each round.
  * A duet can name a partner from `partners`. Shared by singers and admins.
+ * When the last save found a close title (`nearMatch`), that round offers
+ * "It's a different song".
  */
 export function SongFields({
   rounds,
   defaults,
   partners = [],
+  nearMatch,
 }: {
   rounds: number[];
   defaults?: Record<number, SongDefaults | undefined>;
   partners?: DuetPartnerOption[];
+  nearMatch?: NearMatch;
 }) {
   return (
     <div className="space-y-5">
       {rounds.map((r) => (
-        <RoundFields key={r} round={r} defaults={defaults?.[r]} partners={partners} />
+        <RoundFields
+          key={r}
+          round={r}
+          defaults={defaults?.[r]}
+          partners={partners}
+          nearMatchKey={nearMatch?.round === r ? nearMatch.key : undefined}
+        />
       ))}
     </div>
   );
@@ -44,10 +54,12 @@ function RoundFields({
   round: r,
   defaults,
   partners,
+  nearMatchKey,
 }: {
   round: number;
   defaults?: SongDefaults;
   partners: DuetPartnerOption[];
+  nearMatchKey?: string;
 }) {
   const [duet, setDuet] = useState(!!defaults?.duet);
   return (
@@ -71,6 +83,13 @@ function RoundFields({
         <Field label="Film or artist (optional)">
           <input name={`artist${r}`} defaultValue={defaults?.artist} maxLength={150} className={inputClass} />
         </Field>
+        {nearMatchKey && (
+          // Keyed so a new near match starts unticked. The value ties the tick to the title it was for.
+          <label key={nearMatchKey} className="flex items-center gap-2 rounded bg-gold/30 px-2 py-1 text-sm sm:col-span-2">
+            <input type="checkbox" name={`different${r}`} value={nearMatchKey} className="accent-royal" />
+            It&apos;s a different song
+          </label>
+        )}
         <Field label="YouTube karaoke track (optional)" className="sm:col-span-2">
           <input
             name={`youtube${r}`}
@@ -133,7 +152,7 @@ export default function SongsForm({
   const { state, onSubmit, pending } = useFormAction(action);
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <SongFields rounds={[1, 2]} defaults={defaults} partners={partners} />
+      <SongFields rounds={[1, 2]} defaults={defaults} partners={partners} nearMatch={state?.nearMatch} />
       <FormStatus state={state} pending={pending} label="Save songs" />
     </form>
   );

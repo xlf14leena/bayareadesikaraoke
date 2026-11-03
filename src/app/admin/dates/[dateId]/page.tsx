@@ -17,6 +17,7 @@ import { eventPath } from "@/lib/event-url";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { settle } from "@/lib/signups";
+import { looksAlike } from "@/lib/song-match";
 import { feedbackOpen, feedbackSummary } from "@/lib/feedback";
 import { pacificDateOf, pacificTimeOf } from "@/lib/schedule";
 import { prisma } from "@/lib/prisma";
@@ -57,6 +58,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
     (a, b) => (a.screenshot?.uploadedAt.getTime() ?? 0) - (b.screenshot?.uploadedAt.getTime() ?? 0),
   );
   const awaiting = by(["RESERVED", "REJECTED"]);
+  const nearMatches = possibleDuplicates(date.signUps);
   const confirmed = by(["CONFIRMED"]).sort((a, b) => (a.role === b.role ? 0 : a.role === "SINGER" ? -1 : 1));
   const waitlist = by(["WAITLISTED"]).sort(
     (a, b) => (a.waitlistedAt?.getTime() ?? 0) - (b.waitlistedAt?.getTime() ?? 0),
@@ -163,22 +165,23 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           </p>
         </div>
 
-        <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} theme={settings.theme} />
+        <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} theme={settings.theme} nearMatches={nearMatches} />
         <SignUpGroup
           title="Waiting for payment"
           empty="Nobody is waiting to pay."
           list={awaiting}
           theme={settings.theme}
+          nearMatches={nearMatches}
         />
-        <SignUpGroup title="Confirmed" empty="Nobody is confirmed yet." list={confirmed} theme={settings.theme} />
-        {waitlist.length > 0 && <SignUpGroup title="Waitlist" empty="" list={waitlist} theme={settings.theme} />}
+        <SignUpGroup title="Confirmed" empty="Nobody is confirmed yet." list={confirmed} theme={settings.theme} nearMatches={nearMatches} />
+        {waitlist.length > 0 && <SignUpGroup title="Waitlist" empty="" list={waitlist} theme={settings.theme} nearMatches={nearMatches} />}
         {ended.length > 0 && (
           <details>
             <summary className="cursor-pointer text-sm font-medium text-ink-muted">
               Expired or cancelled ({ended.length})
             </summary>
             <div className="mt-3">
-              <SignUpGroup title="" empty="" list={ended} theme={settings.theme} />
+              <SignUpGroup title="" empty="" list={ended} theme={settings.theme} nearMatches={nearMatches} />
             </div>
           </details>
         )}
@@ -276,7 +279,34 @@ type Row = SignUp & {
   reviewedBy: { name: string | null } | null;
 };
 
-function SignUpGroup({ title, empty, list, theme }: { title: string; empty: string; list: Row[]; theme: string | null }) {
+/** Active song id -> who already has a close title, for songs whose title looks like an earlier song's. */
+type NearMatches = Map<string, string>;
+
+function possibleDuplicates(signUps: { displayName: string; songs: Song[] }[]): NearMatches {
+  const songs = signUps
+    .flatMap((s) => s.songs.filter((x) => x.status === "ACTIVE").map((song) => ({ song, name: s.displayName })))
+    .sort((a, b) => a.song.enteredAt.getTime() - b.song.enteredAt.getTime());
+  const out: NearMatches = new Map();
+  songs.forEach(({ song }, i) => {
+    const earlier = songs.slice(0, i).find((e) => looksAlike(e.song.title, song.title));
+    if (earlier) out.set(song.id, `"${earlier.song.title}" (${earlier.name}, round ${earlier.song.round})`);
+  });
+  return out;
+}
+
+function SignUpGroup({
+  title,
+  empty,
+  list,
+  theme,
+  nearMatches,
+}: {
+  title: string;
+  empty: string;
+  list: Row[];
+  theme: string | null;
+  nearMatches: NearMatches;
+}) {
   return (
     <div>
       {title && (
@@ -289,7 +319,7 @@ function SignUpGroup({ title, empty, list, theme }: { title: string; empty: stri
       ) : (
         <ul className="space-y-3">
           {list.map((s) => (
-            <SignUpRow key={s.id} s={s} theme={theme} />
+            <SignUpRow key={s.id} s={s} theme={theme} nearMatches={nearMatches} />
           ))}
         </ul>
       )}
@@ -297,7 +327,7 @@ function SignUpGroup({ title, empty, list, theme }: { title: string; empty: stri
   );
 }
 
-function SignUpRow({ s, theme }: { s: Row; theme: string | null }) {
+function SignUpRow({ s, theme, nearMatches }: { s: Row; theme: string | null; nearMatches: NearMatches }) {
   const active = s.songs.filter((x) => x.status === "ACTIVE");
   const rejected = s.songs.filter((x) => x.status === "REJECTED");
   const shot = s.screenshot ? `/api/screenshots/${s.id}` : null;
@@ -361,6 +391,12 @@ function SignUpRow({ s, theme }: { s: Row; theme: string | null }) {
                     <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs font-medium text-gold-ink">New song</span>
                   )}
                 </p>
+                {nearMatches.has(song.id) && (
+                  <p className="text-xs font-medium text-red-700">
+                    <span className="mr-1 rounded-full bg-red-100 px-2 py-0.5">Possible duplicate</span>
+                    Close to {nearMatches.get(song.id)}, picked earlier. Reject it if it&apos;s the same song.
+                  </p>
+                )}
                 <p className="text-xs text-ink-muted">Song time {formatDateTime(song.enteredAt)}</p>
                 <ReasonForm
                   action={rejectSong.bind(null, song.id)}
