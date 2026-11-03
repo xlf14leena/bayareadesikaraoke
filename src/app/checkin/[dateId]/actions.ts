@@ -7,7 +7,7 @@ import type { FormState } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
 import { requireViewer } from "@/lib/roles";
 import { settle, withDateLock } from "@/lib/signups";
-import { ROUNDS, slotCount, slotModeFor } from "@/lib/slots";
+import { ROUNDS, freeSlots, passedUpTo, slotCount, slotModeFor } from "@/lib/slots";
 
 /** Checks the signed-in guest in, at the server's time, if this browser just scanned the venue code. */
 export async function checkInAtVenue(dateId: string): Promise<FormState> {
@@ -61,13 +61,20 @@ export async function pickSlot(dateId: string, round: number, _prev: FormState, 
       return { error: "Only singers signed up for this event can pick a slot." };
     }
     if (!signUp.checkedInAt) return { error: "Check in at the venue first, then pick your slot." };
-    const count = await slotCount(tx, dateId);
-    if (slot > count) return { error: "That slot doesn't exist. Pick another." };
-    const holder = await tx.roundSlot.findUnique({
-      where: { eventDateId_round_slot: { eventDateId: dateId, round, slot } },
-    });
-    if (holder && holder.signUpId !== signUp.id) return { error: `Slot ${slot} was just taken. Pick another.` };
-    if (holder) return { ok: `You're in slot ${slot}.` };
+    const passed = passedUpTo(date, round);
+    if (passed === Infinity) return { error: `Round ${round} is over.` };
+    const inRound = await tx.roundSlot.findMany({ where: { eventDateId: dateId, round } });
+    const mine = inRound.find((s) => s.signUpId === signUp.id);
+    if (mine?.slot === slot) return { ok: `You're in slot ${slot}.` };
+    if (mine && mine.slot <= passed) return { error: `Your turn in round ${round} has already come up.` };
+    if (slot <= passed) return { error: `Round ${round} is already past slot ${slot}. Pick a later one.` };
+    if (inRound.some((s) => s.slot === slot)) return { error: `Slot ${slot} was just taken. Pick another.` };
+    const free = freeSlots(
+      inRound.map((s) => s.slot),
+      await slotCount(tx, dateId),
+      passed,
+    );
+    if (!free.includes(slot)) return { error: "That slot doesn't exist. Pick another." };
     await tx.roundSlot.deleteMany({ where: { signUpId: signUp.id, round } });
     await tx.roundSlot.create({ data: { eventDateId: dateId, round, slot, signUpId: signUp.id, method: "PICK" } });
     return { ok: `You're in slot ${slot}.` };

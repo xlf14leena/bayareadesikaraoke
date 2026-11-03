@@ -14,6 +14,8 @@ export default function YourSlots({ dateId, rounds }: { dateId: string; rounds: 
               <span className="font-medium">Round {r.round}: </span>
               {r.mySlot ? (
                 <span className="rounded-full bg-royal px-2.5 py-0.5 text-xs font-semibold text-white">Slot {r.mySlot}</span>
+              ) : r.stage === "over" ? (
+                <span className="text-ink-muted">this round is over</span>
               ) : r.mode === "PICK" ? (
                 <span className="text-ink-muted">pick a free slot</span>
               ) : (
@@ -25,7 +27,10 @@ export default function YourSlots({ dateId, rounds }: { dateId: string; rounds: 
                 </span>
               )}
             </p>
-            {r.mode === "PICK" && (
+            {r.mode === "PICK" && r.stage === "running" && !r.myTurnPassed && (
+              <p className="text-xs text-ink-muted">This round has started, so only slots after the current singer are open.</p>
+            )}
+            {r.mode === "PICK" && r.stage !== "over" && !r.myTurnPassed && (
               <SlotPicker
                 key={`${r.mySlot}:${r.free.join(",")}`}
                 action={pickSlot.bind(null, dateId, r.round)} free={r.free} changing={!!r.mySlot} />

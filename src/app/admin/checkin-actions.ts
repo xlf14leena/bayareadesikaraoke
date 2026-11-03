@@ -121,6 +121,18 @@ export async function stepNowSinging(dateId: string, step: 1 | -1): Promise<void
   refresh(dateId);
 }
 
+/**
+ * Starts a round: the first taken slot in it becomes "now singing", whatever
+ * its number. If that's #7, slots 1 to 6 can no longer be picked or given out.
+ */
+export async function startRound(dateId: string, round: number): Promise<void> {
+  await adminDate(dateId);
+  const first = (await singingOrder(dateId)).find((o) => o.round === round);
+  if (!first) return;
+  await prisma.eventDate.update({ where: { id: dateId }, data: { nowRound: round, nowSlot: first.slot } });
+  refresh(dateId);
+}
+
 export async function clearNowSinging(dateId: string): Promise<void> {
   await adminDate(dateId);
   await prisma.eventDate.update({ where: { id: dateId }, data: { nowRound: null, nowSlot: null } });

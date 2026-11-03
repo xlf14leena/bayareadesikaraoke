@@ -40,7 +40,7 @@ export default async function CheckInPage({ params, searchParams }: Props) {
 
   const rounds =
     signUp?.checkedInAt && signUp.role === "SINGER" && CAN_CHECK_IN.includes(signUp.status) && date.endsAt > new Date()
-      ? await singerRounds(prisma, dateId, signUp.id, date.series)
+      ? await singerRounds(prisma, dateId, signUp.id, date.series, date)
       : null;
 
   let body: React.ReactNode;

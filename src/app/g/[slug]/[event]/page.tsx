@@ -131,7 +131,7 @@ export default async function EventPage({ params, searchParams }: Props) {
 
   const myRounds =
     myActive?.checkedInAt && myActive.role === "SINGER" && CAN_CHECK_IN.includes(myActive.status) && date.endsAt > new Date()
-      ? await singerRounds(prisma, date.id, myActive.id, series)
+      ? await singerRounds(prisma, date.id, myActive.id, series, date)
       : null;
 
   const banner = bannerFor(date.bannerUrl, series.bannerUrl, series.group.bannerUrl);
