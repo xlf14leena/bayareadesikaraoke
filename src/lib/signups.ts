@@ -237,15 +237,16 @@ export async function setSong(
   if (input.duetPartnerId) {
     const partner = await tx.signUp.findUnique({
       where: { id: input.duetPartnerId },
-      select: { eventDateId: true, status: true },
+      select: { eventDateId: true, status: true, role: true },
     });
     if (
       input.duetPartnerId === signUp.id ||
       !partner ||
       partner.eventDateId !== signUp.eventDateId ||
+      partner.role !== "SINGER" ||
       !HOLDS_SPOT.includes(partner.status)
     ) {
-      throw new FormError(`Pick a duet partner for round ${round} from the people signed up for this date.`);
+      throw new FormError(`Pick a duet partner for round ${round} from the singers signed up for this date.`);
     }
   }
   const normalizedTitle = normalizeTitle(input.title);

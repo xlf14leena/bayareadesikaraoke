@@ -15,8 +15,8 @@ export type SongDefaults = {
   duetPartnerId: string | null;
 };
 
-/** Someone signed up for the same date who can be picked as a duet partner. */
-export type DuetPartnerOption = { id: string; name: string; listener: boolean };
+/** Another singer signed up for the same date, who can be picked as a duet partner. */
+export type DuetPartnerOption = { id: string; name: string };
 
 /**
  * Song title, film or artist, YouTube track, and solo or duet for each round.
@@ -91,13 +91,12 @@ function RoundFields({
         ))}
       </div>
       {duet && (
-        <Field label="Duet partner (optional)" hint="Pick someone signed up for this date, or leave it for later.">
+        <Field label="Duet partner (optional)" hint="Pick another singer signed up for this date, or leave it for later.">
           <select name={`partner${r}`} defaultValue={defaults?.duetPartnerId ?? ""} className={inputClass}>
             <option value="">Not picked yet</option>
             {partners.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
-                {p.listener ? " (listener)" : ""}
               </option>
             ))}
           </select>

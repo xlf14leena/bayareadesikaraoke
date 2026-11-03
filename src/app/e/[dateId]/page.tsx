@@ -95,13 +95,13 @@ export default async function EventPage({ params, searchParams }: Props) {
         })
       : Promise.resolve([]),
   ]);
-  // Duet partners: anyone else holding a spot on this date, and duets that name me.
+  // Duet partners: other singers holding a spot on this date, and duets that name me.
   const [partnerSignUps, invites] = myActive
     ? await Promise.all([
         prisma.signUp.findMany({
-          where: { eventDateId: date.id, status: { in: HOLDS_SPOT }, id: { not: myActive.id } },
+          where: { eventDateId: date.id, role: "SINGER", status: { in: HOLDS_SPOT }, id: { not: myActive.id } },
           orderBy: { displayName: "asc" },
-          select: { id: true, displayName: true, role: true },
+          select: { id: true, displayName: true },
         }),
         prisma.song.findMany({
           where: { duetPartnerId: myActive.id, status: "ACTIVE", signUp: { status: { in: HOLDS_SPOT } } },
@@ -281,7 +281,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           group={series.group}
           waitlistPosition={waitlistPosition}
           editable={stillEditable(date)}
-          partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName, listener: p.role === "LISTENER" }))}
+          partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName }))}
           duetInvites={invites.map((i) => ({ round: i.round, title: i.title, singer: i.signUp.displayName }))}
         />
       )}

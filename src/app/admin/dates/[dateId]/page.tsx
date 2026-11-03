@@ -150,8 +150,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           <AddPersonForm
             action={addPerson.bind(null, date.id)}
             partners={date.signUps
-              .filter((s) => HOLDS_SPOT.includes(s.status))
-              .map((s) => ({ id: s.id, name: s.displayName, listener: s.role === "LISTENER" }))}
+              .filter((s) => s.role === "SINGER" && HOLDS_SPOT.includes(s.status))
+              .map((s) => ({ id: s.id, name: s.displayName }))}
           />
         </section>
       )}
