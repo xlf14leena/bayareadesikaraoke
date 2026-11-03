@@ -32,7 +32,7 @@ export function SongFields({
   partners?: DuetPartnerOption[];
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {rounds.map((r) => (
         <RoundFields key={r} round={r} defaults={defaults?.[r]} partners={partners} />
       ))}
@@ -51,57 +51,72 @@ function RoundFields({
 }) {
   const [duet, setDuet] = useState(!!defaults?.duet);
   return (
-    <fieldset className="space-y-2 rounded-lg border border-line p-3">
-      <legend className="px-1 text-sm font-semibold text-royal">Round {r}</legend>
-      <Field label="Song title">
-        <input
-          name={`title${r}`}
-          defaultValue={defaults?.title}
-          maxLength={150}
-          placeholder="e.g. Pehla Nasha"
-          className={inputClass}
-        />
-      </Field>
-      <Field label="Film or artist (optional)">
-        <input name={`artist${r}`} defaultValue={defaults?.artist} maxLength={150} className={inputClass} />
-      </Field>
-      <Field label="YouTube karaoke track (optional)">
-        <input
-          name={`youtube${r}`}
-          type="url"
-          inputMode="url"
-          defaultValue={defaults?.youtubeUrl}
-          placeholder="https://youtu.be/…"
-          className={inputClass}
-        />
-      </Field>
-      <div role="radiogroup" aria-label={`Round ${r}: solo or duet`} className="flex gap-4 pt-1 text-sm">
-        {(["solo", "duet"] as const).map((kind) => (
-          <label key={kind} className="flex items-center gap-2">
-            <input
-              type="radio"
-              name={`kind${r}`}
-              value={kind}
-              checked={(kind === "duet") === duet}
-              onChange={() => setDuet(kind === "duet")}
-              className="accent-royal"
-            />
-            {kind === "solo" ? "Solo" : "Duet"}
-          </label>
-        ))}
+    <fieldset className="overflow-hidden rounded-lg border border-line">
+      {/* A filled header band so each round reads as its own block. */}
+      <legend className="sr-only">Round {r}</legend>
+      <div aria-hidden className="flex items-center gap-2 bg-royal px-3 py-1.5 text-sm font-semibold text-white">
+        <span className="grid size-5 place-items-center rounded-full bg-white text-xs text-royal">{r}</span>
+        Round {r}
       </div>
-      {duet && (
-        <Field label="Duet partner (optional)" hint="Pick another singer signed up for this date, or leave it for later.">
-          <select name={`partner${r}`} defaultValue={defaults?.duetPartnerId ?? ""} className={inputClass}>
-            <option value="">Not picked yet</option>
-            {partners.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+      <div className="grid gap-3 bg-mist/60 p-3 sm:grid-cols-2">
+        <Field label="Song title">
+          <input
+            name={`title${r}`}
+            defaultValue={defaults?.title}
+            maxLength={150}
+            placeholder="e.g. Pehla Nasha"
+            className={inputClass}
+          />
         </Field>
-      )}
+        <Field label="Film or artist (optional)">
+          <input name={`artist${r}`} defaultValue={defaults?.artist} maxLength={150} className={inputClass} />
+        </Field>
+        <Field label="YouTube karaoke track (optional)" className="sm:col-span-2">
+          <input
+            name={`youtube${r}`}
+            type="url"
+            inputMode="url"
+            defaultValue={defaults?.youtubeUrl}
+            placeholder="https://youtu.be/…"
+            className={inputClass}
+          />
+        </Field>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:col-span-2">
+          <div role="radiogroup" aria-label={`Round ${r}: solo or duet`} className="flex items-center gap-4">
+            {(["solo", "duet"] as const).map((kind) => (
+              <label key={kind} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name={`kind${r}`}
+                  value={kind}
+                  checked={(kind === "duet") === duet}
+                  onChange={() => setDuet(kind === "duet")}
+                  className="accent-royal"
+                />
+                {kind === "solo" ? "Solo" : "Duet"}
+              </label>
+            ))}
+          </div>
+          {duet && (
+            <label className="flex min-w-[14rem] flex-1 items-center gap-2">
+              <span className="shrink-0 text-ink-muted">with</span>
+              <select
+                name={`partner${r}`}
+                defaultValue={defaults?.duetPartnerId ?? ""}
+                aria-label={`Round ${r} duet partner`}
+                className={`${inputClass} sm:max-w-xs`}
+              >
+                <option value="">Not picked yet</option>
+                {partners.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      </div>
     </fieldset>
   );
 }
