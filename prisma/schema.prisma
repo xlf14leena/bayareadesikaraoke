@@ -188,6 +188,9 @@ model EventDate {
   // opening it again) makes every earlier code useless.
   checkInOpenedAt    DateTime?
   checkInSecret      String?
+  // Who's singing right now, set by an admin from the running order (round and slot)
+  nowRound           Int?
+  nowSlot            Int?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
