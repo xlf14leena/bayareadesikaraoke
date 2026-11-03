@@ -84,7 +84,7 @@ export async function clearSlot(signUpId: string, round: number): Promise<void> 
 
 // ---------- Now singing ----------
 
-/** Every taken slot on the date, in singing order: round 1 by slot, then round 2. */
+/** Every taken slot on the date, in singing order: round 1 by slot, then round 2, and so on. */
 async function singingOrder(dateId: string) {
   return prisma.roundSlot.findMany({
     where: { eventDateId: dateId, signUp: { status: { in: CAN_CHECK_IN } } },

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { Prisma, type AttendeeRole, type EventDate, type EventSeries, type SignUpStatus } from "@prisma/client";
+import { type RoundConfig, type RoundKind, roundsFor } from "@/lib/rounds";
 import { fillCheckInOrderSlots } from "@/lib/slots";
 import { HOLDS_SPOT, settingsFor } from "@/lib/events";
 import { FormError } from "@/lib/forms";
@@ -132,7 +133,12 @@ export async function settleDate(tx: Tx, dateId: string) {
     }
   }
   // Singers who checked in get their place in check-in-order rounds.
-  await fillCheckInOrderSlots(tx, dateId, date.series, date);
+  await fillCheckInOrderSlots(tx, dateId, roundsFor(date, date.series), date);
+}
+
+/** Every round's song from the form, in round order. */
+export function songInputs(form: FormData, rounds: RoundConfig[]): (SongInput | null)[] {
+  return rounds.map((r, i) => songInput(form, i + 1, r.kind));
 }
 
 /** settleDate in its own locked transaction. */
@@ -193,12 +199,15 @@ export type SongInput = {
   confirmedDifferent: string | null;
 };
 
-/** Reads round N's song fields ("title1", "artist1", "youtube1", "kind1" = solo|duet, "partner1" = sign-up id). Blank title = no song. */
-export function songInput(form: FormData, round: number): SongInput | null {
+/**
+ * Reads round N's song fields ("title1", "artist1", "youtube1", "kind1" = solo|duet, "partner1" = sign-up id).
+ * Blank title = no song. A solos-only or duets-only round sets the kind whatever the form says.
+ */
+export function songInput(form: FormData, round: number, kind: RoundKind = "EITHER"): SongInput | null {
   const title = String(form.get(`title${round}`) ?? "").trim();
   const artist = String(form.get(`artist${round}`) ?? "").trim() || null;
   const youtubeUrl = String(form.get(`youtube${round}`) ?? "").trim() || null;
-  const duet = form.get(`kind${round}`) === "duet";
+  const duet = kind === "EITHER" ? form.get(`kind${round}`) === "duet" : kind === "DUET";
   const duetPartnerId = (duet && String(form.get(`partner${round}`) ?? "").trim()) || null;
   const confirmedDifferent = String(form.get(`different${round}`) ?? "") || null;
   if (!title) {

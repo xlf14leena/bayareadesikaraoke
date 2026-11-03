@@ -144,9 +144,8 @@ model EventSeries {
   // Sign-up window, relative to each date's start (null = defaults in spec)
   signupOpensHoursBefore  Int?
   signupClosesHoursBefore Int?
-  // How singers get their place in each round once they check in (src/lib/slots.ts)
-  round1SlotMode          SlotMode   @default(PICK)
-  round2SlotMode          SlotMode   @default(CHECKIN_ORDER)
+  // The rounds, round 1 first: [{ kind: SOLO|DUET|EITHER, slotMode }] (src/lib/rounds.ts)
+  rounds                  Json       @default("[{\"kind\":\"EITHER\",\"slotMode\":\"PICK\"},{\"kind\":\"EITHER\",\"slotMode\":\"CHECKIN_ORDER\"}]")
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
 
@@ -164,7 +163,7 @@ enum EventDateStatus {
 
 // One occurrence. The series is its template: the date uses the series' theme,
 // description, prices and caps unless that setting is listed in overrides
-// ("theme", "description", "pricing", "capacity"), in which case the date's
+// ("theme", "description", "pricing", "capacity", "rounds"), in which case the date's
 // own columns apply. See settingsFor in src/lib/events.ts.
 model EventDate {
   id                 String          @id @default(cuid())
@@ -182,6 +181,7 @@ model EventDate {
   listenerPriceCents Int?
   maxSingers         Int?
   maxListeners       Int?
+  rounds             Json? // used when overrides lists "rounds" (src/lib/rounds.ts)
   bannerUrl          String? // null = the series' banner
   signupOpensAt      DateTime?
   signupClosesAt     DateTime?
@@ -290,8 +290,8 @@ enum SongStatus {
   RELEASED
 }
 
-// First pick wins. A singer has up to two songs per event date, one per round.
-// Duplicates are checked across both rounds: uniqueness among ACTIVE songs per
+// First pick wins. A singer has up to one song per round of the event date.
+// Duplicates are checked across all rounds: uniqueness among ACTIVE songs per
 // event date (title and YouTube video) and one ACTIVE song per sign-up per round
 // are enforced by partial unique indexes in the migration SQL (Prisma can't
 // express them).
@@ -299,7 +299,7 @@ model Song {
   id              String     @id @default(cuid())
   signUpId        String
   eventDateId     String
-  round           Int // 1 or 2
+  round           Int // 1, 2, 3... (src/lib/rounds.ts)
   title           String
   normalizedTitle String
   artist          String?
@@ -329,7 +329,7 @@ model Song {
 // the sign-up ends or its check-in is undone.
 model RoundSlot {
   eventDateId String
-  round       Int // 1 or 2
+  round       Int // 1, 2, 3...
   slot        Int // 1, 2, 3...
   signUpId    String
   method      SlotMode // picked by the singer, or given in check-in order

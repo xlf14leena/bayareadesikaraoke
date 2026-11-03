@@ -1,8 +1,9 @@
-import type { EventSeries, Prisma, SlotMode } from "@prisma/client";
+import type { Prisma, SlotMode } from "@prisma/client";
 import { HOLDS_SPOT } from "@/lib/events";
+import { type RoundConfig, roundAt, roundNumbers } from "@/lib/rounds";
 
 // Singing slots: a singer's place in a round's running order, handed out
-// only after they check in at the venue. Each round of a series has a mode:
+// only after they check in at the venue. Each round (src/lib/rounds.ts) has a mode:
 //   PICK          – the singer picks any free slot (and can change it)
 //   CHECKIN_ORDER – singers go in the order they check in
 //   PAYMENT_ORDER – singers go in the order they paid (see paidAt)
@@ -13,14 +14,6 @@ import { HOLDS_SPOT } from "@/lib/events";
 // Undoing a check-in or ending a sign-up frees that person's slots.
 
 type Tx = Prisma.TransactionClient;
-
-export const ROUNDS = [1, 2] as const;
-
-export const SLOT_MODE_LABEL: Record<SlotMode, string> = {
-  PICK: "Singers pick a slot",
-  CHECKIN_ORDER: "Check-in order",
-  PAYMENT_ORDER: "Payment order",
-};
 
 /** Modes where slots are handed out automatically when a singer checks in. */
 const AUTO_MODES: SlotMode[] = ["CHECKIN_ORDER", "PAYMENT_ORDER"];
@@ -43,8 +36,9 @@ export function paidAt(s: PaidFields): number {
   return (s.screenshot?.uploadedAt ?? s.reviewedAt ?? s.registeredAt).getTime();
 }
 
-export function slotModeFor(series: Pick<EventSeries, "round1SlotMode" | "round2SlotMode">, round: number): SlotMode {
-  return round === 1 ? series.round1SlotMode : series.round2SlotMode;
+/** The slot mode of round n, or null when the event has no such round. */
+export function slotModeFor(rounds: RoundConfig[], round: number): SlotMode | null {
+  return roundAt(rounds, round)?.slotMode ?? null;
 }
 
 /** How many slots each round has: one per singer holding a spot. */
@@ -95,10 +89,10 @@ export function freeSlots(taken: number[], count: number, passed = 0): number[] 
 export async function fillCheckInOrderSlots(
   tx: Tx,
   dateId: string,
-  series: Pick<EventSeries, "round1SlotMode" | "round2SlotMode">,
+  config: RoundConfig[],
   now: NowSinging = { nowRound: null, nowSlot: null },
 ) {
-  const rounds = ROUNDS.filter((r) => AUTO_MODES.includes(slotModeFor(series, r)));
+  const rounds = roundNumbers(config).filter((r) => AUTO_MODES.includes(slotModeFor(config, r)!));
   if (rounds.length === 0) return;
   const singers = await tx.signUp.findMany({
     where: { eventDateId: dateId, role: "SINGER", status: { in: HOLDS_SPOT } },
@@ -120,7 +114,7 @@ export async function fillCheckInOrderSlots(
   const paymentPlace = new Map(byPayment.map((s, i) => [s.id, i + 1]));
   const slots = await tx.roundSlot.findMany({ where: { eventDateId: dateId, round: { in: [...rounds] } } });
   for (const round of rounds) {
-    const mode = slotModeFor(series, round);
+    const mode = slotModeFor(config, round)!;
     const inRound = slots.filter((s) => s.round === round);
     const hasSlot = new Set(inRound.map((s) => s.signUpId));
     const taken = new Set(inRound.map((s) => s.slot));
@@ -162,20 +156,20 @@ export async function singerRounds(
   tx: Tx,
   dateId: string,
   signUpId: string,
-  series: Pick<EventSeries, "round1SlotMode" | "round2SlotMode">,
+  config: RoundConfig[],
   now: NowSinging,
 ): Promise<RoundSlotInfo[]> {
   const [slots, count] = await Promise.all([
     tx.roundSlot.findMany({ where: { eventDateId: dateId }, select: { round: true, slot: true, signUpId: true } }),
     slotCount(tx, dateId),
   ]);
-  return ROUNDS.map((round) => {
+  return roundNumbers(config).map((round) => {
     const inRound = slots.filter((s) => s.round === round);
     const passed = passedUpTo(now, round);
     const mySlot = inRound.find((s) => s.signUpId === signUpId)?.slot ?? null;
     return {
       round,
-      mode: slotModeFor(series, round),
+      mode: slotModeFor(config, round)!,
       mySlot,
       free: freeSlots(
         inRound.map((s) => s.slot),

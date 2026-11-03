@@ -3,11 +3,12 @@ import type { SlotMode } from "@prisma/client";
 import { clearNowSinging, clearSlot, setNowSinging, startRound, stepNowSinging } from "@/app/admin/checkin-actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
-import { SLOT_MODE_LABEL } from "@/lib/slots";
+import { ROUND_KIND_LABEL, type RoundKind, SLOT_MODE_LABEL } from "@/lib/rounds";
 
 export type RunningOrderRound = {
   round: number;
   mode: SlotMode;
+  kind: RoundKind;
   rows: { slot: number; signUpId: string; name: string; song: string | null; track: string | null; method: SlotMode }[];
   /** Checked-in singers who haven't got a slot yet. */
   waiting: string[];
@@ -33,11 +34,15 @@ export default function RunningOrder({
       <div>
         <h2 className="mb-1 text-xl font-semibold">Running order</h2>
         <p className="text-sm text-ink-muted">
-          Singers get a slot in each round after they check in.{" "}
+          Singers get a slot in each round after they check in. Change the rounds and how slots work in{" "}
+          <a href="#date-settings" className="text-cobalt hover:underline">
+            this date&apos;s settings
+          </a>{" "}
+          or the{" "}
           <Link href={`/admin/events/${seriesId}`} className="text-cobalt hover:underline">
-            Change how slots work
-          </Link>{" "}
-          in the event settings.
+            event settings
+          </Link>
+          .
         </p>
       </div>
       <div className="space-y-3 rounded-lg border border-gold bg-gold/15 p-3">
@@ -80,7 +85,7 @@ export default function RunningOrder({
         </div>
         <p className="text-xs text-ink-muted">
           Signed-in guests see this on the event page. A round starts at its first taken slot, so if that is #7,
-          nobody can pick an earlier slot afterwards. After the last slot of round 1, Next moves on to round 2.
+          nobody can pick an earlier slot afterwards. After the last slot of a round, Next moves on to the next round.
         </p>
       </div>
       <div className="space-y-3">
@@ -90,7 +95,7 @@ export default function RunningOrder({
               <span>
                 Round {r.round}{" "}
                 <span className="text-sm font-normal text-ink-muted">
-                  · {SLOT_MODE_LABEL[r.mode]} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
+                  {r.kind !== "EITHER" && `· ${ROUND_KIND_LABEL[r.kind]} `}· {SLOT_MODE_LABEL[r.mode]} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
                 </span>
               </span>
               <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">

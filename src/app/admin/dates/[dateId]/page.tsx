@@ -9,7 +9,7 @@ import AddPersonForm from "@/components/admin/AddPersonForm";
 import CheckInPanel from "@/components/checkin/CheckInPanel";
 import RunningOrder from "@/components/checkin/RunningOrder";
 import { CAN_CHECK_IN } from "@/lib/checkin";
-import { ROUNDS, slotModeFor } from "@/lib/slots";
+import { parseRounds, roundNumbers, roundsFor } from "@/lib/rounds";
 import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
@@ -53,6 +53,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   if (!date) notFound();
   const { series } = date;
   const settings = settingsFor(date, series);
+  const rounds = roundsFor(date, series);
   const by = (statuses: string[]) => date.signUps.filter((s) => statuses.includes(s.status));
   const review = by(["UNDER_REVIEW"]).sort(
     (a, b) => (a.screenshot?.uploadedAt.getTime() ?? 0) - (b.screenshot?.uploadedAt.getTime() ?? 0),
@@ -69,11 +70,15 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   const arrivedSingers = date.signUps.filter(
     (s) => s.role === "SINGER" && s.checkedInAt && CAN_CHECK_IN.includes(s.status),
   );
-  const runningOrder = ROUNDS.map((round) => {
+  // The date's rounds, plus any round that still holds slots after the rounds changed (a past date).
+  const orderRounds = [...new Set([...roundNumbers(rounds), ...slotRows.map((r) => r.round)])].sort((a, b) => a - b);
+  const runningOrder = orderRounds.map((round) => {
     const inRound = slotRows.filter((r) => r.round === round);
+    const config = rounds[round - 1];
     return {
       round,
-      mode: slotModeFor(series, round),
+      mode: config?.slotMode ?? inRound[0]?.method ?? "PICK",
+      kind: config?.kind ?? "EITHER",
       rows: inRound.map((r) => {
         const s = date.signUps.find((x) => x.id === r.signUpId);
         const song = s?.songs.find((x) => x.round === round && x.status === "ACTIVE");
@@ -195,6 +200,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           </p>
           <AddPersonForm
             action={addPerson.bind(null, date.id)}
+            rounds={rounds}
             partners={date.signUps
               .filter((s) => s.role === "SINGER" && HOLDS_SPOT.includes(s.status))
               .map((s) => ({ id: s.id, name: s.displayName }))}
@@ -202,7 +208,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         </section>
       )}
 
-      <section className={cardClass}>
+      <section id="date-settings" className={`${cardClass} scroll-mt-4`}>
         <h2 className="mb-1 text-xl font-semibold">Settings for this date</h2>
         <p className="mb-4 text-sm text-ink-muted">
           This date uses the event settings. Tick &ldquo;Change for this date&rdquo; to override one for this date
@@ -220,6 +226,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
             maxSingers: series.maxSingers,
             maxListeners: series.maxListeners,
           }}
+          rounds={rounds}
+          templateRounds={parseRounds(series.rounds)}
           when={{
             day: pacificDateOf(date.startsAt),
             startTime: pacificTimeOf(date.startsAt),

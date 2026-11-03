@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { FormError, type FormState, text } from "@/lib/forms";
 import { eventPathById } from "@/lib/event-url";
 import { prisma } from "@/lib/prisma";
+import { roundsFor } from "@/lib/rounds";
 import { canAdminGroup, requireViewer } from "@/lib/roles";
 import {
   ENDED,
@@ -20,7 +21,7 @@ import {
   releaseSongs,
   setSong,
   settleDate,
-  songInput,
+  songInputs,
   stillEditable,
   withDateLock,
 } from "@/lib/signups";
@@ -111,7 +112,7 @@ export async function signUpForDate(
 }
 
 async function ownSignUp(signUpId: string) {
-  const signUp = await prisma.signUp.findUnique({ where: { id: signUpId }, include: { eventDate: true } });
+  const signUp = await prisma.signUp.findUnique({ where: { id: signUpId }, include: { eventDate: { include: { series: true } } } });
   const viewer = await requireViewer(signUp ? await eventPathById(signUp.eventDateId) : "/me");
   if (!signUp || signUp.userId !== viewer.id) throw new FormError("That sign-up isn't yours.");
   return signUp;
@@ -156,7 +157,7 @@ export async function uploadScreenshot(signUpId: string, _prev: FormState, form:
   return result;
 }
 
-/** Saves the singer's songs for both rounds. */
+/** Saves the singer's song for each round. */
 export async function saveSongs(signUpId: string, _prev: FormState, form: FormData): Promise<FormState> {
   let dateId = "";
   const result = await attempt(async () => {
@@ -164,7 +165,7 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
     dateId = signUp.eventDateId;
     if (signUp.role !== "SINGER") throw new FormError("Only singers pick songs.");
     if (!stillEditable(signUp.eventDate)) throw new FormError("Songs can't be changed after sign-ups close.");
-    const inputs = [songInput(form, 1), songInput(form, 2)];
+    const inputs = songInputs(form, roundsFor(signUp.eventDate, signUp.eventDate.series));
 
     return withDateLock(dateId, async (tx) => {
       await settleDate(tx, dateId);

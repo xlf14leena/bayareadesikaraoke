@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import CheckInButton from "@/components/checkin/CheckInButton";
 import YourSlots from "@/components/checkin/YourSlots";
+import { roundsFor } from "@/lib/rounds";
 import { singerRounds } from "@/lib/slots";
 import { cardClass } from "@/components/ui";
 import { CAN_CHECK_IN, PASS_COOKIE, checkInIsOpen, checkInOpensAt, passIsValid } from "@/lib/checkin";
@@ -40,7 +41,7 @@ export default async function CheckInPage({ params, searchParams }: Props) {
 
   const rounds =
     signUp?.checkedInAt && signUp.role === "SINGER" && CAN_CHECK_IN.includes(signUp.status) && date.endsAt > new Date()
-      ? await singerRounds(prisma, dateId, signUp.id, date.series, date)
+      ? await singerRounds(prisma, dateId, signUp.id, roundsFor(date, date.series), date)
       : null;
 
   let body: React.ReactNode;

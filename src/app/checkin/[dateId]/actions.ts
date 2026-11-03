@@ -7,7 +7,8 @@ import type { FormState } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
 import { requireViewer } from "@/lib/roles";
 import { settle, withDateLock } from "@/lib/signups";
-import { ROUNDS, freeSlots, passedUpTo, slotCount, slotModeFor } from "@/lib/slots";
+import { roundsFor } from "@/lib/rounds";
+import { freeSlots, passedUpTo, slotCount, slotModeFor } from "@/lib/slots";
 
 /** Checks the signed-in guest in, at the server's time, if this browser just scanned the venue code. */
 export async function checkInAtVenue(dateId: string): Promise<FormState> {
@@ -51,9 +52,9 @@ export async function pickSlot(dateId: string, round: number, _prev: FormState, 
   const result = await withDateLock(dateId, async (tx): Promise<FormState> => {
     const date = await tx.eventDate.findUnique({ where: { id: dateId }, include: { series: true } });
     if (!date || date.status !== "SCHEDULED" || date.endsAt < new Date()) return { error: "This event is over." };
-    if (!ROUNDS.includes(round as 1 | 2) || slotModeFor(date.series, round) !== "PICK") {
-      return { error: "Slots for this round are given out automatically when you check in." };
-    }
+    const mode = slotModeFor(roundsFor(date, date.series), round);
+    if (mode == null) return { error: "This event doesn't have that round." };
+    if (mode !== "PICK") return { error: "Slots for this round are given out automatically when you check in." };
     const signUp = await tx.signUp.findUnique({
       where: { eventDateId_userId: { eventDateId: dateId, userId: viewer.id } },
     });

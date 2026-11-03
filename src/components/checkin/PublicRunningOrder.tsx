@@ -25,7 +25,9 @@ export default function PublicRunningOrder({
   mySignUpId: string | null;
   now: { round: number; slot: number } | null;
 }) {
-  const rounds = [1, 2].map((r) => rows.filter((row) => row.round === r)).filter((list) => list.length > 0);
+  const rounds = [...new Set(rows.map((row) => row.round))]
+    .sort((a, b) => a - b)
+    .map((r) => rows.filter((row) => row.round === r));
   const isNow = (row: PublicOrderRow) => now?.round === row.round && now.slot === row.slot;
   const current = rows.find(isNow);
   const openRound = now?.round ?? rounds[0]?.[0].round;

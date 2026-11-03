@@ -8,7 +8,9 @@ import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
 import { type EventSettings, type OverrideKey, settingsFor } from "@/lib/events";
+import RoundsFields from "@/components/admin/RoundsFields";
 import { dollars, type FormState } from "@/lib/forms";
+import { type RoundConfig, describeRounds } from "@/lib/rounds";
 
 /**
  * Settings for one event date. Each setting follows the event (the template)
@@ -18,11 +20,16 @@ export default function DateForm({
   action,
   date,
   template,
+  rounds,
+  templateRounds,
   when,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
   date: EventDate;
   template: EventSettings;
+  /** The rounds this date uses now, and the event's. */
+  rounds: RoundConfig[];
+  templateRounds: RoundConfig[];
   when: { day: string; startTime: string; endTime: string };
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
@@ -99,6 +106,15 @@ export default function DateForm({
             <input name="maxListeners" inputMode="numeric" defaultValue={current.maxListeners ?? ""} className={inputClass} />
           </Field>
         </div>
+      </Overridable>
+
+      <Overridable
+        name="rounds"
+        title="Rounds"
+        date={date}
+        inherited={`${templateRounds.length} ${templateRounds.length === 1 ? "round" : "rounds"}\n${describeRounds(templateRounds)}`}
+      >
+        <RoundsFields initial={rounds} />
       </Overridable>
 
       <Field label="Banner image link (optional)" hint="Blank uses the event's banner, or the default singing photo.">
