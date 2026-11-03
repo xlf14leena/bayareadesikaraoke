@@ -33,7 +33,7 @@ async function attempt(fn: () => Promise<string | void>): Promise<FormState> {
     const ok = await fn();
     return ok ? { ok } : undefined;
   } catch (e) {
-    if (e instanceof FormError) return { error: e.message };
+    if (e instanceof FormError) return { error: e.message, nearMatch: e.nearMatch };
     throw e;
   }
 }

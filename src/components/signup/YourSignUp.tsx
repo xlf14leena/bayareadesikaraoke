@@ -195,7 +195,7 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable, 
           <div className="space-y-3 border-t border-line p-3">
             <p className="text-xs text-ink-muted">
               Pick one song per round. First pick wins: a song someone already picked for this date can&apos;t be
-              picked again. You can change your songs until sign-ups close.
+              picked again, even spelled a little differently. You can change your songs until sign-ups close.
             </p>
             {rejected.map((s) => (
               <p key={s.id} className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">

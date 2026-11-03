@@ -42,7 +42,7 @@ export default function AddPersonForm({
           <input name="paymentNote" maxLength={120} className={inputClass} />
         </Field>
       </div>
-      {role === "SINGER" && <SongFields rounds={[1, 2]} partners={partners} />}
+      {role === "SINGER" && <SongFields rounds={[1, 2]} partners={partners} nearMatch={state?.nearMatch} />}
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="overCap" className="accent-royal" />
         Go over the cap if this role is full
