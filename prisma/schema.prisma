@@ -27,6 +27,7 @@ model User {
   signUps  SignUp[]     @relation("SignUpUser")
   reviewed SignUp[]     @relation("SignUpReviewer")
   checkIns SignUp[]     @relation("SignUpCheckedInBy")
+  feedback EventFeedback[]
 }
 
 // Google account link (Auth.js). providerAccountId is the Google id.
@@ -198,6 +199,7 @@ model EventDate {
   signUps SignUp[]
   songs   Song[]
   slots   RoundSlot[]
+  feedback EventFeedback[]
 
   @@unique([seriesId, startsAt])
   @@index([startsAt])
@@ -333,4 +335,25 @@ model RoundSlot {
 
   @@id([eventDateId, round, slot])
   @@unique([signUpId, round])
+}
+
+// ---------- Feedback ----------
+
+// What a signed-in person thought of an event date, given once it has ended
+// (src/lib/feedback.ts). One response per person per date; sending the form
+// again updates it. Only that group's admins and super users can read them.
+model EventFeedback {
+  id          String   @id @default(cuid())
+  eventDateId String
+  userId      String
+  rating      Int // 1 to 5 stars
+  comment     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  eventDate EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventDateId, userId])
+  @@index([userId])
 }

@@ -17,6 +17,7 @@ import { eventPath } from "@/lib/event-url";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { settle } from "@/lib/signups";
+import { feedbackOpen, feedbackSummary } from "@/lib/feedback";
 import { pacificDateOf, pacificTimeOf } from "@/lib/schedule";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
@@ -80,6 +81,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
     };
   });
   const viewHref = eventPath(date, series.visibility === "PRIVATE" ? series.privateToken : null);
+  const feedback = await feedbackSummary(date.id);
 
   return (
     <div className="space-y-8">
@@ -107,9 +109,16 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
               </p>
             )}
           </div>
-          <Link href={viewHref} className="text-sm font-medium text-cobalt hover:underline">
-            View event page →
-          </Link>
+          <div className="flex flex-wrap gap-4 text-sm font-medium">
+            {feedbackOpen(date) && (
+              <Link href={`/admin/dates/${date.id}/feedback`} className="text-cobalt hover:underline">
+                Feedback{feedback.count > 0 && ` (${feedback.count})`} →
+              </Link>
+            )}
+            <Link href={viewHref} className="text-cobalt hover:underline">
+              View event page →
+            </Link>
+          </div>
         </div>
       </div>
 
