@@ -8,7 +8,7 @@ import { SLOT_MODE_LABEL } from "@/lib/slots";
 export type RunningOrderRound = {
   round: number;
   mode: SlotMode;
-  rows: { slot: number; signUpId: string; name: string; song: string | null; method: SlotMode }[];
+  rows: { slot: number; signUpId: string; name: string; song: string | null; track: string | null; method: SlotMode }[];
   /** Checked-in singers who haven't got a slot yet. */
   waiting: string[];
 };
@@ -46,6 +46,16 @@ export default function RunningOrder({ rounds, seriesId }: { rounds: RunningOrde
                         {row.song ? ` · ${row.song}` : " · no song yet"}
                         {row.method === "PICK" ? " · picked" : " · check-in order"}
                       </span>
+                      {row.track && (
+                        <a
+                          href={row.track}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 font-medium text-cobalt hover:underline"
+                        >
+                          ▶ Track
+                        </a>
+                      )}
                     </span>
                     {row.method === "PICK" && (
                       <ConfirmButton

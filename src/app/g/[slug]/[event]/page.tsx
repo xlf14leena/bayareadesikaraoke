@@ -11,6 +11,8 @@ import { pacificTimeOf } from "@/lib/schedule";
 import SignUpForm from "@/components/signup/SignUpForm";
 import YourSignUp from "@/components/signup/YourSignUp";
 import YourSlots from "@/components/checkin/YourSlots";
+import LiveRefresh from "@/components/checkin/LiveRefresh";
+import PublicRunningOrder from "@/components/checkin/PublicRunningOrder";
 import { singerRounds } from "@/lib/slots";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
@@ -138,19 +140,39 @@ export default async function EventPage({ params, searchParams }: Props) {
   const toReview = isAdmin
     ? await prisma.signUp.count({ where: { eventDateId: date.id, status: "UNDER_REVIEW" } })
     : 0;
-  // Once singers have slots, each round lists in slot order; anyone without one yet comes after.
-  const slotRows = singers.length
-    ? await prisma.roundSlot.findMany({ where: { eventDateId: date.id }, select: { round: true, slot: true, signUpId: true } })
+  const rounds = [1, 2].map((r) => singers.filter((s) => s.round === r)).filter((list) => list.length > 0);
+  // The running order: checked-in singers by slot, with their song for that round.
+  const orderSlots = viewer
+    ? await prisma.roundSlot.findMany({
+        where: { eventDateId: date.id, signUp: { status: { in: HOLDS_SPOT } } },
+        orderBy: [{ round: "asc" }, { slot: "asc" }],
+        include: {
+          signUp: {
+            select: {
+              displayName: true,
+              songs: {
+                where: { status: "ACTIVE" },
+                select: {
+                  round: true,
+                  title: true,
+                  artist: true,
+                  youtubeUrl: true,
+                  duet: true,
+                  duetPartner: { select: { displayName: true, status: true } },
+                },
+              },
+            },
+          },
+        },
+      })
     : [];
-  const slotOf = (s: { signUpId: string; round: number }) =>
-    slotRows.find((r) => r.signUpId === s.signUpId && r.round === s.round)?.slot ?? null;
-  const rounds = [1, 2]
-    .map((r) =>
-      singers
-        .filter((s) => s.round === r)
-        .sort((a, b) => (slotOf(a) ?? 1e9) - (slotOf(b) ?? 1e9)),
-    )
-    .filter((list) => list.length > 0);
+  const runningOrder = orderSlots.map((r) => ({
+    round: r.round,
+    slot: r.slot,
+    signUpId: r.signUpId,
+    name: r.signUp.displayName,
+    song: r.signUp.songs.find((s) => s.round === r.round) ?? null,
+  }));
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
   const showLineup = date.signupsOpen || rounds.length > 0 || confirmedListeners > 0;
 
@@ -332,6 +354,11 @@ export default async function EventPage({ params, searchParams }: Props) {
         />
       )}
 
+      {runningOrder.length > 0 && !cancelled && (
+        <PublicRunningOrder rows={runningOrder} mySignUpId={myActive?.id ?? null} />
+      )}
+      {runningOrder.length > 0 && !cancelled && !past && <LiveRefresh everyMs={20000} />}
+
       {showLineup && (
         <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
           <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
@@ -351,14 +378,9 @@ export default async function EventPage({ params, searchParams }: Props) {
               {rounds.map((list) => (
                 <div key={list[0].round}>
                   {rounds.length > 1 && <h3 className="mb-1 font-semibold text-royal">Round {list[0].round}</h3>}
-                  <ol className={`space-y-1 ${list.some(slotOf) ? "" : "list-decimal pl-5"}`}>
+                  <ol className="list-decimal space-y-1 pl-5">
                     {list.map((s) => (
                       <li key={s.id}>
-                        {list.some(slotOf) && (
-                          <span className="mr-2 inline-block min-w-14 text-sm font-semibold text-royal">
-                            {slotOf(s) ? `Slot ${slotOf(s)}` : "—"}
-                          </span>
-                        )}
                         <span className="font-medium">{s.signUp.displayName}</span>
                         <span className="text-ink-muted">
                           {" "}

@@ -74,7 +74,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
       rows: inRound.map((r) => {
         const s = date.signUps.find((x) => x.id === r.signUpId);
         const song = s?.songs.find((x) => x.round === round && x.status === "ACTIVE");
-        return { slot: r.slot, signUpId: r.signUpId, name: s?.displayName ?? "?", song: song?.title ?? null, method: r.method };
+        return { slot: r.slot, signUpId: r.signUpId, name: s?.displayName ?? "?", song: song?.title ?? null, track: song?.youtubeUrl ?? null, method: r.method };
       }),
       waiting: arrivedSingers.filter((s) => !inRound.some((r) => r.signUpId === s.id)).map((s) => s.displayName),
     };
