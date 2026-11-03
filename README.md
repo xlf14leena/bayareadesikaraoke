@@ -27,7 +27,9 @@ Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdm
 | `/admin` | Admins | Groups you manage; super users can add groups |
 | `/admin/groups/<id>` | Group admins | Events, group details, admins; super users can delete the group |
 | `/admin/events/<id>` | Group admins | Event schedule and settings, upcoming dates, private link |
-| `/admin/dates/<id>` | Group admins | Settings for one date, cancel or restore it, payment review, add people by hand |
+| `/admin/dates/<id>` | Group admins | Settings for one date, cancel or restore it, payment review, add people by hand, check-in |
+| `/admin/dates/<id>/checkin` | Group admins | Check-in screen for the venue: rotating QR code and latest arrivals |
+| `/checkin/<id>` | Members | Where a guest lands after scanning the venue QR code |
 
 A person must sign in once before they can be made a group admin.
 
@@ -48,6 +50,16 @@ A person must sign in once before they can be made a group admin.
 - Singers pick one song per round, until sign-ups close (the date's start). Admins can reject a song with a reason; songs added after a payment was approved are marked "New song".
 - Admins can add people by hand (confirmed at once, with an optional payment note). Going over a cap needs a tick. If an email is given, the sign-up joins that person's account when they sign in with Google.
 - Emails are not sent yet; they come in the next step.
+
+## Check-in at the venue
+
+`src/lib/checkin.ts` holds the rules; admin actions are in `src/app/admin/checkin-actions.ts`.
+
+- From an hour before a date starts until it ends, the date's admin page shows **Open check-in**. Opening it gives the date a fresh secret (`EventDate.checkInSecret`); **Close check-in** clears it.
+- **Show check-in screen** opens a page to put up at the venue. Its QR code holds a code signed with `AUTH_SECRET` and that secret, and changes every 30 seconds. A code is accepted for at most a minute, so a photo sent to someone at home is useless by the time they try it, and closing or reopening check-in voids every earlier code.
+- A guest scans it with their phone camera. `/checkin/<id>/scan` checks the code and leaves a single-use pass cookie valid for 10 minutes (time to sign in with Google), then `/checkin/<id>` checks them in. `SignUp.checkedInAt` is the server's time, never the phone's. Anyone holding a spot can check in (paid or still paying; the admin list shows which), once.
+- The admin page lists who has checked in, when, and whether they scanned or were checked in by hand, refreshing every 10 seconds while check-in is open. Admins can undo a check-in or check someone in by hand.
+- There is no location check: venues are stored as an address without coordinates, and phone location is easy to fake and unreliable indoors.
 
 ## Data model
 

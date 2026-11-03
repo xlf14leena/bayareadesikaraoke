@@ -4,8 +4,10 @@ import Banner from "@/components/Banner";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton } from "@/components/ui";
 import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
-import { formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
+import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { ENDED, acceptingSignUps, settle, stillEditable } from "@/lib/signups";
+import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
+import { pacificTimeOf } from "@/lib/schedule";
 import SignUpForm from "@/components/signup/SignUpForm";
 import YourSignUp from "@/components/signup/YourSignUp";
 import { signUpForDate } from "./actions";
@@ -282,6 +284,20 @@ export default async function EventPage({ params, searchParams }: Props) {
           </div>
         )}
       </section>
+
+      {myActive?.checkedInAt ? (
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+          ✓ You checked in at {formatClock(pacificTimeOf(myActive.checkedInAt))}.
+        </p>
+      ) : (
+        myActive &&
+        CAN_CHECK_IN.includes(myActive.status) &&
+        checkInIsOpen(date) && (
+          <p className="rounded-lg bg-gold/30 px-3 py-2 text-sm font-medium text-gold-ink">
+            Check-in is open. When you arrive, scan the QR code on the check-in screen at the venue.
+          </p>
+        )
+      )}
 
       {myActive && !cancelled && (
         <YourSignUp

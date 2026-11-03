@@ -6,6 +6,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import DateForm from "@/components/admin/DateForm";
 import { approvePayment, addPerson, cancelSignUp, rejectPayment, rejectSong } from "@/app/admin/signup-actions";
 import AddPersonForm from "@/components/admin/AddPersonForm";
+import CheckInPanel from "@/components/checkin/CheckInPanel";
 import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
@@ -39,6 +40,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           },
           screenshot: { select: { uploadedAt: true, contentType: true } },
           reviewedBy: { select: { name: true } },
+          checkedInBy: { select: { name: true } },
         },
       },
     },
@@ -110,6 +112,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           </form>
         </section>
       )}
+
+      <CheckInPanel date={date} signUps={date.signUps} />
 
       <section className={`${cardClass} space-y-6`}>
         <div>
@@ -295,6 +299,7 @@ function SignUpRow({ s, theme }: { s: Row; theme: string | null }) {
           )}
           {s.reviewReason && <p className="text-red-700">Payment rejected: {s.reviewReason}</p>}
           {s.paymentNote && <p className="text-ink-muted">Paid: {s.paymentNote}</p>}
+          {s.checkedInAt && <p className="font-medium text-emerald-700">Checked in {formatDateTime(s.checkedInAt)}</p>}
           {s.reviewedAt && s.status === "CONFIRMED" && (
             <p className="text-ink-muted">
               Confirmed {formatDateTime(s.reviewedAt)}

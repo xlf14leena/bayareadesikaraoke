@@ -26,6 +26,7 @@ model User {
   adminOf  GroupAdmin[]
   signUps  SignUp[]     @relation("SignUpUser")
   reviewed SignUp[]     @relation("SignUpReviewer")
+  checkIns SignUp[]     @relation("SignUpCheckedInBy")
 }
 
 // Google account link (Auth.js). providerAccountId is the Google id.
@@ -174,6 +175,11 @@ model EventDate {
   signupOpensAt      DateTime?
   signupClosesAt     DateTime?
   status             EventDateStatus @default(SCHEDULED)
+  // In-person check-in (src/lib/checkin.ts). Set while an admin has check-in
+  // open; the secret signs the rotating QR codes, so closing check-in (or
+  // opening it again) makes every earlier code useless.
+  checkInOpenedAt    DateTime?
+  checkInSecret      String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
@@ -202,34 +208,44 @@ enum SignUpStatus {
   CANCELLED
 }
 
+enum CheckInMethod {
+  SCAN // the person scanned the QR code shown at the venue
+  ADMIN // an admin checked them in by hand
+}
+
 model SignUp {
-  id             String       @id @default(cuid())
+  id             String         @id @default(cuid())
   eventDateId    String
   userId         String? // null when added by an admin without an account
   displayName    String
   email          String?
   role           AttendeeRole
-  status         SignUpStatus @default(RESERVED)
-  memoCode       String       @unique // e.g. BADK-7Q4M
+  status         SignUpStatus   @default(RESERVED)
+  memoCode       String         @unique // e.g. BADK-7Q4M
   amountDueCents Int
   screenshotKey  String? // unused; the screenshot lives in PaymentScreenshot
-  registeredAt   DateTime     @default(now()) // when the person signed up for this date
+  registeredAt   DateTime       @default(now()) // when the person signed up for this date
   reservedUntil  DateTime?
   waitlistedAt   DateTime?
-  addedByAdmin   Boolean      @default(false)
+  addedByAdmin   Boolean        @default(false)
   paymentNote    String? // e.g. "cash at door"
   reviewedById   String?
   reviewedAt     DateTime?
   reviewReason   String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  // Arrival at the venue: the server's time when they checked in, and how.
+  checkedInAt    DateTime?
+  checkInMethod  CheckInMethod?
+  checkedInById  String? // the admin, for a check-in done by hand
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  eventDate  EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
-  user       User?     @relation("SignUpUser", fields: [userId], references: [id], onDelete: SetNull)
-  reviewedBy User?     @relation("SignUpReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  songs      Song[]    @relation("SongSinger")
-  duetSongs  Song[]    @relation("DuetPartner") // other singers' duets that name this person
-  screenshot PaymentScreenshot?
+  eventDate   EventDate          @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
+  user        User?              @relation("SignUpUser", fields: [userId], references: [id], onDelete: SetNull)
+  reviewedBy  User?              @relation("SignUpReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  checkedInBy User?              @relation("SignUpCheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
+  songs       Song[]             @relation("SongSinger")
+  duetSongs   Song[]             @relation("DuetPartner") // other singers' duets that name this person
+  screenshot  PaymentScreenshot?
 
   // one sign-up per account per date (no guest sign-ups)
   @@unique([eventDateId, userId])
