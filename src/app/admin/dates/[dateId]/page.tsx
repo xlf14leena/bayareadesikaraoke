@@ -31,7 +31,11 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
       signUps: {
         orderBy: { registeredAt: "asc" },
         include: {
-          songs: { where: { status: { in: ["ACTIVE", "REJECTED"] } }, orderBy: [{ round: "asc" }, { enteredAt: "asc" }] },
+          songs: {
+            where: { status: { in: ["ACTIVE", "REJECTED"] } },
+            orderBy: [{ round: "asc" }, { enteredAt: "asc" }],
+            include: { duetPartner: { select: { displayName: true } } },
+          },
           screenshot: { select: { uploadedAt: true, contentType: true } },
           reviewedBy: { select: { name: true } },
         },
@@ -143,7 +147,12 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           <p className="mb-4 text-sm text-ink-muted">
             For people who paid in person or don&apos;t use the site. They&apos;re confirmed right away.
           </p>
-          <AddPersonForm action={addPerson.bind(null, date.id)} />
+          <AddPersonForm
+            action={addPerson.bind(null, date.id)}
+            partners={date.signUps
+              .filter((s) => HOLDS_SPOT.includes(s.status))
+              .map((s) => ({ id: s.id, name: s.displayName, listener: s.role === "LISTENER" }))}
+          />
         </section>
       )}
 
@@ -219,7 +228,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
 }
 
 type Row = SignUp & {
-  songs: Song[];
+  songs: (Song & { duetPartner: { displayName: string } | null })[];
   screenshot: { uploadedAt: Date; contentType: string } | null;
   reviewedBy: { name: string | null } | null;
 };
@@ -298,7 +307,7 @@ function SignUpRow({ s, theme }: { s: Row; theme: string | null }) {
                 <p>
                   Round {song.round}: <span className="font-medium">{song.title}</span>
                   {song.artist && ` (${song.artist})`}
-                  {song.duet && " · duet"}
+                  {song.duet && (song.duetPartner ? ` · duet with ${song.duetPartner.displayName}` : " · duet")}
                   {song.youtubeUrl && (
                     <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-cobalt hover:underline">
                       Track

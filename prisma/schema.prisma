@@ -227,7 +227,8 @@ model SignUp {
   eventDate  EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
   user       User?     @relation("SignUpUser", fields: [userId], references: [id], onDelete: SetNull)
   reviewedBy User?     @relation("SignUpReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  songs      Song[]
+  songs      Song[]    @relation("SongSinger")
+  duetSongs  Song[]    @relation("DuetPartner") // other singers' duets that name this person
   screenshot PaymentScreenshot?
 
   // one sign-up per account per date (no guest sign-ups)
@@ -269,6 +270,7 @@ model Song {
   youtubeUrl      String?
   youtubeVideoId  String?
   duet            Boolean    @default(false) // solo unless the singer marks it a duet
+  duetPartnerId   String? // optional: another sign-up for the same date singing this duet
   // The song time: when this title was entered. Priority goes by this time,
   // not by registration time. Changing the title releases this row and
   // creates a new one with a fresh enteredAt (history is kept). Editing only
@@ -279,8 +281,9 @@ model Song {
   status          SongStatus @default(ACTIVE)
   rejectReason    String?
 
-  signUp    SignUp    @relation(fields: [signUpId], references: [id], onDelete: Cascade)
-  eventDate EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
+  signUp      SignUp    @relation("SongSinger", fields: [signUpId], references: [id], onDelete: Cascade)
+  duetPartner SignUp?   @relation("DuetPartner", fields: [duetPartnerId], references: [id], onDelete: SetNull)
+  eventDate   EventDate @relation(fields: [eventDateId], references: [id], onDelete: Cascade)
 
   @@index([eventDateId, enteredAt])
 }

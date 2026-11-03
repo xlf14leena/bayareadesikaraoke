@@ -188,14 +188,21 @@ export function youtubeVideoId(raw: string): string | null {
   return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
 }
 
-export type SongInput = { title: string; artist: string | null; youtubeUrl: string | null; duet: boolean };
+export type SongInput = {
+  title: string;
+  artist: string | null;
+  youtubeUrl: string | null;
+  duet: boolean;
+  duetPartnerId: string | null;
+};
 
-/** Reads round N's song fields ("title1", "artist1", "youtube1", "kind1" = solo|duet). Blank title = no song. */
+/** Reads round N's song fields ("title1", "artist1", "youtube1", "kind1" = solo|duet, "partner1" = sign-up id). Blank title = no song. */
 export function songInput(form: FormData, round: number): SongInput | null {
   const title = String(form.get(`title${round}`) ?? "").trim();
   const artist = String(form.get(`artist${round}`) ?? "").trim() || null;
   const youtubeUrl = String(form.get(`youtube${round}`) ?? "").trim() || null;
   const duet = form.get(`kind${round}`) === "duet";
+  const duetPartnerId = (duet && String(form.get(`partner${round}`) ?? "").trim()) || null;
   if (!title) {
     if (artist || youtubeUrl) throw new FormError(`Add the song title for round ${round}.`);
     return null;
@@ -206,7 +213,7 @@ export function songInput(form: FormData, round: number): SongInput | null {
     throw new FormError(`The round ${round} track should be a YouTube link, like https://youtu.be/…`);
   }
   if (!normalizeTitle(title)) throw new FormError("The song title needs at least one letter or number.");
-  return { title, artist, youtubeUrl, duet };
+  return { title, artist, youtubeUrl, duet, duetPartnerId };
 }
 
 /**
@@ -226,6 +233,20 @@ export async function setSong(
       await tx.song.update({ where: { id: current.id }, data: { status: "RELEASED", releasedAt: new Date() } });
     }
     return;
+  }
+  if (input.duetPartnerId) {
+    const partner = await tx.signUp.findUnique({
+      where: { id: input.duetPartnerId },
+      select: { eventDateId: true, status: true },
+    });
+    if (
+      input.duetPartnerId === signUp.id ||
+      !partner ||
+      partner.eventDateId !== signUp.eventDateId ||
+      !HOLDS_SPOT.includes(partner.status)
+    ) {
+      throw new FormError(`Pick a duet partner for round ${round} from the people signed up for this date.`);
+    }
   }
   const normalizedTitle = normalizeTitle(input.title);
   const videoId = input.youtubeUrl ? youtubeVideoId(input.youtubeUrl) : null;
@@ -259,6 +280,7 @@ export async function setSong(
           youtubeUrl: input.youtubeUrl,
           youtubeVideoId: videoId,
           duet: input.duet,
+          duetPartnerId: input.duetPartnerId,
         },
       });
     } else {
@@ -276,6 +298,7 @@ export async function setSong(
           youtubeUrl: input.youtubeUrl,
           youtubeVideoId: videoId,
           duet: input.duet,
+          duetPartnerId: input.duetPartnerId,
         },
       });
     }

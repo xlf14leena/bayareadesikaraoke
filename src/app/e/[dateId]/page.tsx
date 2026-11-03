@@ -56,7 +56,11 @@ export default async function EventPage({ params, searchParams }: Props) {
     ? await prisma.signUp.findUnique({
         where: { eventDateId_userId: { eventDateId: date.id, userId: viewer.id } },
         include: {
-          songs: { where: { status: { in: ["ACTIVE", "REJECTED"] } }, orderBy: { enteredAt: "desc" } },
+          songs: {
+            where: { status: { in: ["ACTIVE", "REJECTED"] } },
+            orderBy: { enteredAt: "desc" },
+            include: { duetPartner: { select: { displayName: true } } },
+          },
           screenshot: { select: { uploadedAt: true } },
         },
       })
@@ -84,10 +88,28 @@ export default async function EventPage({ params, searchParams }: Props) {
       ? prisma.song.findMany({
           where: { eventDateId: date.id, status: "ACTIVE", signUp: { status: "CONFIRMED" } },
           orderBy: [{ round: "asc" }, { enteredAt: "asc" }],
-          include: { signUp: { select: { displayName: true } } },
+          include: {
+            signUp: { select: { displayName: true } },
+            duetPartner: { select: { displayName: true, status: true } },
+          },
         })
       : Promise.resolve([]),
   ]);
+  // Duet partners: anyone else holding a spot on this date, and duets that name me.
+  const [partnerSignUps, invites] = myActive
+    ? await Promise.all([
+        prisma.signUp.findMany({
+          where: { eventDateId: date.id, status: { in: HOLDS_SPOT }, id: { not: myActive.id } },
+          orderBy: { displayName: "asc" },
+          select: { id: true, displayName: true, role: true },
+        }),
+        prisma.song.findMany({
+          where: { duetPartnerId: myActive.id, status: "ACTIVE", signUp: { status: { in: HOLDS_SPOT } } },
+          orderBy: { round: "asc" },
+          select: { round: true, title: true, signUp: { select: { displayName: true } } },
+        }),
+      ])
+    : [[], []];
   const taken = (role: "SINGER" | "LISTENER") => held.find((h) => h.role === role)?._count ?? 0;
   const confirmedListeners = viewer
     ? await prisma.signUp.count({ where: { eventDateId: date.id, role: "LISTENER", status: "CONFIRMED" } })
@@ -259,6 +281,8 @@ export default async function EventPage({ params, searchParams }: Props) {
           group={series.group}
           waitlistPosition={waitlistPosition}
           editable={stillEditable(date)}
+          partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName, listener: p.role === "LISTENER" }))}
+          duetInvites={invites.map((i) => ({ round: i.round, title: i.title, singer: i.signUp.displayName }))}
         />
       )}
 
@@ -288,7 +312,10 @@ export default async function EventPage({ params, searchParams }: Props) {
                         {" "}
                         · {s.title}
                         {s.artist && ` (${s.artist})`}
-                        {s.duet && " · duet"}
+                        {s.duet &&
+                          (s.duetPartner && HOLDS_SPOT.includes(s.duetPartner.status)
+                            ? ` · duet with ${s.duetPartner.displayName}`
+                            : " · duet")}
                       </span>
                       {s.youtubeUrl && (
                         <a

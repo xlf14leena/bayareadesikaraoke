@@ -4,12 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
-import { SongFields } from "@/components/signup/SongsForm";
+import { type DuetPartnerOption, SongFields } from "@/components/signup/SongsForm";
 import { inputClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
 
 /** Adds someone by hand. They're confirmed at once; a singer's songs follow the first-pick rule. */
-export default function AddPersonForm({ action }: { action: (prev: FormState, form: FormData) => Promise<FormState> }) {
+export default function AddPersonForm({
+  action,
+  partners,
+}: {
+  action: (prev: FormState, form: FormData) => Promise<FormState>;
+  partners: DuetPartnerOption[];
+}) {
   const { state, onSubmit, pending } = useFormAction(action);
   const [role, setRole] = useState("SINGER");
   const form = useRef<HTMLFormElement>(null);
@@ -36,7 +42,7 @@ export default function AddPersonForm({ action }: { action: (prev: FormState, fo
           <input name="paymentNote" maxLength={120} className={inputClass} />
         </Field>
       </div>
-      {role === "SINGER" && <SongFields rounds={[1, 2]} />}
+      {role === "SINGER" && <SongFields rounds={[1, 2]} partners={partners} />}
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="overCap" className="accent-royal" />
         Go over the cap if this role is full
