@@ -26,7 +26,7 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ gro
         orderBy: { createdAt: "asc" },
         include: {
           dates: {
-            where: { startsAt: { gte: new Date() }, status: "SCHEDULED" },
+            where: { endsAt: { gte: new Date() }, status: "SCHEDULED" },
             orderBy: { startsAt: "asc" },
             take: 1,
           },
