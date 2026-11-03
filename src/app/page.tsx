@@ -9,12 +9,12 @@ const HERO_PHOTO =
   "https://images.unsplash.com/photo-1738156674456-97cdf7793bb7?auto=format&fit=crop&w=1400&q=70";
 const HERO_PHOTO_PAGE = "https://unsplash.com/photos/a-group-of-people-standing-next-to-each-other-zddcsUv2DUE";
 
-// Public dashboard: upcoming public event dates, soonest first.
+// Public dashboard: public event dates that are happening now or upcoming, soonest first.
 export default async function Home() {
   const dates = await prisma.eventDate.findMany({
     where: {
       status: "SCHEDULED",
-      startsAt: { gte: new Date() },
+      endsAt: { gte: new Date() },
       series: { visibility: "PUBLIC" },
     },
     orderBy: { startsAt: "asc" },

@@ -27,7 +27,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
     include: {
       group: true,
       dates: {
-        where: { startsAt: { gte: new Date() }, status: { not: "DELETED" } },
+        where: { endsAt: { gte: new Date() }, status: { not: "DELETED" } },
         orderBy: { startsAt: "asc" },
         include: { signUps: { where: { status: { in: HOLDS_SPOT } }, select: { role: true, status: true } } },
       },
