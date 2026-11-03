@@ -67,12 +67,14 @@ export function freeSlots(taken: number[], count: number): number[] {
  *   first. A slot freed by a cancellation is skipped rather than refilled,
  *   since that turn may already have passed.
  *   Payment order: their place among the date's singers by paidAt (1 = paid
- *   first), or the next free number if that one is held.
+ *   first), or the next free number if that one is held. A singer who checks
+ *   in after "now singing" has reached or passed their place goes to the end.
  */
 export async function fillCheckInOrderSlots(
   tx: Tx,
   dateId: string,
   series: Pick<EventSeries, "round1SlotMode" | "round2SlotMode">,
+  now: { nowRound: number | null; nowSlot: number | null } = { nowRound: null, nowSlot: null },
 ) {
   const rounds = ROUNDS.filter((r) => AUTO_MODES.includes(slotModeFor(series, r)));
   if (rounds.length === 0) return;
@@ -105,7 +107,12 @@ export async function fillCheckInOrderSlots(
       if (hasSlot.has(singer.id)) continue;
       let slot: number;
       if (mode === "PAYMENT_ORDER") {
-        slot = paymentPlace.get(singer.id)!;
+        const place = paymentPlace.get(singer.id)!;
+        // Arriving after their turn has come up (or the round is over) sends
+        // them to the end, after every payment place; otherwise they keep it.
+        const passed =
+          now.nowRound != null && (now.nowRound > round || (now.nowRound === round && place <= (now.nowSlot ?? 0)));
+        slot = passed ? Math.max(last, singers.length, now.nowRound === round ? (now.nowSlot ?? 0) : 0) + 1 : place;
         while (taken.has(slot)) slot++;
       } else {
         slot = last + 1;
