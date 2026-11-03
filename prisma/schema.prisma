@@ -113,6 +113,7 @@ enum Frequency {
 enum SlotMode {
   PICK // a checked-in singer picks any free slot
   CHECKIN_ORDER // slots go out in the order singers check in
+  PAYMENT_ORDER // slot numbers follow the order singers paid (src/lib/slots.ts)
 }
 
 // Template that generates EventDates. All times are Pacific (America/Los_Angeles).

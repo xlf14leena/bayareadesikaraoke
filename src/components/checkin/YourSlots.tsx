@@ -2,7 +2,7 @@ import { pickSlot } from "@/app/checkin/[dateId]/actions";
 import SlotPicker from "@/components/checkin/SlotPicker";
 import type { RoundSlotInfo } from "@/lib/slots";
 
-/** A checked-in singer's place in each round: pick a slot, or see the one check-in order gave them. */
+/** A checked-in singer's place in each round: pick a slot, or see the one check-in or payment order gave them. */
 export default function YourSlots({ dateId, rounds }: { dateId: string; rounds: RoundSlotInfo[] }) {
   return (
     <section id="your-slots" className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
@@ -17,9 +17,13 @@ export default function YourSlots({ dateId, rounds }: { dateId: string; rounds: 
               ) : r.mode === "PICK" ? (
                 <span className="text-ink-muted">pick a free slot</span>
               ) : (
-                <span className="text-ink-muted">assigned in check-in order</span>
+                <span className="text-ink-muted">assigned in {r.mode === "PAYMENT_ORDER" ? "payment" : "check-in"} order</span>
               )}
-              {r.mySlot && r.mode === "CHECKIN_ORDER" && <span className="ml-2 text-xs text-ink-muted">by check-in order</span>}
+              {r.mySlot && r.mode !== "PICK" && (
+                <span className="ml-2 text-xs text-ink-muted">
+                  by {r.mode === "PAYMENT_ORDER" ? "payment" : "check-in"} order
+                </span>
+              )}
             </p>
             {r.mode === "PICK" && (
               <SlotPicker

@@ -180,7 +180,7 @@ function seriesFields(form: FormData) {
 
 function slotMode(form: FormData, name: string, fallback: SlotMode): SlotMode {
   const v = form.get(name);
-  return v === "PICK" || v === "CHECKIN_ORDER" ? v : fallback;
+  return v === "PICK" || v === "CHECKIN_ORDER" || v === "PAYMENT_ORDER" ? v : fallback;
 }
 
 function newPrivateToken(): string {

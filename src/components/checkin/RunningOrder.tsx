@@ -103,7 +103,7 @@ export default function RunningOrder({
                       <span className="font-medium">{row.name}</span>
                       <span className="text-ink-muted">
                         {row.song ? ` · ${row.song}` : " · no song yet"}
-                        {row.method === "PICK" ? " · picked" : " · check-in order"}
+                        {row.method === "PICK" ? " · picked" : row.method === "PAYMENT_ORDER" ? " · payment order" : " · check-in order"}
                       </span>
                       {row.track && (
                         <a
