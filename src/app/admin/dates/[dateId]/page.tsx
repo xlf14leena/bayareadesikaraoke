@@ -298,6 +298,7 @@ function SignUpRow({ s, theme }: { s: Row; theme: string | null }) {
                 <p>
                   Round {song.round}: <span className="font-medium">{song.title}</span>
                   {song.artist && ` (${song.artist})`}
+                  {song.duet && " · duet"}
                   {song.youtubeUrl && (
                     <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-cobalt hover:underline">
                       Track

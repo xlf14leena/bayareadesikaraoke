@@ -6,9 +6,9 @@ import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
 
-export type SongDefaults = { title: string; artist: string; youtubeUrl: string };
+export type SongDefaults = { title: string; artist: string; youtubeUrl: string; duet: boolean };
 
-/** Song title, film or artist, and YouTube track for each round. Shared by singers and admins. */
+/** Song title, film or artist, YouTube track, and solo or duet for each round. Shared by singers and admins. */
 export function SongFields({ rounds, defaults }: { rounds: number[]; defaults?: Record<number, SongDefaults | undefined> }) {
   return (
     <div className="space-y-4">
@@ -37,6 +37,20 @@ export function SongFields({ rounds, defaults }: { rounds: number[]; defaults?: 
               className={inputClass}
             />
           </Field>
+          <div role="radiogroup" aria-label={`Round ${r}: solo or duet`} className="flex gap-4 pt-1 text-sm">
+            {(["solo", "duet"] as const).map((kind) => (
+              <label key={kind} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name={`kind${r}`}
+                  value={kind}
+                  defaultChecked={(kind === "duet") === !!defaults?.[r]?.duet}
+                  className="accent-royal"
+                />
+                {kind === "solo" ? "Solo" : "Duet"}
+              </label>
+            ))}
+          </div>
         </fieldset>
       ))}
     </div>

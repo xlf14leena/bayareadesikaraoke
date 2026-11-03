@@ -188,13 +188,14 @@ export function youtubeVideoId(raw: string): string | null {
   return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
 }
 
-export type SongInput = { title: string; artist: string | null; youtubeUrl: string | null };
+export type SongInput = { title: string; artist: string | null; youtubeUrl: string | null; duet: boolean };
 
-/** Reads round N's song fields ("title1", "artist1", "youtube1"). Blank title = no song. */
+/** Reads round N's song fields ("title1", "artist1", "youtube1", "kind1" = solo|duet). Blank title = no song. */
 export function songInput(form: FormData, round: number): SongInput | null {
   const title = String(form.get(`title${round}`) ?? "").trim();
   const artist = String(form.get(`artist${round}`) ?? "").trim() || null;
   const youtubeUrl = String(form.get(`youtube${round}`) ?? "").trim() || null;
+  const duet = form.get(`kind${round}`) === "duet";
   if (!title) {
     if (artist || youtubeUrl) throw new FormError(`Add the song title for round ${round}.`);
     return null;
@@ -205,13 +206,13 @@ export function songInput(form: FormData, round: number): SongInput | null {
     throw new FormError(`The round ${round} track should be a YouTube link, like https://youtu.be/…`);
   }
   if (!normalizeTitle(title)) throw new FormError("The song title needs at least one letter or number.");
-  return { title, artist, youtubeUrl };
+  return { title, artist, youtubeUrl, duet };
 }
 
 /**
  * Sets a sign-up's song for one round, first pick wins. Changing the title
  * releases the old song and gives the new one a fresh song time; changing
- * only the artist or link keeps the song time. null clears the round.
+ * only the artist, link or solo/duet keeps the song time. null clears the round.
  */
 export async function setSong(
   tx: Tx,
@@ -252,7 +253,13 @@ export async function setSong(
     if (sameSong) {
       await tx.song.update({
         where: { id: current.id },
-        data: { title: input.title, artist: input.artist, youtubeUrl: input.youtubeUrl, youtubeVideoId: videoId },
+        data: {
+          title: input.title,
+          artist: input.artist,
+          youtubeUrl: input.youtubeUrl,
+          youtubeVideoId: videoId,
+          duet: input.duet,
+        },
       });
     } else {
       if (current) {
@@ -268,6 +275,7 @@ export async function setSong(
           artist: input.artist,
           youtubeUrl: input.youtubeUrl,
           youtubeVideoId: videoId,
+          duet: input.duet,
         },
       });
     }

@@ -268,6 +268,7 @@ model Song {
   artist          String?
   youtubeUrl      String?
   youtubeVideoId  String?
+  duet            Boolean    @default(false) // solo unless the singer marks it a duet
   // The song time: when this title was entered. Priority goes by this time,
   // not by registration time. Changing the title releases this row and
   // creates a new one with a fresh enteredAt (history is kept). Editing only
