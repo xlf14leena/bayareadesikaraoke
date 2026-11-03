@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import EventDateList from "@/components/EventDateList";
+import { eventPath } from "@/lib/event-url";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +17,7 @@ export default async function PrivateEventPage({ params }: { params: Promise<{ t
   });
   if (!series || series.visibility !== "PRIVATE") notFound();
 
-  const query = `?k=${encodeURIComponent(token)}`;
-  if (series.dates.length === 1) redirect(`/e/${series.dates[0].id}${query}`);
+  if (series.dates.length === 1) redirect(eventPath({ ...series.dates[0], series }, token));
 
   const { dates, ...rest } = series;
   return (
@@ -29,7 +29,7 @@ export default async function PrivateEventPage({ params }: { params: Promise<{ t
           No upcoming dates right now.
         </p>
       ) : (
-        <EventDateList dates={dates.map((d) => ({ ...d, series: rest }))} query={query} />
+        <EventDateList dates={dates.map((d) => ({ ...d, series: rest }))} privateKey={token} />
       )}
     </div>
   );

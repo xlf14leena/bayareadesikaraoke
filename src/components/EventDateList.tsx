@@ -1,13 +1,14 @@
 import Link from "next/link";
 import type { EventDate, EventSeries, Group } from "@prisma/client";
 import { bannerFor } from "@/lib/banner";
+import { eventPath } from "@/lib/event-url";
 import { settingsFor } from "@/lib/events";
 import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
 export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
 
-/** Cards for upcoming event dates; each opens the event page. `query` is added to links (private keys). */
-export default function EventDateList({ dates, query = "" }: { dates: ListedDate[]; query?: string }) {
+/** Cards for upcoming event dates; each opens the event page. `privateKey` is added to links for private events. */
+export default function EventDateList({ dates, privateKey }: { dates: ListedDate[]; privateKey?: string }) {
   return (
     <ul className="space-y-3">
       {dates.map((d) => {
@@ -17,7 +18,7 @@ export default function EventDateList({ dates, query = "" }: { dates: ListedDate
         return (
           <li key={d.id}>
             <Link
-              href={`/e/${d.id}${query}`}
+              href={eventPath(d, privateKey)}
               className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-white p-3 transition hover:border-lapis hover:shadow-sm sm:flex-nowrap sm:p-4"
             >
               <div className="w-16 shrink-0 rounded-xl bg-gold py-1.5 text-center text-gold-ink">

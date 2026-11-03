@@ -3,6 +3,7 @@
 import type { AttendeeRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { FormError, type FormState, text } from "@/lib/forms";
+import { eventPathById } from "@/lib/event-url";
 import { prisma } from "@/lib/prisma";
 import { canAdminGroup, requireViewer } from "@/lib/roles";
 import {
@@ -37,8 +38,8 @@ async function attempt(fn: () => Promise<string | void>): Promise<FormState> {
   }
 }
 
-function refresh(dateId: string) {
-  revalidatePath(`/e/${dateId}`);
+function refresh() {
+  revalidatePath("/g/[slug]/[event]", "page");
   revalidatePath("/me");
 }
 
@@ -49,7 +50,7 @@ export async function signUpForDate(
   _prev: FormState,
   form: FormData,
 ): Promise<FormState> {
-  const viewer = await requireViewer(`/e/${dateId}`);
+  const viewer = await requireViewer(await eventPathById(dateId));
   const result = await attempt(async () => {
     const date = await prisma.eventDate.findUnique({ where: { id: dateId }, include: { series: true } });
     if (!date || date.status === "DELETED") throw new FormError("This date no longer exists.");
@@ -105,13 +106,13 @@ export async function signUpForDate(
       return full ? "You're on the waitlist." : "You're signed up.";
     });
   });
-  refresh(dateId);
+  refresh();
   return result;
 }
 
 async function ownSignUp(signUpId: string) {
   const signUp = await prisma.signUp.findUnique({ where: { id: signUpId }, include: { eventDate: true } });
-  const viewer = await requireViewer(signUp ? `/e/${signUp.eventDateId}` : "/me");
+  const viewer = await requireViewer(signUp ? await eventPathById(signUp.eventDateId) : "/me");
   if (!signUp || signUp.userId !== viewer.id) throw new FormError("That sign-up isn't yours.");
   return signUp;
 }
@@ -151,7 +152,7 @@ export async function uploadScreenshot(signUpId: string, _prev: FormState, form:
       return "Thanks! The organizers will check your payment.";
     });
   });
-  if (dateId) refresh(dateId);
+  if (dateId) refresh();
   return result;
 }
 
@@ -179,7 +180,7 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
       return "Songs saved.";
     });
   });
-  if (dateId) refresh(dateId);
+  if (dateId) refresh();
   return result;
 }
 
@@ -193,5 +194,5 @@ export async function leaveSignUp(signUpId: string): Promise<void> {
     await releaseSongs(tx, [signUpId]);
     await settleDate(tx, signUp.eventDateId);
   });
-  refresh(signUp.eventDateId);
+  refresh();
 }

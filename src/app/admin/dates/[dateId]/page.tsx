@@ -9,6 +9,7 @@ import AddPersonForm from "@/components/admin/AddPersonForm";
 import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
+import { eventPath } from "@/lib/event-url";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { settle } from "@/lib/signups";
@@ -52,7 +53,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   );
   const ended = by(["EXPIRED", "CANCELLED"]);
   const held = (role: string) => date.signUps.filter((s) => s.role === role && HOLDS_SPOT.includes(s.status)).length;
-  const viewHref = `/e/${date.id}${series.visibility === "PRIVATE" && series.privateToken ? `?k=${series.privateToken}` : ""}`;
+  const viewHref = eventPath(date, series.visibility === "PRIVATE" ? series.privateToken : null);
 
   return (
     <div className="space-y-8">

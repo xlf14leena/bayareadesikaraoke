@@ -20,7 +20,7 @@ Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdm
 | Path | Who | What |
 | --- | --- | --- |
 | `/` | Everyone | Upcoming public event dates |
-| `/e/<date-id>` | Everyone (private: link holders, admins, people signed up) | Event page; signed-in members sign up, pay, pick songs and see who's singing |
+| `/g/<group-slug>/<YYYY-MM-DD>-<title>` | Everyone (private: link holders, admins, people signed up) | Event page; signed-in members sign up, pay, pick songs and see who's singing |
 | `/me` | Members | My events: their sign-ups with status and songs |
 | `/e/p/<token>` | Link holders | Private event link; opens the next date |
 | `/g/<slug>` | Everyone | Group page with its public dates |
@@ -39,7 +39,7 @@ A person must sign in once before they can be made a group admin.
 
 ## Sign-ups
 
-`src/lib/signups.ts` holds the rules; member actions are in `src/app/e/[dateId]/actions.ts` and admin actions in `src/app/admin/signup-actions.ts`.
+`src/lib/signups.ts` holds the rules; member actions are in `src/app/g/[slug]/[event]/actions.ts` and admin actions in `src/app/admin/signup-actions.ts`.
 
 - A member picks singer or listener. A paid spot is **Reserved** for 24 hours and the page shows the group's Zelle details, the amount and a memo code (`BADK-XXXX`). A free spot is confirmed at once. When a role is full they join its waitlist instead.
 - Uploading a payment screenshot moves the sign-up to **Payment under review** and holds the spot until an admin decides. Admins approve, reject with a reason (the person gets 24 hours to upload a new one), or cancel.
