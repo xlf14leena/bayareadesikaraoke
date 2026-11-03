@@ -2,14 +2,21 @@ import type { Group, SignUp, Song } from "@prisma/client";
 import { leaveSignUp, saveSongs, uploadScreenshot } from "@/app/e/[dateId]/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ScreenshotForm from "@/components/signup/ScreenshotForm";
-import SongsForm, { type SongDefaults } from "@/components/signup/SongsForm";
+import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";
 import { cardClass } from "@/components/ui";
 import { STATUS_LABEL } from "@/lib/events";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { PICKS_SONGS } from "@/lib/signups";
 
 type Props = {
-  signUp: SignUp & { songs: Song[]; screenshot: { uploadedAt: Date } | null };
+  signUp: SignUp & {
+    songs: (Song & { duetPartner: { displayName: string } | null })[];
+    screenshot: { uploadedAt: Date } | null;
+  };
+  /** People signed up for this date who can be picked as a duet partner. */
+  partners: DuetPartnerOption[];
+  /** Other singers' duets on this date that name this person as the partner. */
+  duetInvites: { round: number; title: string; singer: string }[];
   group: Pick<Group, "name" | "zelleName" | "zelleHandle">;
   waitlistPosition: number | null;
   editable: boolean;
@@ -24,7 +31,7 @@ const TONE: Record<string, string> = {
 };
 
 /** The signed-in person's own sign-up for this date: status, how to pay, and their songs. */
-export default function YourSignUp({ signUp, group, waitlistPosition, editable }: Props) {
+export default function YourSignUp({ signUp, group, waitlistPosition, editable, partners, duetInvites }: Props) {
   const role = signUp.role === "SINGER" ? "singer" : "listener";
   const needsProof = signUp.status === "RESERVED" || signUp.status === "REJECTED";
   const active = signUp.songs.filter((s) => s.status === "ACTIVE");
@@ -32,7 +39,21 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable }
     (s) => s.status === "REJECTED" && !active.some((a) => a.round === s.round),
   );
   const defaults: Record<number, SongDefaults | undefined> = {};
-  for (const s of active) defaults[s.round] = { title: s.title, artist: s.artist ?? "", youtubeUrl: s.youtubeUrl ?? "" };
+  for (const s of active) {
+    defaults[s.round] = {
+      title: s.title,
+      artist: s.artist ?? "",
+      youtubeUrl: s.youtubeUrl ?? "",
+      duet: s.duet,
+      duetPartnerId: s.duetPartnerId,
+    };
+  }
+  const songSummary = active.length
+    ? [...active]
+        .sort((a, b) => a.round - b.round)
+        .map((s) => `${s.title}${s.duet ? (s.duetPartner ? ` (duet with ${s.duetPartner.displayName})` : " (duet)") : ""}`)
+        .join(" · ")
+    : "No songs picked yet";
   const canLeave = ["WAITLISTED", "RESERVED", "REJECTED", "UNDER_REVIEW"].includes(signUp.status);
 
   return (
@@ -144,36 +165,55 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable }
         </details>
       )}
 
+      {duetInvites.length > 0 && (
+        <ul className="space-y-1 rounded-lg bg-lapis/5 px-3 py-2 text-sm">
+          {duetInvites.map((d) => (
+            <li key={`${d.round}-${d.singer}`}>
+              {d.singer} picked you as their duet partner for round {d.round}: &ldquo;{d.title}&rdquo;
+            </li>
+          ))}
+        </ul>
+      )}
+
       {signUp.role === "SINGER" && PICKS_SONGS.includes(signUp.status) && (
-        <div className="space-y-3">
-          <div>
-            <h3 className="font-semibold">Your songs</h3>
+        <details open={!active.length || rejected.length > 0} className="group rounded-lg border border-line">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0">
+              <span className="block font-semibold">Your songs</span>
+              <span className="block truncate text-sm text-ink-muted">{songSummary}</span>
+            </span>
+            <span aria-hidden className="shrink-0 text-cobalt transition-transform group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <div className="space-y-3 border-t border-line p-4">
             <p className="text-sm text-ink-muted">
               Pick one song per round. First pick wins: a song someone already picked for this date can&apos;t be
               picked again. You can change your songs until sign-ups close.
             </p>
+            {rejected.map((s) => (
+              <p key={s.id} className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+                The organizers turned down your round {s.round} song &ldquo;{s.title}&rdquo;
+                {s.rejectReason && <>: {s.rejectReason}</>}. Please pick another.
+              </p>
+            ))}
+            {editable ? (
+              <SongsForm action={saveSongs.bind(null, signUp.id)} defaults={defaults} partners={partners} />
+            ) : active.length ? (
+              <ul className="text-sm">
+                {active.map((s) => (
+                  <li key={s.id}>
+                    Round {s.round}: {s.title}
+                    {s.artist && ` (${s.artist})`}
+                    {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}` : " · duet")}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-ink-muted">No songs picked.</p>
+            )}
           </div>
-          {rejected.map((s) => (
-            <p key={s.id} className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
-              The organizers turned down your round {s.round} song &ldquo;{s.title}&rdquo;
-              {s.rejectReason && <>: {s.rejectReason}</>}. Please pick another.
-            </p>
-          ))}
-          {editable ? (
-            <SongsForm action={saveSongs.bind(null, signUp.id)} defaults={defaults} />
-          ) : active.length ? (
-            <ul className="text-sm">
-              {active.map((s) => (
-                <li key={s.id}>
-                  Round {s.round}: {s.title}
-                  {s.artist && ` (${s.artist})`}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-ink-muted">No songs picked.</p>
-          )}
-        </div>
+        </details>
       )}
 
       {canLeave && (
