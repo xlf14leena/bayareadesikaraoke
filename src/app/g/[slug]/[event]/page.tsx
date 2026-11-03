@@ -10,6 +10,8 @@ import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
 import { pacificTimeOf } from "@/lib/schedule";
 import SignUpForm from "@/components/signup/SignUpForm";
 import YourSignUp from "@/components/signup/YourSignUp";
+import YourSlots from "@/components/checkin/YourSlots";
+import { singerRounds } from "@/lib/slots";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
 import { eventPath, eventSegment, findEventDate } from "@/lib/event-url";
@@ -123,6 +125,11 @@ export default async function EventPage({ params, searchParams }: Props) {
     ? await prisma.signUp.count({ where: { eventDateId: date.id, role: "LISTENER", status: "CONFIRMED" } })
     : 0;
 
+  const myRounds =
+    myActive?.checkedInAt && myActive.role === "SINGER" && CAN_CHECK_IN.includes(myActive.status) && date.endsAt > new Date()
+      ? await singerRounds(prisma, date.id, myActive.id, series)
+      : null;
+
   const banner = bannerFor(date.bannerUrl, series.bannerUrl, series.group.bannerUrl);
   const cancelled = date.status === "CANCELLED";
   const past = date.endsAt < new Date();
@@ -131,7 +138,19 @@ export default async function EventPage({ params, searchParams }: Props) {
   const toReview = isAdmin
     ? await prisma.signUp.count({ where: { eventDateId: date.id, status: "UNDER_REVIEW" } })
     : 0;
-  const rounds = [1, 2].map((r) => singers.filter((s) => s.round === r)).filter((list) => list.length > 0);
+  // Once singers have slots, each round lists in slot order; anyone without one yet comes after.
+  const slotRows = singers.length
+    ? await prisma.roundSlot.findMany({ where: { eventDateId: date.id }, select: { round: true, slot: true, signUpId: true } })
+    : [];
+  const slotOf = (s: { signUpId: string; round: number }) =>
+    slotRows.find((r) => r.signUpId === s.signUpId && r.round === s.round)?.slot ?? null;
+  const rounds = [1, 2]
+    .map((r) =>
+      singers
+        .filter((s) => s.round === r)
+        .sort((a, b) => (slotOf(a) ?? 1e9) - (slotOf(b) ?? 1e9)),
+    )
+    .filter((list) => list.length > 0);
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
   const showLineup = date.signupsOpen || rounds.length > 0 || confirmedListeners > 0;
 
@@ -294,10 +313,13 @@ export default async function EventPage({ params, searchParams }: Props) {
         CAN_CHECK_IN.includes(myActive.status) &&
         checkInIsOpen(date) && (
           <p className="rounded-lg bg-gold/30 px-3 py-2 text-sm font-medium text-gold-ink">
-            Check-in is open. When you arrive, scan the QR code on the check-in screen at the venue.
+            Check-in is open. When you arrive, scan the QR code on the check-in screen at the venue
+            {myActive.role === "SINGER" && ", then get your singing slots"}.
           </p>
         )
       )}
+
+      {myRounds && !cancelled && <YourSlots dateId={date.id} rounds={myRounds} />}
 
       {myActive && !cancelled && (
         <YourSignUp
@@ -329,9 +351,14 @@ export default async function EventPage({ params, searchParams }: Props) {
               {rounds.map((list) => (
                 <div key={list[0].round}>
                   {rounds.length > 1 && <h3 className="mb-1 font-semibold text-royal">Round {list[0].round}</h3>}
-                  <ol className="list-decimal space-y-1 pl-5">
+                  <ol className={`space-y-1 ${list.some(slotOf) ? "" : "list-decimal pl-5"}`}>
                     {list.map((s) => (
                       <li key={s.id}>
+                        {list.some(slotOf) && (
+                          <span className="mr-2 inline-block min-w-14 text-sm font-semibold text-royal">
+                            {slotOf(s) ? `Slot ${slotOf(s)}` : "—"}
+                          </span>
+                        )}
                         <span className="font-medium">{s.signUp.displayName}</span>
                         <span className="text-ink-muted">
                           {" "}

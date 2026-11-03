@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { Prisma, type Frequency, type Visibility } from "@prisma/client";
+import { Prisma, type Frequency, type SlotMode, type Visibility } from "@prisma/client";
 import { OVERRIDE_KEYS, type OverrideKey } from "@/lib/events";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -173,7 +173,14 @@ function seriesFields(form: FormData) {
     maxSingers: optionalCap(form, "maxSingers", "Singer cap"),
     maxListeners: optionalCap(form, "maxListeners", "Listener cap"),
     bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
+    round1SlotMode: slotMode(form, "round1SlotMode", "PICK"),
+    round2SlotMode: slotMode(form, "round2SlotMode", "CHECKIN_ORDER"),
   };
+}
+
+function slotMode(form: FormData, name: string, fallback: SlotMode): SlotMode {
+  const v = form.get(name);
+  return v === "PICK" || v === "CHECKIN_ORDER" ? v : fallback;
 }
 
 function newPrivateToken(): string {
