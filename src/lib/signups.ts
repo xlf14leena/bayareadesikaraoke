@@ -112,6 +112,15 @@ export async function settleDate(tx: Tx, dateId: string) {
 
   const date = await tx.eventDate.findUnique({ where: { id: dateId }, include: { series: true } });
   if (!date || date.status !== "SCHEDULED" || date.endsAt < now) return;
+  // A role that became free after people signed up: nobody still owes anything,
+  // so anyone waiting to pay (or for review) is confirmed. Refunds happen outside the app.
+  for (const role of ["SINGER", "LISTENER"] as const) {
+    if (priceFor(date, role) !== 0) continue;
+    await tx.signUp.updateMany({
+      where: { eventDateId: dateId, role, status: { in: ["RESERVED", "REJECTED", "UNDER_REVIEW"] } },
+      data: { status: "CONFIRMED", amountDueCents: 0, reservedUntil: null },
+    });
+  }
   for (const role of ["SINGER", "LISTENER"] as const) {
     const cap = capFor(date, role);
     let free = cap == null ? Infinity : cap - (await heldCount(tx, dateId, role));

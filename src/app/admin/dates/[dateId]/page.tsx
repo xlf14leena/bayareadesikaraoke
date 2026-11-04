@@ -15,7 +15,7 @@ import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
 import { bannerFor } from "@/lib/banner";
-import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
+import { HOLDS_SPOT, STATUS_LABEL, isFree, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { settle } from "@/lib/signups";
 import { looksAlike } from "@/lib/song-match";
@@ -54,6 +54,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   if (!date) notFound();
   const { series } = date;
   const settings = settingsFor(date, series);
+  // On a free date nobody pays, so the payment sections and fields are left out.
+  const free = isFree(settings);
   const rounds = roundsFor(date, series);
   const by = (statuses: string[]) => date.signUps.filter((s) => statuses.includes(s.status));
   const review = by(["UNDER_REVIEW"]).sort(
@@ -161,6 +163,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           rounds={runningOrder}
           seriesId={series.id}
           dateId={date.id}
+          singersFree={settings.singerPriceCents === 0}
           now={date.nowRound != null && date.nowSlot != null ? { round: date.nowRound, slot: date.nowSlot } : null}
         />
       )}
@@ -170,19 +173,25 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           <h2 className="mb-1 text-xl font-semibold">Sign-ups</h2>
           <p className="text-sm text-ink-muted">
             Singers {spotsLabel(held("SINGER"), settings.maxSingers)} · Listeners{" "}
-            {spotsLabel(held("LISTENER"), settings.maxListeners)} (counting held spots). Match each screenshot&apos;s
-            memo code and amount in your bank app before approving.
+            {spotsLabel(held("LISTENER"), settings.maxListeners)} (counting held spots).
+            {free
+              ? " This date is free, so everyone who signs up is confirmed right away."
+              : " Match each screenshot's memo code and amount in your bank app before approving."}
           </p>
         </div>
 
-        <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} theme={settings.theme} nearMatches={nearMatches} />
-        <SignUpGroup
-          title="Waiting for payment"
-          empty="Nobody is waiting to pay."
-          list={awaiting}
-          theme={settings.theme}
-          nearMatches={nearMatches}
-        />
+        {(!free || review.length > 0) && (
+          <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} theme={settings.theme} nearMatches={nearMatches} />
+        )}
+        {(!free || awaiting.length > 0) && (
+          <SignUpGroup
+            title="Waiting for payment"
+            empty="Nobody is waiting to pay."
+            list={awaiting}
+            theme={settings.theme}
+            nearMatches={nearMatches}
+          />
+        )}
         <SignUpGroup title="Confirmed" empty="Nobody is confirmed yet." list={confirmed} theme={settings.theme} nearMatches={nearMatches} />
         {waitlist.length > 0 && <SignUpGroup title="Waitlist" empty="" list={waitlist} theme={settings.theme} nearMatches={nearMatches} />}
         {ended.length > 0 && (
@@ -201,10 +210,12 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         <section className={cardClass}>
           <h2 className="mb-1 text-xl font-semibold">Add someone by hand</h2>
           <p className="mb-4 text-sm text-ink-muted">
-            For people who paid in person or don&apos;t use the site. They&apos;re confirmed right away.
+            {free ? "For people who don't use the site." : "For people who paid in person or don't use the site."}{" "}
+            They&apos;re confirmed right away.
           </p>
           <AddPersonForm
             action={addPerson.bind(null, date.id)}
+            free={free}
             rounds={rounds}
             partners={date.signUps
               .filter((s) => s.role === "SINGER" && HOLDS_SPOT.includes(s.status))
@@ -389,8 +400,14 @@ function SignUpRow({ s, theme, nearMatches }: { s: Row; theme: string | null; ne
           </p>
           {s.email && <p className="text-ink-muted">{s.email}</p>}
           <p>
-            Memo <span className="font-mono font-semibold">{s.memoCode}</span> · {formatPrice(s.amountDueCents)} · Signed
-            up {formatDateTime(s.registeredAt)}
+            {s.amountDueCents > 0 ? (
+              <>
+                Memo <span className="font-mono font-semibold">{s.memoCode}</span> · {formatPrice(s.amountDueCents)}
+              </>
+            ) : (
+              "Free"
+            )}{" "}
+            · Signed up {formatDateTime(s.registeredAt)}
           </p>
           {s.screenshot && <p className="text-ink-muted">Screenshot sent {formatDateTime(s.screenshot.uploadedAt)}</p>}
           {s.reservedUntil && <p className="text-ink-muted">Held until {formatDateTime(s.reservedUntil)}</p>}

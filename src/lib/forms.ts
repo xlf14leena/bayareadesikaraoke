@@ -38,6 +38,15 @@ export function price(form: FormData, name: string, label: string): number {
   return Math.round(Number(raw) * 100);
 }
 
+/** Singer and listener prices from a price form: both $0 when "Free event" is ticked. */
+export function prices(form: FormData): { singerPriceCents: number; listenerPriceCents: number } {
+  if (form.get("free")) return { singerPriceCents: 0, listenerPriceCents: 0 };
+  return {
+    singerPriceCents: price(form, "singerPrice", "Singer price"),
+    listenerPriceCents: price(form, "listenerPrice", "Listener price"),
+  };
+}
+
 /** A positive whole number, or null when blank (no cap). */
 export function optionalCap(form: FormData, name: string, label: string): number | null {
   const raw = String(form.get(name) ?? "").trim();

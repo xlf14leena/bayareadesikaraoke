@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { EventDate, EventSeries, Group } from "@prisma/client";
 import { bannerFor } from "@/lib/banner";
 import { eventPath } from "@/lib/event-url";
-import { settingsFor } from "@/lib/events";
+import { isFree, settingsFor } from "@/lib/events";
 import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
 export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
@@ -59,9 +59,15 @@ export default function EventDateList({
               </div>
               {!past && (
               <p className="w-full pl-20 text-sm text-ink-muted sm:w-auto sm:pl-0 sm:text-right sm:whitespace-nowrap">
-                Singer <span className="font-semibold text-ink">{formatPrice(settings.singerPriceCents)}</span>
-                {" · "}
-                Listener <span className="font-semibold text-ink">{formatPrice(settings.listenerPriceCents)}</span>
+                {isFree(settings) ? (
+                  <span className="font-semibold text-ink">Free</span>
+                ) : (
+                  <>
+                    Singer <span className="font-semibold text-ink">{formatPrice(settings.singerPriceCents)}</span>
+                    {" · "}
+                    Listener <span className="font-semibold text-ink">{formatPrice(settings.listenerPriceCents)}</span>
+                  </>
+                )}
               </p>
               )}
             </Link>

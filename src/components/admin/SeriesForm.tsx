@@ -5,11 +5,12 @@ import type { EventSeries, Frequency } from "@prisma/client";
 import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
+import PriceFields from "@/components/admin/PriceFields";
 import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
 import RoundsFields from "@/components/admin/RoundsFields";
-import { dollars, type FormState } from "@/lib/forms";
+import type { FormState } from "@/lib/forms";
 import { DEFAULT_ROUNDS, parseRounds } from "@/lib/rounds";
 
 type Action = (prev: FormState, form: FormData) => Promise<FormState>;
@@ -122,24 +123,11 @@ export default function SeriesForm({ action, series }: { action: Action; series?
       <fieldset className="space-y-4">
         <legend className="mb-2 font-semibold text-royal">Prices and spots</legend>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Singer price ($)" hint="0 for free.">
-            <input
-              name="singerPrice"
-              inputMode="decimal"
-              defaultValue={series ? dollars(series.singerPriceCents) : ""}
-              placeholder="20"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Listener price ($)" hint="0 for free.">
-            <input
-              name="listenerPrice"
-              inputMode="decimal"
-              defaultValue={series ? dollars(series.listenerPriceCents) : ""}
-              placeholder="10"
-              className={inputClass}
-            />
-          </Field>
+          <PriceFields
+            singerCents={series?.singerPriceCents}
+            listenerCents={series?.listenerPriceCents}
+            hint="0 makes it free for this role only."
+          />
           <Field label="Singer cap (optional)" hint="Blank for no cap.">
             <input name="maxSingers" inputMode="numeric" defaultValue={series?.maxSingers ?? ""} className={inputClass} />
           </Field>

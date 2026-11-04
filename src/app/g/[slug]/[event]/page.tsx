@@ -5,7 +5,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import SectionTabs, { type SectionTab } from "@/components/SectionTabs";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton } from "@/components/ui";
-import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
+import { HOLDS_SPOT, STATUS_LABEL, isFree, mapUrl, settingsFor } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { ENDED, acceptingSignUps, settle, stillEditable } from "@/lib/signups";
 import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
@@ -56,6 +56,7 @@ export default async function EventPage({ params, searchParams }: Props) {
   const { series } = date;
   const isAdmin = canAdminGroup(viewer, series.groupId);
   const settings = settingsFor(date, series);
+  const free = isFree(settings);
   const roundConfig = roundsFor(date, series);
 
   if (series.visibility === "PRIVATE" && !isAdmin) {
@@ -272,15 +273,16 @@ export default async function EventPage({ params, searchParams }: Props) {
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Price</dt>
             <dd className="max-w-xs space-y-1">
+              {free && <p className="text-lg font-semibold">Free</p>}
               <PriceRow
                 label="Singer"
-                cents={settings.singerPriceCents}
+                cents={free ? null : settings.singerPriceCents}
                 taken={taken("SINGER")}
                 cap={settings.maxSingers}
               />
               <PriceRow
                 label="Listener"
-                cents={settings.listenerPriceCents}
+                cents={free ? null : settings.listenerPriceCents}
                 taken={taken("LISTENER")}
                 cap={settings.maxListeners}
               />
@@ -369,7 +371,7 @@ export default async function EventPage({ params, searchParams }: Props) {
         )
       )}
 
-      {myRounds && !cancelled && <YourSlots dateId={date.id} rounds={myRounds} />}
+      {myRounds && !cancelled && <YourSlots dateId={date.id} rounds={myRounds} singersFree={settings.singerPriceCents === 0} />}
 
       {myActive && !cancelled && (
         <YourSignUp
@@ -463,8 +465,10 @@ export default async function EventPage({ params, searchParams }: Props) {
   );
 }
 
-function PriceRow({ label, cents, taken, cap }: { label: string; cents: number; taken: number; cap: number | null }) {
+/** One role's price and spots left. cents is null on a free date, where the price is shown once above. */
+function PriceRow({ label, cents, taken, cap }: { label: string; cents: number | null; taken: number; cap: number | null }) {
   const left = cap == null ? null : Math.max(cap - taken, 0);
+  if (cents == null && left == null) return null;
   return (
     <div className="flex items-baseline justify-between gap-3">
       <div>
@@ -473,7 +477,7 @@ function PriceRow({ label, cents, taken, cap }: { label: string; cents: number; 
           <p className="text-xs text-ink-muted">{left === 0 ? "Full: waitlist only" : `${left} of ${cap} spots left`}</p>
         )}
       </div>
-      <p className="text-lg font-semibold">{formatPrice(cents)}</p>
+      {cents != null && <p className="text-lg font-semibold">{formatPrice(cents)}</p>}
     </div>
   );
 }

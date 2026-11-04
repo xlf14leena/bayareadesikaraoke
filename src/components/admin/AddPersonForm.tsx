@@ -14,8 +14,11 @@ export default function AddPersonForm({
   action,
   partners,
   rounds,
+  free = false,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
+  /** A free date: no "How they paid" box. */
+  free?: boolean;
   partners: DuetPartnerOption[];
   rounds: RoundConfig[];
 }) {
@@ -41,9 +44,11 @@ export default function AddPersonForm({
         <Field label="Email (optional)" hint="If they later sign in with this Google address, the sign-up shows in their My events.">
           <input name="email" type="email" maxLength={120} className={inputClass} />
         </Field>
-        <Field label="How they paid (optional)" hint='For example "cash at door".'>
-          <input name="paymentNote" maxLength={120} className={inputClass} />
-        </Field>
+        {!free && (
+          <Field label="How they paid (optional)" hint='For example "cash at door".'>
+            <input name="paymentNote" maxLength={120} className={inputClass} />
+          </Field>
+        )}
       </div>
       {role === "SINGER" && <SongFields rounds={rounds} partners={partners} nearMatch={state?.nearMatch} />}
       <label className="flex items-center gap-2 text-sm">

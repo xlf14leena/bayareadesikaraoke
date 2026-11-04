@@ -5,12 +5,13 @@ import type { EventDate } from "@prisma/client";
 import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
+import PriceFields from "@/components/admin/PriceFields";
 import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
-import { type EventSettings, type OverrideKey, settingsFor } from "@/lib/events";
+import { type EventSettings, type OverrideKey, pricesLabel, settingsFor } from "@/lib/events";
 import RoundsFields from "@/components/admin/RoundsFields";
-import { dollars, type FormState } from "@/lib/forms";
+import type { FormState } from "@/lib/forms";
 import { type RoundConfig, describeRounds } from "@/lib/rounds";
 
 /**
@@ -84,16 +85,13 @@ export default function DateForm({
         name="pricing"
         title="Prices"
         date={date}
-        inherited={`Singer $${dollars(template.singerPriceCents)} · Listener $${dollars(template.listenerPriceCents)}`}
+        inherited={pricesLabel(template)}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Singer price ($)">
-            <input name="singerPrice" inputMode="decimal" defaultValue={dollars(current.singerPriceCents)} className={inputClass} />
-          </Field>
-          <Field label="Listener price ($)">
-            <input name="listenerPrice" inputMode="decimal" defaultValue={dollars(current.listenerPriceCents)} className={inputClass} />
-          </Field>
-        </div>
+        <PriceFields
+          singerCents={current.singerPriceCents}
+          listenerCents={current.listenerPriceCents}
+          hint="0 makes it free for this role only."
+        />
       </Overridable>
 
       <Overridable
@@ -116,7 +114,7 @@ export default function DateForm({
         name="rounds"
         title="Rounds"
         date={date}
-        inherited={`${templateRounds.length} ${templateRounds.length === 1 ? "round" : "rounds"}\n${describeRounds(templateRounds)}`}
+        inherited={`${templateRounds.length} ${templateRounds.length === 1 ? "round" : "rounds"}\n${describeRounds(templateRounds, current.singerPriceCents === 0)}`}
       >
         <RoundsFields initial={rounds} />
       </Overridable>

@@ -32,6 +32,14 @@ export const SLOT_MODE_LABEL: Record<SlotMode, string> = {
   PAYMENT_ORDER: "Payment order",
 };
 
+/**
+ * A slot mode's name. When singing is free nobody pays, so payment order is
+ * really sign-up order (paidAt in src/lib/slots.ts) and is called that.
+ */
+export function slotModeLabel(mode: SlotMode, singersFree = false): string {
+  return mode === "PAYMENT_ORDER" && singersFree ? "Sign-up order" : SLOT_MODE_LABEL[mode];
+}
+
 /** The stored JSON as rounds. Anything unreadable falls back to the default two rounds. */
 export function parseRounds(raw: unknown): RoundConfig[] {
   if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_ROUNDS;
@@ -78,8 +86,8 @@ export function roundsFromForm(form: FormData): RoundConfig[] {
 }
 
 /** "2 rounds: 1 solo or duet, singers pick a slot; 2 …", for showing the template's rounds. */
-export function describeRounds(rounds: RoundConfig[]): string {
+export function describeRounds(rounds: RoundConfig[], singersFree = false): string {
   return rounds
-    .map((r, i) => `Round ${i + 1}: ${ROUND_KIND_LABEL[r.kind].toLowerCase()}, ${SLOT_MODE_LABEL[r.slotMode].toLowerCase()}`)
+    .map((r, i) => `Round ${i + 1}: ${ROUND_KIND_LABEL[r.kind].toLowerCase()}, ${slotModeLabel(r.slotMode, singersFree).toLowerCase()}`)
     .join("\n");
 }
