@@ -2,6 +2,9 @@
 
 export const inputClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2 text-ink placeholder:text-ink-muted/60 focus:border-lapis focus:outline-none focus:ring-2 focus:ring-lapis/30";
+/** A dropdown as wide as its longest option, with the chevron just after the text. */
+export const selectClass =
+  "select-chevron w-auto max-w-full rounded-lg border border-line bg-white py-2 pl-3 text-ink focus:border-lapis focus:outline-none focus:ring-2 focus:ring-lapis/30";
 export const labelClass = "mb-1 block text-sm font-medium text-ink";
 export const hintClass = "mt-1 text-xs text-ink-muted";
 export const cardClass = "rounded-xl border border-line bg-white p-4 sm:p-6";
