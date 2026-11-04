@@ -12,6 +12,7 @@ export default async function SiteHeader() {
 
   return (
     <HeaderShell>
+      <div className="toran" aria-hidden="true" />
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="font-display text-xl text-royal group-data-[tone=dark]:text-white sm:text-2xl">
           Bay Area <span className="text-lapis group-data-[tone=dark]:text-kicker">Desi</span> Karaoke
