@@ -126,8 +126,6 @@ model EventSeries {
   description             String?
   venueName               String
   venueAddress            String
-  theme                   String? // blank = no theme
-  themeRequired           Boolean    @default(true) // songs must fit the theme
   visibility              Visibility @default(PUBLIC)
   privateToken            String?    @unique
   // Schedule rule
@@ -149,7 +147,7 @@ model EventSeries {
   // Sign-up window, relative to each date's start (null = defaults in spec)
   signupOpensHoursBefore  Int?
   signupClosesHoursBefore Int?
-  // The rounds, round 1 first: [{ kind: SOLO|DUET|EITHER, slotMode }] (src/lib/rounds.ts)
+  // The rounds, round 1 first: [{ kind: SOLO|DUET|EITHER, slotMode, theme, themeRequired }] (src/lib/rounds.ts)
   rounds                  Json       @default("[{\"kind\":\"EITHER\",\"slotMode\":\"PICK\"},{\"kind\":\"EITHER\",\"slotMode\":\"CHECKIN_ORDER\"}]")
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
@@ -166,9 +164,9 @@ enum EventDateStatus {
   DELETED // removed by an admin; kept so the schedule doesn't create it again
 }
 
-// One occurrence. The series is its template: the date uses the series' theme,
-// description, prices and caps unless that setting is listed in overrides
-// ("theme", "description", "pricing", "capacity", "rounds", "banner", "zelle"), in which case the date's
+// One occurrence. The series is its template: the date uses the series'
+// description, prices, caps and rounds unless that setting is listed in overrides
+// ("description", "pricing", "capacity", "rounds", "banner", "zelle"), in which case the date's
 // own columns apply. See settingsFor in src/lib/events.ts.
 model EventDate {
   id                 String          @id @default(cuid())
@@ -178,8 +176,6 @@ model EventDate {
   // Set when an admin moved this date: the schedule slot it came from.
   originalStartsAt   DateTime?
   overrides          String[]        @default([])
-  theme              String?
-  themeRequired      Boolean         @default(true)
   description        String?
   signupsOpen        Boolean         @default(false) // admin opens sign-ups per date
   singerPriceCents   Int?

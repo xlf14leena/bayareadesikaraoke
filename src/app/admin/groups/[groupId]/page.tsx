@@ -11,6 +11,7 @@ import { formatClock, formatEventDate, formatPrice } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
 import { describeSchedule, ruleOf, syncAllSeries } from "@/lib/schedule";
+import { parseRounds, roundThemes } from "@/lib/rounds";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,9 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ gro
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">
                       {s.title}
-                      {s.theme && <span className="text-lapis"> · {s.theme}</span>}
+                      {roundThemes(parseRounds(s.rounds)).map((t) => (
+                        <span key={t} className="text-lapis"> · {t}</span>
+                      ))}
                       {s.visibility === "PRIVATE" && (
                         <span className="ml-2 rounded-full bg-gold/30 px-2 py-0.5 text-xs font-medium text-gold-ink">Private</span>
                       )}

@@ -2,19 +2,24 @@
 
 import { useState } from "react";
 import type { SlotMode } from "@prisma/client";
-import { labelClass, selectClass } from "@/components/ui";
-import { MAX_ROUNDS, type RoundConfig, type RoundKind } from "@/lib/rounds";
+import { inputClass, labelClass, selectClass } from "@/components/ui";
+import { MAX_ROUNDS, MAX_THEME_LENGTH, type RoundConfig, type RoundKind } from "@/lib/rounds";
 
 /**
- * How many rounds an event has, and for each one solo/duet and how singers
- * get their slot. Posts "roundCount" and "round{n}Kind" / "round{n}SlotMode"
- * (read by roundsFromForm in src/lib/rounds.ts).
+ * How many rounds an event has, and for each one solo/duet, how singers get
+ * their slot, and an optional theme. Posts "roundCount" and "round{n}Kind" /
+ * "round{n}SlotMode" / "round{n}Theme" / "round{n}ThemeRequired" (read by
+ * roundsFromForm in src/lib/rounds.ts).
  */
 export default function RoundsFields({ initial }: { initial: RoundConfig[] }) {
   const [count, setCount] = useState(initial.length);
   // Settings for every possible round, so lowering the count and raising it again keeps them.
   const [rounds, setRounds] = useState<RoundConfig[]>(() =>
-    Array.from({ length: MAX_ROUNDS }, (_, i) => initial[i] ?? { kind: "EITHER", slotMode: "CHECKIN_ORDER" }),
+    Array.from({ length: MAX_ROUNDS }, (_, i) => {
+      const r = initial[i] ?? { kind: "EITHER", slotMode: "CHECKIN_ORDER", theme: null, themeRequired: true };
+      // With no theme yet, "Songs must fit" starts ticked for when one is typed.
+      return r.theme ? r : { ...r, themeRequired: true };
+    }),
   );
   const change = (i: number, patch: Partial<RoundConfig>) =>
     setRounds((list) => list.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -69,13 +74,37 @@ export default function RoundsFields({ initial }: { initial: RoundConfig[] }) {
                 <option value="PAYMENT_ORDER">Payment order</option>
               </select>
             </label>
+            <div className="w-full space-y-1.5 sm:pl-24">
+              <label className="block">
+                <span className={labelClass}>Theme (optional)</span>
+                <input
+                  name={`round${i + 1}Theme`}
+                  value={r.theme ?? ""}
+                  onChange={(e) => change(i, { theme: e.target.value })}
+                  maxLength={MAX_THEME_LENGTH}
+                  placeholder="Blank for no theme, e.g. 90s Bollywood"
+                  className={inputClass}
+                />
+              </label>
+              {r.theme?.trim() && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name={`round${i + 1}ThemeRequired`}
+                    checked={r.themeRequired}
+                    onChange={(e) => change(i, { themeRequired: e.target.checked })}
+                  />
+                  Songs must fit the theme (untick to make it a suggestion)
+                </label>
+              )}
+            </div>
           </fieldset>
         ))}
       </div>
       <p className="text-xs text-ink-muted">
         Each singer picks one song per round. In a solo-or-duet round the singer chooses. The singing order says how
         singers get their slot in that round once they check in: they pick one, they go in the order they arrived,
-        or the first to pay sings first.
+        or the first to pay sings first. A round&apos;s theme is optional; leave it blank for anything goes.
       </p>
     </div>
   );

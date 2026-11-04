@@ -16,14 +16,12 @@ export const STATUS_LABEL: Record<SignUpStatus, string> = {
 // Settings a date can override; anything not listed in date.overrides comes from the series.
 // Rounds are read with roundsFor in src/lib/rounds.ts; the banner with bannerFor (date.bannerUrl is set only when overridden);
 // Zelle details with zelleFor below.
-export const OVERRIDE_KEYS = ["theme", "description", "pricing", "capacity", "rounds", "banner", "zelle"] as const;
+export const OVERRIDE_KEYS = ["description", "pricing", "capacity", "rounds", "banner", "zelle"] as const;
 export type OverrideKey = (typeof OVERRIDE_KEYS)[number];
 
 type DateSettings = Pick<
   EventDate,
   | "overrides"
-  | "theme"
-  | "themeRequired"
   | "description"
   | "singerPriceCents"
   | "listenerPriceCents"
@@ -32,7 +30,7 @@ type DateSettings = Pick<
 >;
 type SeriesSettings = Pick<
   EventSeries,
-  "theme" | "themeRequired" | "description" | "singerPriceCents" | "listenerPriceCents" | "maxSingers" | "maxListeners"
+  "description" | "singerPriceCents" | "listenerPriceCents" | "maxSingers" | "maxListeners"
 >;
 
 export type EventSettings = SeriesSettings;
@@ -41,8 +39,6 @@ export type EventSettings = SeriesSettings;
 export function settingsFor(date: DateSettings, series: SeriesSettings): EventSettings {
   const own = (key: OverrideKey) => date.overrides.includes(key);
   return {
-    theme: own("theme") ? date.theme : series.theme,
-    themeRequired: own("theme") ? date.themeRequired : series.themeRequired,
     description: own("description") ? date.description : series.description,
     singerPriceCents: own("pricing") ? (date.singerPriceCents ?? 0) : series.singerPriceCents,
     listenerPriceCents: own("pricing") ? (date.listenerPriceCents ?? 0) : series.listenerPriceCents,

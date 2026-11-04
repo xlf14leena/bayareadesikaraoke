@@ -8,6 +8,7 @@ import SeriesForm from "@/components/admin/SeriesForm";
 import { cardClass } from "@/components/ui";
 import { eventPath } from "@/lib/event-url";
 import { HOLDS_SPOT, settingsFor, spotsLabel } from "@/lib/events";
+import { roundThemes, roundsFor } from "@/lib/rounds";
 import { formatClock, formatEventDate, formatEventTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
@@ -82,12 +83,13 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
               const listeners = d.signUps.length - singers;
               const toReview = d.signUps.filter((s) => s.status === "UNDER_REVIEW").length;
               const settings = settingsFor(d, series);
+              const themes = roundThemes(roundsFor(d, series));
               return (
                 <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">
                       {formatEventDate(d.startsAt)}
-                      {settings.theme && <span className="text-lapis"> · {settings.theme}</span>}
+                      {themes.length > 0 && <span className="text-lapis"> · {themes.join(" / ")}</span>}
                       {d.signupsOpen && d.status === "SCHEDULED" && (
                         <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Sign-ups open</span>
                       )}

@@ -5,7 +5,6 @@ import type { EventDate } from "@prisma/client";
 import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
-import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
 import { type EventSettings, type OverrideKey, settingsFor } from "@/lib/events";
@@ -65,19 +64,6 @@ export default function DateForm({
           Change these to reschedule just this date. The rest of the schedule stays the same.
         </p>
       </fieldset>
-
-      <Overridable
-        name="theme"
-        title="Theme"
-        date={date}
-        inherited={
-          template.theme
-            ? `${template.theme} (${template.themeRequired ? "songs must fit" : "optional"})`
-            : "No theme"
-        }
-      >
-        <ThemeFields theme={current.theme} required={current.themeRequired} hint="Blank for no theme on this date." />
-      </Overridable>
 
       <Overridable name="description" title="Description" date={date} inherited={template.description ?? "No description"}>
         <Field label="Description for this date" hint="Blank for no description on this date.">

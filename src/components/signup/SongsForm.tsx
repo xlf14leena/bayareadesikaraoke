@@ -39,11 +39,13 @@ export function SongFields({
 }) {
   return (
     <div className="space-y-5">
-      {rounds.map(({ kind }, i) => (
+      {rounds.map(({ kind, theme, themeRequired }, i) => (
         <RoundFields
           key={i + 1}
           round={i + 1}
           kind={kind}
+          theme={theme}
+          themeRequired={themeRequired}
           defaults={defaults?.[i + 1]}
           partners={partners}
           nearMatchKey={nearMatch?.round === i + 1 ? nearMatch.key : undefined}
@@ -56,12 +58,16 @@ export function SongFields({
 function RoundFields({
   round: r,
   kind: roundKind,
+  theme,
+  themeRequired,
   defaults,
   partners,
   nearMatchKey,
 }: {
   round: number;
   kind: RoundKind;
+  theme: string | null;
+  themeRequired: boolean;
   defaults?: SongDefaults;
   partners: DuetPartnerOption[];
   nearMatchKey?: string;
@@ -79,6 +85,15 @@ function RoundFields({
           <span className="ml-auto text-xs font-medium text-white/80">{roundKind === "SOLO" ? "Solos" : "Duets"}</span>
         )}
       </div>
+      {theme && (
+        <p className="border-b border-gold/40 bg-gold/15 px-3 py-1.5 text-sm text-gold-ink">
+          <span className="font-semibold">Theme: {theme}</span>
+          <span className="text-gold-ink/70">
+            {" "}
+            · {themeRequired ? "your song must fit it" : "just a suggestion"}
+          </span>
+        </p>
+      )}
       <div className="grid gap-3 bg-mist/60 p-3 sm:grid-cols-2">
         <Field label="Song title">
           <input
