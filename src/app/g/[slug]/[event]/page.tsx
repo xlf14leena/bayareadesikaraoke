@@ -41,8 +41,8 @@ async function load({ slug, event }: { slug: string; event: string }) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const date = await load(await params);
-  if (!date || date.series.visibility === "PRIVATE") return { title: "Bay Area Desi Karaoke" };
-  return { title: `${date.series.title} · ${formatEventDate(date.startsAt)} · Bay Area Desi Karaoke` };
+  if (!date || date.series.visibility === "PRIVATE") return { title: "Desi Karaoke" };
+  return { title: `${date.series.title} · ${formatEventDate(date.startsAt)} · Desi Karaoke` };
 }
 
 // Event page (spec: "Dashboard, event pages and private links"). Private
