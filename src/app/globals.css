@@ -42,3 +42,13 @@
   background-size: 1rem;
   padding-right: 2rem;
 }
+
+/* Section tabs on the event page land each section below the sticky header and tab bar. */
+section[id] {
+  scroll-margin-top: 8.5rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
