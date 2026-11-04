@@ -25,8 +25,9 @@ export default async function Home() {
   return (
     <div className="space-y-8">
       {/* Edge to edge: breaks out of the centered content column to the full window width and
-          sits flush under the header; the text stays lined up with the column below. */}
-      <section className="relative isolate -mx-[calc(50vw-50%)] -mt-6 h-72 overflow-hidden bg-gradient-to-r from-royal via-cobalt to-lapis text-white sm:h-[26rem]">
+          starts at the top of the window, with the header floating over it (HeaderShell); the
+          text stays lined up with the column below and clears the header. */}
+      <section className="relative isolate -mx-[calc(50vw-50%)] -mt-6 h-[23rem] overflow-hidden bg-gradient-to-r from-royal via-cobalt to-lapis text-white sm:h-[32rem]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={HERO_PHOTO}
@@ -37,7 +38,7 @@ export default async function Home() {
             text stays readable while the photo spans the whole banner. */}
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-royal/90 via-royal/60 to-royal/10 sm:from-royal/90 sm:from-20% sm:via-royal/50 sm:via-55% sm:to-transparent" />
         <div className="dot-grid absolute inset-0 -z-10" />
-        <div className="mx-auto flex h-full max-w-5xl flex-col justify-center gap-2 px-4">
+        <div className="mx-auto flex h-full max-w-5xl flex-col justify-center gap-2 px-4 pt-16 sm:pt-20">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-kicker">
             Gaana · Bajaana · Mehfil
           </p>

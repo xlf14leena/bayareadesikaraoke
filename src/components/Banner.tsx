@@ -1,7 +1,8 @@
 import { DEFAULT_BANNER } from "@/lib/banner";
 
 // Edge to edge: breaks out of the centered content column to the full window
-// width and sits flush under the header, like the home hero.
+// width and sits flush under the header (dark indigo on these pages, see
+// HeaderShell), like the home hero.
 const BLEED = "-mx-[calc(50vw-50%)] -mt-6 overflow-hidden";
 
 /**
