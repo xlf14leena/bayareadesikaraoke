@@ -104,7 +104,7 @@ export async function signUpForDate(
           data: { ...data, eventDateId: dateId, userId: viewer.id, memoCode: await newMemoCode(tx) },
         });
       }
-      return full ? "You're on the waitlist." : "You're signed up.";
+      return full ? "You're on the waitlist." : amount === 0 ? "You're confirmed." : "You're signed up.";
     });
   });
   refresh();

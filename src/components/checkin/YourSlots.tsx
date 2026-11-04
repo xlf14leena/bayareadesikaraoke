@@ -3,7 +3,17 @@ import SlotPicker from "@/components/checkin/SlotPicker";
 import type { RoundSlotInfo } from "@/lib/slots";
 
 /** A checked-in singer's place in each round: pick a slot, or see the one check-in or payment order gave them. */
-export default function YourSlots({ dateId, rounds }: { dateId: string; rounds: RoundSlotInfo[] }) {
+export default function YourSlots({
+  dateId,
+  rounds,
+  singersFree = false,
+}: {
+  dateId: string;
+  rounds: RoundSlotInfo[];
+  /** Singing is free on this date, so payment order is shown as sign-up order. */
+  singersFree?: boolean;
+}) {
+  const auto = (mode: string) => (mode === "PAYMENT_ORDER" ? (singersFree ? "sign-up" : "payment") : "check-in");
   return (
     <section id="your-slots" className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
       <h2 className="text-lg font-semibold">Your singing slots</h2>
@@ -19,11 +29,11 @@ export default function YourSlots({ dateId, rounds }: { dateId: string; rounds: 
               ) : r.mode === "PICK" ? (
                 <span className="text-ink-muted">pick a free slot</span>
               ) : (
-                <span className="text-ink-muted">assigned in {r.mode === "PAYMENT_ORDER" ? "payment" : "check-in"} order</span>
+                <span className="text-ink-muted">assigned in {auto(r.mode)} order</span>
               )}
               {r.mySlot && r.mode !== "PICK" && (
                 <span className="ml-2 text-xs text-ink-muted">
-                  by {r.mode === "PAYMENT_ORDER" ? "payment" : "check-in"} order
+                  by {auto(r.mode)} order
                 </span>
               )}
             </p>

@@ -66,7 +66,7 @@ export default function RoundsFields({ initial }: { initial: RoundConfig[] }) {
               >
                 <option value="PICK">Singers pick a slot</option>
                 <option value="CHECKIN_ORDER">Check-in order</option>
-                <option value="PAYMENT_ORDER">Payment order</option>
+                <option value="PAYMENT_ORDER">Payment order (sign-up order when free)</option>
               </select>
             </label>
           </fieldset>

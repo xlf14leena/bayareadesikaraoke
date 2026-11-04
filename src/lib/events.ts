@@ -1,4 +1,5 @@
 import type { EventDate, EventSeries, SignUpStatus } from "@prisma/client";
+import { formatPrice } from "@/lib/format";
 
 // Sign-up statuses that hold a spot under the cap (spec: "Holding a spot under the cap").
 export const HOLDS_SPOT: SignUpStatus[] = ["RESERVED", "UNDER_REVIEW", "CONFIRMED", "REJECTED"];
@@ -48,6 +49,17 @@ export function settingsFor(date: DateSettings, series: SeriesSettings): EventSe
     maxSingers: own("capacity") ? date.maxSingers : series.maxSingers,
     maxListeners: own("capacity") ? date.maxListeners : series.maxListeners,
   };
+}
+
+/** Whether nobody pays on a date: both roles cost $0. */
+export function isFree(s: Pick<EventSettings, "singerPriceCents" | "listenerPriceCents">): boolean {
+  return s.singerPriceCents === 0 && s.listenerPriceCents === 0;
+}
+
+/** "Free", or "Singer $20 · Listener Free". */
+export function pricesLabel(s: Pick<EventSettings, "singerPriceCents" | "listenerPriceCents">): string {
+  if (isFree(s)) return "Free";
+  return `Singer ${formatPrice(s.singerPriceCents)} · Listener ${formatPrice(s.listenerPriceCents)}`;
 }
 
 /** "3 of 20" with a cap, or just "3" without one. */

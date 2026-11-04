@@ -20,6 +20,7 @@ const AUTO_MODES: SlotMode[] = ["CHECKIN_ORDER", "PAYMENT_ORDER"];
 
 type PaidFields = {
   status: string;
+  amountDueCents: number;
   registeredAt: Date;
   reviewedAt: Date | null;
   screenshot: { uploadedAt: Date } | null;
@@ -27,12 +28,14 @@ type PaidFields = {
 
 /**
  * When a singer paid, for payment order: the time they sent the payment
- * screenshot that was approved. A free spot, or one an admin added or marked
- * paid by hand, counts from when it was confirmed. Anyone not confirmed yet
- * (payment still under review) goes after everyone who is.
+ * screenshot that was approved. A free spot counts from when they signed up
+ * (so on a free date payment order is sign-up order); one an admin added or
+ * marked paid by hand counts from when it was confirmed. Anyone not confirmed
+ * yet (payment still under review) goes after everyone who is.
  */
 export function paidAt(s: PaidFields): number {
   if (s.status !== "CONFIRMED") return Number.MAX_SAFE_INTEGER;
+  if (s.amountDueCents === 0) return s.registeredAt.getTime();
   return (s.screenshot?.uploadedAt ?? s.reviewedAt ?? s.registeredAt).getTime();
 }
 
@@ -100,6 +103,7 @@ export async function fillCheckInOrderSlots(
     select: {
       id: true,
       status: true,
+      amountDueCents: true,
       checkedInAt: true,
       registeredAt: true,
       reviewedAt: true,

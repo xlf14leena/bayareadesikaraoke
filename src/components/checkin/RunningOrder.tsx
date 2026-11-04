@@ -3,7 +3,7 @@ import type { SlotMode } from "@prisma/client";
 import { clearNowSinging, clearSlot, setNowSinging, startRound, stepNowSinging } from "@/app/admin/checkin-actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
-import { ROUND_KIND_LABEL, type RoundKind, SLOT_MODE_LABEL } from "@/lib/rounds";
+import { ROUND_KIND_LABEL, type RoundKind, slotModeLabel } from "@/lib/rounds";
 
 export type RunningOrderRound = {
   round: number;
@@ -20,8 +20,11 @@ export default function RunningOrder({
   seriesId,
   dateId,
   now,
+  singersFree = false,
 }: {
   rounds: RunningOrderRound[];
+  /** Singing is free on this date, so payment order is shown as sign-up order. */
+  singersFree?: boolean;
   seriesId: string;
   dateId: string;
   now: { round: number; slot: number } | null;
@@ -95,7 +98,7 @@ export default function RunningOrder({
               <span>
                 Round {r.round}{" "}
                 <span className="text-sm font-normal text-ink-muted">
-                  {r.kind !== "EITHER" && `· ${ROUND_KIND_LABEL[r.kind]} `}· {SLOT_MODE_LABEL[r.mode]} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
+                  {r.kind !== "EITHER" && `· ${ROUND_KIND_LABEL[r.kind]} `}· {slotModeLabel(r.mode, singersFree)} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
                 </span>
               </span>
               <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">
@@ -118,7 +121,7 @@ export default function RunningOrder({
                       <span className="font-medium">{row.name}</span>
                       <span className="text-ink-muted">
                         {row.song ? ` · ${row.song}` : " · no song yet"}
-                        {row.method === "PICK" ? " · picked" : row.method === "PAYMENT_ORDER" ? " · payment order" : " · check-in order"}
+                        {row.method === "PICK" ? " · picked" : row.method === "PAYMENT_ORDER" ? (singersFree ? " · sign-up order" : " · payment order") : " · check-in order"}
                       </span>
                       {row.track && (
                         <a
