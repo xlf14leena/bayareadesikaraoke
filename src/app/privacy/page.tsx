@@ -1,4 +1,4 @@
-export const metadata = { title: "Privacy policy · Bay Area Desi Karaoke" };
+export const metadata = { title: "Privacy policy · Desi Karaoke" };
 
 export default function PrivacyPage() {
   return (
@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       <p className="text-sm text-gray-500">Last updated October 12, 2026</p>
 
       <p>
-        Bay Area Desi Karaoke lists karaoke events run by local groups and lets people sign up for them.
+        Desi Karaoke lists karaoke events run by local groups and lets people sign up for them.
         This page explains what we collect and why.
       </p>
 

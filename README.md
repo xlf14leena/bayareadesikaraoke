@@ -1,6 +1,6 @@
-# Bay Area Desi Karaoke
+# Desi Karaoke
 
-A responsive site where Bay Area karaoke groups publish recurring events and people sign up to sing or listen.
+A responsive site where local karaoke groups publish recurring events and people sign up to sing or listen.
 
 Stack: Next.js (App Router, TypeScript, Tailwind), Auth.js with Google sign-in, Postgres through Prisma, hosted on Vercel.
 
