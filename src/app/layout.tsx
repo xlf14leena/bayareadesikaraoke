@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${hind.variable} ${rozha.variable}`}>
-      <body className="min-h-screen bg-mist font-sans text-ink antialiased">
+      <body className="min-h-screen overflow-x-clip bg-mist font-sans text-ink antialiased">
         <SiteHeader />
         <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
         <footer className="mx-auto max-w-5xl px-4 pb-8 text-sm text-ink-muted">

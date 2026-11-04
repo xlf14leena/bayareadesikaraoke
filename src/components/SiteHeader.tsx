@@ -3,6 +3,7 @@ import Image from "next/image";
 import { signIn, signOut } from "@/auth";
 import { setViewAs } from "@/app/view-as-actions";
 import ViewAsSelect from "@/components/ViewAsSelect";
+import HeaderShell from "@/components/HeaderShell";
 import { prisma } from "@/lib/prisma";
 import { canSwitchView, getViewer, isAnyAdmin, type Viewer } from "@/lib/roles";
 
@@ -10,20 +11,20 @@ export default async function SiteHeader() {
   const viewer = await getViewer();
 
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-mist/90 backdrop-blur">
+    <HeaderShell>
       <div className="toran" aria-hidden="true" />
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="font-display text-xl text-royal sm:text-2xl">
-          Bay Area <span className="text-lapis">Desi</span> Karaoke
+        <Link href="/" className="font-display text-xl text-royal group-data-[tone=dark]:text-white sm:text-2xl">
+          Bay Area <span className="text-lapis group-data-[tone=dark]:text-kicker">Desi</span> Karaoke
         </Link>
 
         {viewer ? (
           <div className="flex items-center gap-3 text-sm">
-            <Link href="/me" className="whitespace-nowrap font-medium text-ink hover:text-cobalt">
+            <Link href="/me" className="whitespace-nowrap font-medium text-ink hover:text-cobalt group-data-[tone=dark]:text-white group-data-[tone=dark]:hover:text-kicker">
               My events
             </Link>
             {isAnyAdmin(viewer) && (
-              <Link href="/admin" className="font-medium text-ink hover:text-cobalt">
+              <Link href="/admin" className="font-medium text-ink hover:text-cobalt group-data-[tone=dark]:text-white group-data-[tone=dark]:hover:text-kicker">
                 Admin
               </Link>
             )}
@@ -42,7 +43,7 @@ export default async function SiteHeader() {
                 await signOut({ redirectTo: "/" });
               }}
             >
-              <button type="submit" className="text-ink-muted hover:text-cobalt">
+              <button type="submit" className="text-ink-muted hover:text-cobalt group-data-[tone=dark]:text-white/85 group-data-[tone=dark]:hover:text-kicker">
                 Sign out
               </button>
             </form>
@@ -56,7 +57,7 @@ export default async function SiteHeader() {
           >
             <button
               type="submit"
-              className="whitespace-nowrap rounded-full bg-royal px-4 py-2 text-sm font-medium text-white hover:bg-cobalt"
+              className="whitespace-nowrap rounded-full bg-royal px-4 py-2 text-sm font-medium text-white hover:bg-cobalt group-data-[tone=dark]:bg-white group-data-[tone=dark]:text-royal group-data-[tone=dark]:hover:bg-kicker"
             >
               <span className="sm:hidden">Sign in</span>
               <span className="hidden sm:inline">Sign in with Google</span>
@@ -65,7 +66,7 @@ export default async function SiteHeader() {
         )}
       </div>
       {canSwitchView(viewer) && <ViewAsBar viewer={viewer!} />}
-    </header>
+    </HeaderShell>
   );
 }
 
@@ -88,8 +89,8 @@ async function ViewAsBar({ viewer }: { viewer: Viewer }) {
 
   if (!viewer.viewAs) {
     return (
-      <div className="border-t border-line/70 bg-white/60">
-        <div className="mx-auto flex max-w-5xl justify-end px-4 py-1.5 text-xs text-ink-muted">
+      <div className="border-t border-line/70 bg-white/60 group-data-[tone=dark]:border-white/15 group-data-[tone=dark]:bg-black/20">
+        <div className="mx-auto flex max-w-5xl justify-end px-4 py-1.5 text-xs text-ink-muted group-data-[tone=dark]:text-white/80">
           <ViewAsSelect current={current} options={options} />
         </div>
       </div>
