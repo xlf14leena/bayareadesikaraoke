@@ -7,14 +7,17 @@ import { useFormAction } from "@/components/admin/useFormAction";
 import { type DuetPartnerOption, SongFields } from "@/components/signup/SongsForm";
 import { inputClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
+import type { RoundConfig } from "@/lib/rounds";
 
 /** Adds someone by hand. They're confirmed at once; a singer's songs follow the first-pick rule. */
 export default function AddPersonForm({
   action,
   partners,
+  rounds,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
   partners: DuetPartnerOption[];
+  rounds: RoundConfig[];
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
   const [role, setRole] = useState("SINGER");
@@ -42,7 +45,7 @@ export default function AddPersonForm({
           <input name="paymentNote" maxLength={120} className={inputClass} />
         </Field>
       </div>
-      {role === "SINGER" && <SongFields rounds={[1, 2]} partners={partners} nearMatch={state?.nearMatch} />}
+      {role === "SINGER" && <SongFields rounds={rounds} partners={partners} nearMatch={state?.nearMatch} />}
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="overCap" className="accent-royal" />
         Go over the cap if this role is full

@@ -7,7 +7,9 @@ import FormStatus from "@/components/admin/FormStatus";
 import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
+import RoundsFields from "@/components/admin/RoundsFields";
 import { dollars, type FormState } from "@/lib/forms";
+import { DEFAULT_ROUNDS, parseRounds } from "@/lib/rounds";
 
 type Action = (prev: FormState, form: FormData) => Promise<FormState>;
 
@@ -150,28 +152,11 @@ export default function SeriesForm({ action, series }: { action: Action; series?
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="mb-2 font-semibold text-royal">Singing order</legend>
+        <legend className="mb-2 font-semibold text-royal">Rounds</legend>
         <p className="text-sm text-ink-muted">
-          How singers get their slot in each round once they check in at the venue.
+          How many rounds each date has. You can change them for a single date later.
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[1, 2].map((round) => (
-            <Field key={round} label={`Round ${round}`}>
-              <select
-                name={`round${round}SlotMode`}
-                defaultValue={
-                  (round === 1 ? series?.round1SlotMode : series?.round2SlotMode) ??
-                  (round === 1 ? "PICK" : "CHECKIN_ORDER")
-                }
-                className={inputClass}
-              >
-                <option value="PICK">Singers pick a free slot</option>
-                <option value="CHECKIN_ORDER">Slots go in check-in order</option>
-                <option value="PAYMENT_ORDER">Slots go in payment order (first to pay sings first)</option>
-              </select>
-            </Field>
-          ))}
-        </div>
+        <RoundsFields initial={series ? parseRounds(series.rounds) : DEFAULT_ROUNDS} />
       </fieldset>
 
       <FormStatus state={state} pending={pending} label={series ? "Save event" : "Create event"} />

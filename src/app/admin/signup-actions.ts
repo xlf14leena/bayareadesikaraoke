@@ -4,6 +4,7 @@ import type { AttendeeRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { FormError, type FormState, optionalText, text } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
+import { roundsFor } from "@/lib/rounds";
 import { requireGroupAdmin } from "@/lib/roles";
 import {
   ENDED,
@@ -15,7 +16,7 @@ import {
   releaseSongs,
   setSong,
   settleDate,
-  songInput,
+  songInputs,
   withDateLock,
 } from "@/lib/signups";
 
@@ -133,7 +134,7 @@ export async function addPerson(dateId: string, _prev: FormState, form: FormData
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new FormError("That email address doesn't look right.");
     const paymentNote = optionalText(form, "paymentNote", { max: 120 });
     const overCap = form.get("overCap") === "on";
-    const songs = role === "SINGER" ? [songInput(form, 1), songInput(form, 2)] : [null, null];
+    const songs = role === "SINGER" ? songInputs(form, roundsFor(date, date.series)) : [];
 
     return withDateLock(dateId, async (tx) => {
       await settleDate(tx, dateId);

@@ -1,13 +1,15 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { Prisma, type Frequency, type SlotMode, type Visibility } from "@prisma/client";
+import { Prisma, type Frequency, type Visibility } from "@prisma/client";
 import { OVERRIDE_KEYS, type OverrideKey } from "@/lib/events";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin, requireSuperUser } from "@/lib/roles";
+import { parseRounds, roundsFromForm } from "@/lib/rounds";
 import { syncSeriesDates, timesFor } from "@/lib/schedule";
+import { settle } from "@/lib/signups";
 import {
   FormError,
   type FormState,
@@ -173,14 +175,39 @@ function seriesFields(form: FormData) {
     maxSingers: optionalCap(form, "maxSingers", "Singer cap"),
     maxListeners: optionalCap(form, "maxListeners", "Listener cap"),
     bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
-    round1SlotMode: slotMode(form, "round1SlotMode", "PICK"),
-    round2SlotMode: slotMode(form, "round2SlotMode", "CHECKIN_ORDER"),
+    rounds: roundsFromForm(form),
   };
 }
 
-function slotMode(form: FormData, name: string, fallback: SlotMode): SlotMode {
-  const v = form.get(name);
-  return v === "PICK" || v === "CHECKIN_ORDER" || v === "PAYMENT_ORDER" ? v : fallback;
+/**
+ * Refuses to drop rounds that upcoming dates already use: a song or a slot
+ * in a round past the new count would vanish from the running order.
+ */
+async function checkRoundCount(dateIds: string[], count: number, fromSeries: boolean) {
+  if (dateIds.length === 0) return;
+  const where = { eventDateId: { in: dateIds }, round: { gt: count } };
+  const [songs, slots] = await Promise.all([
+    prisma.song.findMany({ where: { ...where, status: "ACTIVE" }, select: { round: true }, distinct: ["round"] }),
+    prisma.roundSlot.findMany({ where, select: { round: true }, distinct: ["round"] }),
+  ]);
+  const used = [...new Set([...songs, ...slots].map((r) => r.round))].sort((a, b) => a - b);
+  if (used.length) {
+    const which = used.map((r) => `round ${r}`).join(" and ");
+    throw new FormError(
+      `Singers already have songs or slots in ${which}${fromSeries ? " on an upcoming date" : ""}, ` +
+        `so keep at least ${used.at(-1)} rounds. Ask them to clear those songs first` +
+        (fromSeries ? ", or set that date's own rounds in its settings." : "."),
+    );
+  }
+}
+
+/** Upcoming dates of a series that follow its rounds (no rounds of their own). */
+async function datesFollowingSeriesRounds(seriesId: string) {
+  const dates = await prisma.eventDate.findMany({
+    where: { seriesId, status: "SCHEDULED", endsAt: { gte: new Date() }, NOT: { overrides: { has: "rounds" } } },
+    select: { id: true },
+  });
+  return dates.map((d) => d.id);
 }
 
 function newPrivateToken(): string {
@@ -219,6 +246,8 @@ export async function updateSeries(seriesId: string, _prev: FormState, form: For
   await requireGroupAdmin(groupId);
   const result = await attempt(async () => {
     const data = seriesFields(form);
+    const following = await datesFollowingSeriesRounds(seriesId);
+    await checkRoundCount(following, data.rounds.length, true);
     const before = await prisma.eventSeries.findUniqueOrThrow({ where: { id: seriesId } });
     await prisma.eventSeries.update({
       where: { id: seriesId },
@@ -229,6 +258,8 @@ export async function updateSeries(seriesId: string, _prev: FormState, form: For
     });
     // Dates follow these settings unless they override them, so there's nothing to copy.
     await syncSeriesDates(seriesId);
+    // A round that now goes by check-in or payment order gives slots to singers already here.
+    for (const id of following) await settle(id);
   });
   if (result) return result;
   revalidatePath(`/admin/events/${seriesId}`);
@@ -259,6 +290,7 @@ async function dateGroup(dateId: string) {
       startsAt: true,
       endsAt: true,
       originalStartsAt: true,
+      status: true,
       series: { select: { groupId: true } },
     },
   });
@@ -285,6 +317,9 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
     const custom = form.getAll("custom").map(String);
     const overrides = OVERRIDE_KEYS.filter((k) => custom.includes(k));
     const own = (key: OverrideKey) => overrides.includes(key);
+    const rounds = own("rounds") ? roundsFromForm(form) : null;
+    const series = await prisma.eventSeries.findUniqueOrThrow({ where: { id: d.seriesId }, select: { rounds: true } });
+    await checkRoundCount([dateId], (rounds ?? parseRounds(series.rounds)).length, false);
 
     await prisma.eventDate.update({
       where: { id: dateId },
@@ -299,9 +334,11 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
         listenerPriceCents: own("pricing") ? price(form, "listenerPrice", "Listener price") : null,
         maxSingers: own("capacity") ? optionalCap(form, "maxSingers", "Singer cap") : null,
         maxListeners: own("capacity") ? optionalCap(form, "maxListeners", "Listener cap") : null,
+        rounds: rounds ?? Prisma.DbNull,
         bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
       },
     });
+    if (d.status === "SCHEDULED") await settle(dateId);
   }, "This event already has a date starting at that time.");
   if (result) return result;
   revalidatePath(`/admin/dates/${dateId}`);

@@ -15,6 +15,7 @@ import LiveRefresh from "@/components/checkin/LiveRefresh";
 import PublicRunningOrder from "@/components/checkin/PublicRunningOrder";
 import EventComments from "@/components/comments/EventComments";
 import FeedbackPrompt from "@/components/feedback/FeedbackPrompt";
+import { ROUND_KIND_LABEL, roundNumbers, roundsFor } from "@/lib/rounds";
 import { singerRounds } from "@/lib/slots";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
@@ -53,6 +54,7 @@ export default async function EventPage({ params, searchParams }: Props) {
   const { series } = date;
   const isAdmin = canAdminGroup(viewer, series.groupId);
   const settings = settingsFor(date, series);
+  const roundConfig = roundsFor(date, series);
 
   if (series.visibility === "PRIVATE" && !isAdmin) {
     const hasKey = !!k && k === series.privateToken;
@@ -131,7 +133,7 @@ export default async function EventPage({ params, searchParams }: Props) {
 
   const myRounds =
     myActive?.checkedInAt && myActive.role === "SINGER" && CAN_CHECK_IN.includes(myActive.status) && date.endsAt > new Date()
-      ? await singerRounds(prisma, date.id, myActive.id, series, date)
+      ? await singerRounds(prisma, date.id, myActive.id, roundConfig, date)
       : null;
 
   const banner = bannerFor(date.bannerUrl, series.bannerUrl, series.group.bannerUrl);
@@ -142,7 +144,11 @@ export default async function EventPage({ params, searchParams }: Props) {
   const toReview = isAdmin
     ? await prisma.signUp.count({ where: { eventDateId: date.id, status: "UNDER_REVIEW" } })
     : 0;
-  const rounds = [1, 2].map((r) => singers.filter((s) => s.round === r)).filter((list) => list.length > 0);
+  // Songs are listed by the round they were picked for, even one a past date no longer has.
+  const rounds = [...new Set([...roundNumbers(roundConfig), ...singers.map((s) => s.round)])]
+    .sort((a, b) => a - b)
+    .map((r) => singers.filter((s) => s.round === r))
+    .filter((list) => list.length > 0);
   // The running order: checked-in singers by slot, with their song for that round.
   const orderSlots = viewer
     ? await prisma.roundSlot.findMany({
@@ -353,6 +359,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           group={series.group}
           waitlistPosition={waitlistPosition}
           editable={stillEditable(date)}
+          rounds={roundConfig}
           partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName }))}
           duetInvites={invites.map((i) => ({ round: i.round, title: i.title, singer: i.signUp.displayName }))}
         />
@@ -385,7 +392,16 @@ export default async function EventPage({ params, searchParams }: Props) {
             <div className="space-y-4">
               {rounds.map((list) => (
                 <div key={list[0].round}>
-                  {rounds.length > 1 && <h3 className="mb-1 font-semibold text-royal">Round {list[0].round}</h3>}
+                  {(rounds.length > 1 || roundConfig.length > 1) && (
+                    <h3 className="mb-1 font-semibold text-royal">
+                      Round {list[0].round}
+                      {roundConfig[list[0].round - 1]?.kind !== "EITHER" && roundConfig[list[0].round - 1] && (
+                        <span className="ml-2 text-sm font-normal text-ink-muted">
+                          {ROUND_KIND_LABEL[roundConfig[list[0].round - 1].kind]}
+                        </span>
+                      )}
+                    </h3>
+                  )}
                   <ol className="list-decimal space-y-1 pl-5">
                     {list.map((s) => (
                       <li key={s.id}>
