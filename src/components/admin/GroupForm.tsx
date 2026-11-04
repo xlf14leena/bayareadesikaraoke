@@ -47,7 +47,7 @@ export default function GroupForm({ action, group }: { action: Action; group?: G
             <input name="instagramUrl" inputMode="url" defaultValue={group?.instagramUrl ?? ""} placeholder="https://instagram.com/..." className={inputClass} />
           </Field>
         </div>
-        <p className="text-xs text-ink-muted">Shown as icons under the group name on the group page.</p>
+        <p className="text-xs text-ink-muted">Shown as icon links under the group name on the group page.</p>
       </fieldset>
       {!group && (
         <Field

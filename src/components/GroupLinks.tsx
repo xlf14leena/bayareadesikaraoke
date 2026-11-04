@@ -2,7 +2,7 @@ import type { Group } from "@prisma/client";
 
 type Links = Pick<Group, "name" | "websiteUrl" | "facebookUrl" | "instagramUrl">;
 
-/** The group's website, Facebook and Instagram, as labelled icon links. Nothing when none are set. */
+/** The group's website, Facebook and Instagram, as round icon links. Nothing when none are set. */
 export default function GroupLinks({ group }: { group: Links }) {
   const links = [
     { href: group.websiteUrl, label: "Website", icon: <GlobeIcon /> },
@@ -19,10 +19,11 @@ export default function GroupLinks({ group }: { group: Links }) {
             href={l.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-royal hover:border-royal"
+            aria-label={`${group.name} ${l.label}`}
+            title={l.label}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white text-royal hover:border-royal"
           >
             {l.icon}
-            {l.label}
           </a>
         </li>
       ))}
@@ -30,7 +31,7 @@ export default function GroupLinks({ group }: { group: Links }) {
   );
 }
 
-const iconProps = { width: 18, height: 18, viewBox: "0 0 24 24", "aria-hidden": true } as const;
+const iconProps = { width: 20, height: 20, viewBox: "0 0 24 24", "aria-hidden": true } as const;
 
 function GlobeIcon() {
   return (
