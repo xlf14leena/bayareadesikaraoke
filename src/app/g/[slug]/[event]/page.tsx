@@ -214,33 +214,53 @@ export default async function EventPage({ params, searchParams }: Props) {
 
       <header className="!mt-3">
         {series.visibility === "PRIVATE" && <p className="text-sm font-medium text-ink-muted">Private event</p>}
-        <h1 className="font-display text-3xl leading-tight text-royal sm:text-4xl">{series.title}</h1>
+        <div className="flex items-start gap-4">
+          <h1 className="font-display text-3xl leading-tight text-royal sm:text-4xl">{series.title}</h1>
+          {isAdmin && (
+            <Link
+              href={`/admin/dates/${date.id}`}
+              title="Manage this date and its sign-ups"
+              className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-royal shadow-sm hover:border-cobalt hover:text-cobalt sm:mt-1.5"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Manage
+            </Link>
+          )}
+        </div>
         {settings.theme ? (
-          <p className="text-lg text-lapis">
-            Theme: {settings.theme}
-            <span className="ml-2 text-sm text-ink-muted">
-              {settings.themeRequired ? "· Songs must fit the theme" : "· Theme is optional"}
+          <div className="mt-2 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gold/60 bg-gold/15 px-4 py-2">
+            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-ink/70">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 text-gold" fill="currentColor" aria-hidden="true">
+                <path d="M9 18V5l12-2v13a3 3 0 1 1-2-2.83V7.3L11 8.63V18a3 3 0 1 1-2-2.83z" />
+              </svg>
+              Theme
             </span>
-          </p>
+            <span className="font-display text-xl leading-tight text-royal sm:text-2xl">{settings.theme}</span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                settings.themeRequired ? "bg-royal text-white" : "bg-white text-ink-muted ring-1 ring-line"
+              }`}
+            >
+              {settings.themeRequired ? "Songs must fit the theme" : "Theme is optional"}
+            </span>
+          </div>
         ) : (
           <p className="text-lg text-ink-muted">No theme: sing anything you like</p>
         )}
         {cancelled && (
           <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 font-medium text-red-700">This date has been cancelled.</p>
         )}
-        {isAdmin && (
-          <p className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-            <Link href={`/admin/dates/${date.id}`} className="font-medium text-cobalt hover:underline">
-              Manage this date and its sign-ups →
+        {isAdmin && toReview > 0 && (
+          <p className="mt-2 text-sm">
+            <Link
+              href={`/admin/dates/${date.id}`}
+              className="inline-block rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-800 hover:underline"
+            >
+              {toReview} {toReview === 1 ? "payment" : "payments"} to review
             </Link>
-            {toReview > 0 && (
-              <Link
-                href={`/admin/dates/${date.id}`}
-                className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-800 hover:underline"
-              >
-                {toReview} {toReview === 1 ? "payment" : "payments"} to review
-              </Link>
-            )}
           </p>
         )}
       </header>
