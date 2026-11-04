@@ -89,8 +89,8 @@ async function ViewAsBar({ viewer }: { viewer: Viewer }) {
 
   if (!viewer.viewAs) {
     return (
-      <div className="border-t border-line/70 bg-white/60 group-data-[tone=dark]:border-white/15 group-data-[tone=dark]:bg-black/20">
-        <div className="mx-auto flex max-w-5xl justify-end px-4 py-1.5 text-xs text-ink-muted group-data-[tone=dark]:text-white/80">
+      <div className="bg-gold text-gold-ink">
+        <div className="mx-auto flex max-w-5xl justify-end px-4 py-2 text-sm">
           <ViewAsSelect current={current} options={options} />
         </div>
       </div>
