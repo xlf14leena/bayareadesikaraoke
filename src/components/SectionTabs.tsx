@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type SectionTab = { id: string; label: string; icon: keyof typeof ICONS };
 
@@ -22,6 +22,10 @@ const ICONS = {
 export default function SectionTabs({ tabs }: { tabs: SectionTab[] }) {
   const [active, setActive] = useState(tabs[0]?.id);
   const [top, setTop] = useState(0);
+  // A clicked tab stays active while the page scrolls to it. Near the bottom of
+  // the page a section can't reach the top, so the scroll position alone would
+  // light up a later tab. The hold ends when the reader scrolls on their own.
+  const clicked = useRef<string | null>(null);
 
   useEffect(() => {
     // Stick right under the site header, whose height changes (e.g. the "View site as" bar).
@@ -37,6 +41,7 @@ export default function SectionTabs({ tabs }: { tabs: SectionTab[] }) {
   useEffect(() => {
     // The active tab is the last section whose top has scrolled past the bar.
     const update = () => {
+      if (clicked.current) return;
       let current = tabs[0]?.id;
       for (const t of tabs) {
         const el = document.getElementById(t.id);
@@ -45,9 +50,16 @@ export default function SectionTabs({ tabs }: { tabs: SectionTab[] }) {
       if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) current = tabs[tabs.length - 1]?.id;
       setActive(current);
     };
+    const release = () => {
+      clicked.current = null;
+    };
     update();
     window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
+    for (const e of ["wheel", "touchstart", "keydown"]) window.addEventListener(e, release, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", update);
+      for (const e of ["wheel", "touchstart", "keydown"]) window.removeEventListener(e, release);
+    };
   }, [tabs, top]);
 
   if (tabs.length < 2) return null;
@@ -61,6 +73,10 @@ export default function SectionTabs({ tabs }: { tabs: SectionTab[] }) {
               <a
                 href={`#${t.id}`}
                 aria-current={on ? "location" : undefined}
+                onClick={() => {
+                  clicked.current = t.id;
+                  setActive(t.id);
+                }}
                 className={`flex items-center gap-2 border-b-[3px] px-2 pb-2.5 pt-3 text-[15px] whitespace-nowrap transition-colors sm:px-3 ${
                   on ? "border-gold font-medium text-royal" : "border-transparent text-ink-muted hover:text-royal"
                 }`}
