@@ -214,7 +214,7 @@ export default async function EventPage({ params, searchParams }: Props) {
 
       <header className="!mt-3">
         {series.visibility === "PRIVATE" && <p className="text-sm font-medium text-ink-muted">Private event</p>}
-        <div className="flex items-start gap-4">
+        <div className="flex items-start justify-between gap-4">
           <h1 className="font-display text-3xl leading-tight text-royal sm:text-4xl">{series.title}</h1>
           {isAdmin && (
             <Link
@@ -231,7 +231,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           )}
         </div>
         {settings.theme ? (
-          <div className="mt-2 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gold/60 bg-gold/15 px-4 py-2">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gold/60 bg-gold/15 px-4 py-3 sm:px-6">
             <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-ink/70">
               <svg viewBox="0 0 24 24" className="h-4 w-4 text-gold" fill="currentColor" aria-hidden="true">
                 <path d="M9 18V5l12-2v13a3 3 0 1 1-2-2.83V7.3L11 8.63V18a3 3 0 1 1-2-2.83z" />
