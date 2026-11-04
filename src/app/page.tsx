@@ -33,7 +33,7 @@ export default async function Home() {
           srcSet={HERO_PHOTO_SRCSET}
           sizes="100vw"
           fetchPriority="high"
-          alt="Friends in kurtas and saris singing together into microphones"
+          alt="Friends and family of all ages singing together into microphones"
           className="absolute inset-0 -z-10 h-full w-full object-cover object-[65%_top] text-transparent sm:object-top"
         />
         {/* Darkens the photo behind the headline on the left and fades out to the right, so the text
