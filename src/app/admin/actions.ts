@@ -404,6 +404,14 @@ export async function restoreDate(dateId: string): Promise<void> {
   revalidatePath(`/admin/dates/${dateId}`);
 }
 
+/** Archives a past date (hidden from the group page's past karaoke nights), or brings it back. */
+export async function setDateArchived(dateId: string, archived: boolean): Promise<void> {
+  const d = await dateGroup(dateId);
+  await requireGroupAdmin(d.series.groupId);
+  await prisma.eventDate.update({ where: { id: dateId }, data: { archivedAt: archived ? new Date() : null } });
+  revalidatePath(`/admin/dates/${dateId}`);
+}
+
 /**
  * Removes one date. The row stays as DELETED (hidden everywhere) so the
  * repeating schedule doesn't create that date again; its sign-ups are cancelled.
