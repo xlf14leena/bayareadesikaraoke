@@ -5,7 +5,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import SectionTabs, { type SectionTab } from "@/components/SectionTabs";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton } from "@/components/ui";
-import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
+import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { ENDED, acceptingSignUps, settle, stillEditable } from "@/lib/signups";
 import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
@@ -188,12 +188,14 @@ export default async function EventPage({ params, searchParams }: Props) {
   const showLineup = date.signupsOpen || rounds.length > 0 || confirmedListeners > 0;
   const showSlots = !!myRounds && !cancelled;
   const showMine = !!myActive && !cancelled;
+  // Not signed up yet: the Your sign-up section holds the sign-up form (or why you can't sign up).
+  const showJoin = !myActive && !cancelled && !past;
   const showOrder = runningOrder.length > 0 && !cancelled;
   // Tabs under the banner, in page order, for the sections that are showing.
   const tabs: (SectionTab & { show: boolean })[] = [
     { id: "details", label: "Details", icon: "details", show: true },
     { id: "your-slots", label: "Your slots", icon: "slots", show: showSlots },
-    { id: "your-sign-up", label: "Your sign-up", icon: "signup", show: showMine },
+    { id: "your-sign-up", label: "Your sign-up", icon: "signup", show: showMine || showJoin },
     { id: "running-order", label: "Running order", icon: "order", show: showOrder },
     { id: "whos-singing", label: "Who's singing", icon: "singers", show: showLineup },
     { id: "comments", label: "Comments", icon: "comments", show: date.commentsEnabled || isAdmin },
@@ -294,63 +296,6 @@ export default async function EventPage({ params, searchParams }: Props) {
             <p className="whitespace-pre-line text-ink">{settings.description}</p>
           </div>
         )}
-
-        {cancelled || past ? null : (
-          <div className="space-y-3 border-t border-line pt-5">
-            {myActive ? (
-              <a
-                href="#your-sign-up"
-                className="block rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 hover:underline"
-              >
-                You&apos;re signed up: {STATUS_LABEL[myActive.status].toLowerCase()}. See your sign-up ↓
-              </a>
-            ) : !accepting ? (
-              <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">
-                {date.signupsOpen ? "Sign-ups for this date are closed." : "Sign-ups aren't open yet."}
-              </p>
-            ) : viewer ? (
-              <>
-                {mine && (
-                  <p className="text-sm text-ink-muted">
-                    {mine.status === "EXPIRED"
-                      ? "Your earlier hold ran out. You can sign up again."
-                      : "Your earlier sign-up was cancelled. You can sign up again."}
-                  </p>
-                )}
-                <div className="max-w-md">
-                  <SignUpForm
-                    action={signUpForDate.bind(null, date.id, k ?? null)}
-                    defaultName={mine?.displayName ?? viewer.name ?? ""}
-                    options={[
-                      {
-                        role: "SINGER",
-                        label: "Sing",
-                        price: formatPrice(settings.singerPriceCents),
-                        full: settings.maxSingers != null && taken("SINGER") >= settings.maxSingers,
-                      },
-                      {
-                        role: "LISTENER",
-                        label: "Listen",
-                        price: formatPrice(settings.listenerPriceCents),
-                        full: settings.maxListeners != null && taken("LISTENER") >= settings.maxListeners,
-                      },
-                    ]}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
-                <Link
-                  href={`/signin?callbackUrl=${encodeURIComponent(here)}`}
-                  className={`${primaryButton} w-full sm:w-auto`}
-                >
-                  Sign in to sign up
-                </Link>
-              </>
-            )}
-          </div>
-        )}
       </section>
 
       <FeedbackPrompt date={date} viewer={viewer} isAdmin={isAdmin} privateKey={k ?? null} />
@@ -371,6 +316,57 @@ export default async function EventPage({ params, searchParams }: Props) {
       )}
 
       {myRounds && !cancelled && <YourSlots dateId={date.id} rounds={myRounds} />}
+
+      {showJoin && (
+        <section id="your-sign-up" className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
+          <h2 className="text-lg font-semibold">Your sign-up</h2>
+          {!accepting ? (
+            <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">
+              {date.signupsOpen ? "Sign-ups for this date are closed." : "Sign-ups aren't open yet."}
+            </p>
+          ) : viewer ? (
+            <>
+              {mine && (
+                <p className="text-sm text-ink-muted">
+                  {mine.status === "EXPIRED"
+                    ? "Your earlier hold ran out. You can sign up again."
+                    : "Your earlier sign-up was cancelled. You can sign up again."}
+                </p>
+              )}
+              <div className="max-w-md">
+                <SignUpForm
+                  action={signUpForDate.bind(null, date.id, k ?? null)}
+                  defaultName={mine?.displayName ?? viewer.name ?? ""}
+                  options={[
+                    {
+                      role: "SINGER",
+                      label: "Sing",
+                      price: formatPrice(settings.singerPriceCents),
+                      full: settings.maxSingers != null && taken("SINGER") >= settings.maxSingers,
+                    },
+                    {
+                      role: "LISTENER",
+                      label: "Listen",
+                      price: formatPrice(settings.listenerPriceCents),
+                      full: settings.maxListeners != null && taken("LISTENER") >= settings.maxListeners,
+                    },
+                  ]}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
+              <Link
+                href={`/signin?callbackUrl=${encodeURIComponent(here)}`}
+                className={`${primaryButton} w-full sm:w-auto`}
+              >
+                Sign in to sign up
+              </Link>
+            </>
+          )}
+        </section>
+      )}
 
       {myActive && !cancelled && (
         <YourSignUp
