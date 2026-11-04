@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { hintClass, inputClass, labelClass, secondaryButton } from "@/components/ui";
-import { shrinkImage } from "@/lib/shrink-image";
+import { shrinkImage, trimLightEdges } from "@/lib/shrink-image";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const isUploaded = (url: string | null) => !!url?.startsWith("/api/banners/");
@@ -35,7 +35,7 @@ export default function BannerField({ current, hint }: { current: string | null;
     setError(undefined);
     if (!file) return setFilePreview(null);
     setPreparing(true);
-    const ready = await shrinkImage(file);
+    const ready = await shrinkImage(await trimLightEdges(file));
     setPreparing(false);
     if (ready.size > MAX_BYTES) {
       clearFile();
