@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // Hero photo: "Group of 5 people singing together inside of a karaoke room" by Singa Karaoke,
 // free to use under the Unsplash License.
 const HERO_PHOTO =
-  "https://images.unsplash.com/photo-1738156674456-97cdf7793bb7?auto=format&fit=crop&w=2000&q=70";
+  "https://images.unsplash.com/photo-1738156674456-97cdf7793bb7?auto=format&fit=crop&w=2400&q=70";
 const HERO_PHOTO_PAGE = "https://unsplash.com/photos/a-group-of-people-standing-next-to-each-other-zddcsUv2DUE";
 
 // Public dashboard: public event dates that are happening now or upcoming, soonest first.
@@ -24,7 +24,9 @@ export default async function Home() {
 
   return (
     <div className="space-y-8">
-      <section className="relative isolate h-56 overflow-hidden rounded-2xl bg-gradient-to-r from-royal via-cobalt to-lapis text-white sm:h-60">
+      {/* Edge to edge: breaks out of the centered content column to the full window width and
+          sits flush under the header; the text stays lined up with the column below. */}
+      <section className="relative isolate -mx-[calc(50vw-50%)] -mt-6 h-72 overflow-hidden bg-gradient-to-r from-royal via-cobalt to-lapis text-white sm:h-[26rem]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={HERO_PHOTO}
@@ -33,9 +35,9 @@ export default async function Home() {
         />
         {/* Darkens the photo behind the headline on the left and fades out to the right, so the
             text stays readable while the photo spans the whole banner. */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-royal/90 via-royal/60 to-royal/10 sm:from-royal/85 sm:from-15% sm:via-royal/45 sm:via-50% sm:to-transparent" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-royal/90 via-royal/60 to-royal/10 sm:from-royal/90 sm:from-20% sm:via-royal/50 sm:via-55% sm:to-transparent" />
         <div className="dot-grid absolute inset-0 -z-10" />
-        <div className="flex h-full flex-col justify-center gap-2 px-6 sm:px-10">
+        <div className="mx-auto flex h-full max-w-5xl flex-col justify-center gap-2 px-4">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-kicker">
             Gaana · Bajaana · Mehfil
           </p>
