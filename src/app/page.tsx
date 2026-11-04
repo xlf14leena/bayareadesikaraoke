@@ -3,11 +3,10 @@ import EventDateList from "@/components/EventDateList";
 
 export const dynamic = "force-dynamic";
 
-// Hero photo: "Group of 5 people singing together inside of a karaoke room" by Singa Karaoke,
-// free to use under the Unsplash License.
-const HERO_PHOTO =
-  "https://images.unsplash.com/photo-1738156674456-97cdf7793bb7?auto=format&fit=crop&w=2400&q=70";
-const HERO_PHOTO_PAGE = "https://unsplash.com/photos/a-group-of-people-standing-next-to-each-other-zddcsUv2DUE";
+// Hero banner: the site's own artwork (public/images), with the headline that was drawn into it
+// painted out so the live text below is the only copy. It carries its own dot grid.
+const HERO_PHOTO = "/images/home-hero.webp";
+const HERO_PHOTO_SRCSET = "/images/home-hero-1200.webp 1200w, /images/home-hero.webp 2172w";
 
 // Public dashboard: public event dates that are happening now or upcoming, soonest first.
 export default async function Home() {
@@ -31,13 +30,15 @@ export default async function Home() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={HERO_PHOTO}
-          alt="Friends singing together in a karaoke room"
-          className="absolute inset-0 -z-10 h-full w-full object-cover object-top text-transparent"
+          srcSet={HERO_PHOTO_SRCSET}
+          sizes="100vw"
+          fetchPriority="high"
+          alt="Friends in kurtas and saris singing together into microphones"
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-[65%_top] text-transparent sm:object-top"
         />
-        {/* Darkens the photo behind the headline on the left and fades out to the right, so the
-            text stays readable while the photo spans the whole banner. */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-royal/90 via-royal/60 to-royal/10 sm:from-royal/90 sm:from-20% sm:via-royal/50 sm:via-55% sm:to-transparent" />
-        <div className="dot-grid absolute inset-0 -z-10" />
+        {/* Darkens the photo behind the headline on the left and fades out to the right, so the text
+            stays readable where it runs over the first singer while the rest of the group stays bright. */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-royal/85 via-royal/55 to-royal/10 sm:from-royal/80 sm:from-25% sm:via-royal/40 sm:via-50% sm:to-transparent sm:to-75%" />
         <div className="mx-auto flex h-full max-w-5xl flex-col justify-center gap-2 px-4 pt-16 sm:pt-20">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-kicker">
             Gaana · Bajaana · Mehfil
@@ -49,14 +50,6 @@ export default async function Home() {
             Find a karaoke night near you and sing the songs you grew up with.
           </p>
         </div>
-        <a
-          href={HERO_PHOTO_PAGE}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute right-3 bottom-2 text-[11px] text-white/70 hover:text-white"
-        >
-          Photo: Singa Karaoke / Unsplash
-        </a>
       </section>
 
       <section>
