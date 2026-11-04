@@ -1,9 +1,9 @@
-import type { Group, SignUp, Song } from "@prisma/client";
+import type { SignUp, Song } from "@prisma/client";
 import { leaveSignUp, saveSongs, uploadScreenshot } from "@/app/g/[slug]/[event]/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ScreenshotForm from "@/components/signup/ScreenshotForm";
 import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";
-import { STATUS_LABEL } from "@/lib/events";
+import { STATUS_LABEL, type ZelleDetails } from "@/lib/events";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import type { RoundConfig } from "@/lib/rounds";
 import { PICKS_SONGS } from "@/lib/signups";
@@ -17,7 +17,9 @@ type Props = {
   partners: DuetPartnerOption[];
   /** Other singers' duets on this date that name this person as the partner. */
   duetInvites: { round: number; title: string; singer: string }[];
-  group: Pick<Group, "name" | "zelleName" | "zelleHandle">;
+  groupName: string;
+  /** Where to send the payment, from the event template or this date. */
+  zelle: ZelleDetails;
   waitlistPosition: number | null;
   editable: boolean;
   /** The date's rounds, for the songs form. */
@@ -33,7 +35,7 @@ const TONE: Record<string, string> = {
 };
 
 /** The signed-in person's own sign-up for this date: status, how to pay, and their songs. */
-export default function YourSignUp({ signUp, group, waitlistPosition, editable, partners, duetInvites, rounds }: Props) {
+export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition, editable, partners, duetInvites, rounds }: Props) {
   const role = signUp.role === "SINGER" ? "singer" : "listener";
   const needsProof = signUp.status === "RESERVED" || signUp.status === "REJECTED";
   const active = signUp.songs.filter((s) => s.status === "ACTIVE");
@@ -118,15 +120,15 @@ export default function YourSignUp({ signUp, group, waitlistPosition, editable, 
             <div>
               <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Send to</dt>
               <dd>
-                {group.zelleHandle ? (
+                {zelle.handle ? (
                   <>
-                    <span className="font-medium">{group.zelleName ?? group.name}</span>
+                    <span className="font-medium">{zelle.name ?? groupName}</span>
                     <br />
-                    <span className="select-all font-mono">{group.zelleHandle}</span>
+                    <span className="select-all font-mono">{zelle.handle}</span>
                   </>
                 ) : (
                   <span className="text-red-700">
-                    {group.name} hasn&apos;t added its Zelle details yet. Please contact the organizers.
+                    {groupName} hasn&apos;t added Zelle details for this event yet. Please contact the organizers.
                   </span>
                 )}
               </dd>

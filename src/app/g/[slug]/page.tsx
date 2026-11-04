@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Banner from "@/components/Banner";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EventDateList from "@/components/EventDateList";
+import GroupLinks from "@/components/GroupLinks";
 import { bannerFor } from "@/lib/banner";
 import { formatEventDate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -50,6 +51,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
       <header className="!mt-3">
         <h1 className="font-display text-3xl text-royal sm:text-4xl">{group.name}</h1>
         {group.description && <p className="mt-1 whitespace-pre-line text-ink-muted">{group.description}</p>}
+        <GroupLinks group={group} />
       </header>
       <section>
         <h2 className="mb-4 text-xl font-semibold">Upcoming karaoke nights</h2>

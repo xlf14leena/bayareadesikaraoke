@@ -34,14 +34,21 @@ export default function GroupForm({ action, group }: { action: Action; group?: G
         current={group?.bannerUrl ?? null}
         hint="Shown on the group page and used for events that have no banner of their own. Without one, the default singing photo is used."
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Zelle recipient name (optional)">
-          <input name="zelleName" defaultValue={group?.zelleName ?? ""} className={inputClass} />
-        </Field>
-        <Field label="Zelle email or phone (optional)">
-          <input name="zelleHandle" defaultValue={group?.zelleHandle ?? ""} className={inputClass} />
-        </Field>
-      </div>
+      <fieldset className="space-y-2">
+        <legend className="mb-2 font-semibold text-royal">Links (optional)</legend>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Website">
+            <input name="websiteUrl" inputMode="url" defaultValue={group?.websiteUrl ?? ""} placeholder="https://..." className={inputClass} />
+          </Field>
+          <Field label="Facebook page">
+            <input name="facebookUrl" inputMode="url" defaultValue={group?.facebookUrl ?? ""} placeholder="https://facebook.com/..." className={inputClass} />
+          </Field>
+          <Field label="Instagram page">
+            <input name="instagramUrl" inputMode="url" defaultValue={group?.instagramUrl ?? ""} placeholder="https://instagram.com/..." className={inputClass} />
+          </Field>
+        </div>
+        <p className="text-xs text-ink-muted">Shown as icons under the group name on the group page.</p>
+      </fieldset>
       {!group && (
         <Field
           label="Group admins (optional)"

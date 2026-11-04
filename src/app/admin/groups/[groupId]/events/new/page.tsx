@@ -11,6 +11,12 @@ export default async function NewEventPage({ params }: { params: Promise<{ group
   await requireGroupAdmin(groupId, `/admin/groups/${groupId}/events/new`);
   const group = await prisma.group.findUnique({ where: { id: groupId } });
   if (!group) notFound();
+  // A new event starts with the Zelle details of the group's latest one.
+  const latest = await prisma.eventSeries.findFirst({
+    where: { groupId, zelleHandle: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { zelleName: true, zelleHandle: true },
+  });
 
   return (
     <div>
@@ -23,7 +29,7 @@ export default async function NewEventPage({ params }: { params: Promise<{ group
       />
       <h1 className="mb-4 font-display text-3xl text-royal">New event</h1>
       <div className={cardClass}>
-        <SeriesForm action={createSeries.bind(null, group.id)} />
+        <SeriesForm action={createSeries.bind(null, group.id)} zelleDefaults={latest ?? undefined} />
       </div>
     </div>
   );

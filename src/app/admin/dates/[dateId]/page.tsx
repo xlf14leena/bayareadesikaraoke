@@ -234,6 +234,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           rounds={rounds}
           templateRounds={parseRounds(series.rounds)}
           templateBanner={bannerFor(series.bannerUrl, series.group.bannerUrl)}
+          templateZelle={{ name: series.zelleName, handle: series.zelleHandle }}
           when={{
             day: pacificDateOf(date.startsAt),
             startTime: pacificTimeOf(date.startsAt),

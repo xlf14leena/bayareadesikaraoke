@@ -43,7 +43,7 @@ A person must sign in once before they can be made a group admin.
 
 `src/lib/signups.ts` holds the rules; member actions are in `src/app/g/[slug]/[event]/actions.ts` and admin actions in `src/app/admin/signup-actions.ts`.
 
-- A member picks singer or listener. A paid spot is **Reserved** for 24 hours and the page shows the group's Zelle details, the amount and a memo code (`BADK-XXXX`). A free spot is confirmed at once. When a role is full they join its waitlist instead.
+- A member picks singer or listener. A paid spot is **Reserved** for 24 hours and the page shows the event's Zelle details (set on the event, and changeable per date), the amount and a memo code (`BADK-XXXX`). A free spot is confirmed at once. When a role is full they join its waitlist instead.
 - Uploading a payment screenshot moves the sign-up to **Payment under review** and holds the spot until an admin decides. Admins approve, reject with a reason (the person gets 24 hours to upload a new one), or cancel.
 - Screenshots are stored in Postgres (`PaymentScreenshot`) rather than a file service, so there is nothing else to set up and they stay private: `/api/screenshots/<sign-up-id>` serves one only to its uploader and that group's admins. The page shrinks photos to a JPEG before upload, and uploads are capped at 4 MB (Vercel's request limit is 4.5 MB).
 - Overdue holds expire, and freed spots go to the next person on that role's waitlist, whenever the event page or its admin page is opened, and in the daily cron as a backstop (`settleDate`). Every change to who holds a spot runs under a per-date Postgres advisory lock, so two people can't both take the last spot.

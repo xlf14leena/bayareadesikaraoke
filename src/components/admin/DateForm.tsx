@@ -9,6 +9,7 @@ import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
 import { type EventSettings, type OverrideKey, settingsFor } from "@/lib/events";
+import { type ZelleDetails, zelleFor } from "@/lib/events";
 import RoundsFields from "@/components/admin/RoundsFields";
 import { dollars, type FormState } from "@/lib/forms";
 import { type RoundConfig, describeRounds } from "@/lib/rounds";
@@ -24,6 +25,7 @@ export default function DateForm({
   rounds,
   templateRounds,
   templateBanner,
+  templateZelle,
   when,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
@@ -34,11 +36,14 @@ export default function DateForm({
   templateRounds: RoundConfig[];
   /** The banner dates get from the event (or the group, or the default photo). */
   templateBanner: { src: string; isDefault: boolean };
+  /** The Zelle details dates get from the event. */
+  templateZelle: ZelleDetails;
   when: { day: string; startTime: string; endTime: string };
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
   // Starting values when an admin begins overriding: the date's own, or the event's.
   const current = settingsFor(date, template);
+  const zelle = zelleFor(date, { zelleName: templateZelle.name, zelleHandle: templateZelle.handle });
   const capLabel = (cap: number | null) => (cap == null ? "no cap" : String(cap));
 
   return (
@@ -119,6 +124,26 @@ export default function DateForm({
         inherited={`${templateRounds.length} ${templateRounds.length === 1 ? "round" : "rounds"}\n${describeRounds(templateRounds)}`}
       >
         <RoundsFields initial={rounds} />
+      </Overridable>
+
+      <Overridable
+        name="zelle"
+        title="Zelle details"
+        date={date}
+        inherited={
+          templateZelle.handle
+            ? [templateZelle.name, templateZelle.handle].filter(Boolean).join(" · ")
+            : "None yet, so members are asked to contact the organizers"
+        }
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Zelle recipient name">
+            <input name="zelleName" maxLength={100} defaultValue={zelle.name ?? ""} className={inputClass} />
+          </Field>
+          <Field label="Zelle email or phone">
+            <input name="zelleHandle" maxLength={100} defaultValue={zelle.handle ?? ""} className={inputClass} />
+          </Field>
+        </div>
       </Overridable>
 
       <Overridable

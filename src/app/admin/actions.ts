@@ -16,6 +16,7 @@ import {
   type FormState,
   hm,
   optionalCap,
+  optionalLink,
   optionalText,
   price,
   slugify,
@@ -55,8 +56,9 @@ function groupFields(form: FormData) {
     name,
     slug,
     description: optionalText(form, "description", { max: 1000 }),
-    zelleName: optionalText(form, "zelleName", { max: 100 }),
-    zelleHandle: optionalText(form, "zelleHandle", { max: 100 }),
+    websiteUrl: optionalLink(form, "websiteUrl", "Website"),
+    facebookUrl: optionalLink(form, "facebookUrl", "Facebook page"),
+    instagramUrl: optionalLink(form, "instagramUrl", "Instagram page"),
   };
 }
 
@@ -185,6 +187,15 @@ function seriesFields(form: FormData) {
     maxSingers: optionalCap(form, "maxSingers", "Singer cap"),
     maxListeners: optionalCap(form, "maxListeners", "Listener cap"),
     rounds: roundsFromForm(form),
+    ...zelleFields(form),
+  };
+}
+
+/** Where members send Zelle payments. Both are optional. */
+function zelleFields(form: FormData) {
+  return {
+    zelleName: optionalText(form, "zelleName", { max: 100 }),
+    zelleHandle: optionalText(form, "zelleHandle", { max: 100 }),
   };
 }
 
@@ -359,6 +370,7 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
         maxSingers: own("capacity") ? optionalCap(form, "maxSingers", "Singer cap") : null,
         maxListeners: own("capacity") ? optionalCap(form, "maxListeners", "Listener cap") : null,
         rounds: rounds ?? Prisma.DbNull,
+        ...(own("zelle") ? zelleFields(form) : { zelleName: null, zelleHandle: null }),
     };
     await withBanner(
       form,

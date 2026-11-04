@@ -6,6 +6,7 @@ import SectionTabs, { type SectionTab } from "@/components/SectionTabs";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton } from "@/components/ui";
 import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
+import { zelleFor } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { ENDED, acceptingSignUps, settle, stillEditable } from "@/lib/signups";
 import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
@@ -374,7 +375,8 @@ export default async function EventPage({ params, searchParams }: Props) {
       {myActive && !cancelled && (
         <YourSignUp
           signUp={myActive}
-          group={series.group}
+          groupName={series.group.name}
+          zelle={zelleFor(date, series)}
           waitlistPosition={waitlistPosition}
           editable={stillEditable(date)}
           rounds={roundConfig}
