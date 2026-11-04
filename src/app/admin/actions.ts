@@ -38,14 +38,6 @@ async function attempt(
   }
 }
 
-/** Theme is optional; when set, the admin says whether songs must fit it. */
-function themeFields(form: FormData) {
-  return {
-    theme: optionalText(form, "theme", { max: 120 }),
-    themeRequired: form.get("themeRequired") === "on",
-  };
-}
-
 // ---------- Groups ----------
 
 function groupFields(form: FormData) {
@@ -174,7 +166,6 @@ function seriesFields(form: FormData) {
     description: optionalText(form, "description", { max: 2000 }),
     venueName: text(form, "venueName", "Venue name", { max: 120 }),
     venueAddress: text(form, "venueAddress", "Venue address", { max: 200 }),
-    ...themeFields(form),
     visibility,
     frequency,
     monthlyWeekOfMonth,
@@ -363,7 +354,6 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
         endsAt,
         originalStartsAt,
         overrides,
-        ...(own("theme") ? themeFields(form) : { theme: null, themeRequired: true }),
         description: own("description") ? optionalText(form, "description", { max: 2000 }) : null,
         singerPriceCents: own("pricing") ? price(form, "singerPrice", "Singer price") : null,
         listenerPriceCents: own("pricing") ? price(form, "listenerPrice", "Listener price") : null,

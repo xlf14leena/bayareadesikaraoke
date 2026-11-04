@@ -9,7 +9,7 @@ import AddPersonForm from "@/components/admin/AddPersonForm";
 import CheckInPanel from "@/components/checkin/CheckInPanel";
 import RunningOrder from "@/components/checkin/RunningOrder";
 import { CAN_CHECK_IN } from "@/lib/checkin";
-import { parseRounds, roundNumbers, roundsFor } from "@/lib/rounds";
+import { type RoundConfig, parseRounds, roundNumbers, roundsFor } from "@/lib/rounds";
 import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
@@ -175,23 +175,23 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           </p>
         </div>
 
-        <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} theme={settings.theme} nearMatches={nearMatches} />
+        <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} rounds={rounds} nearMatches={nearMatches} />
         <SignUpGroup
           title="Waiting for payment"
           empty="Nobody is waiting to pay."
           list={awaiting}
-          theme={settings.theme}
+          rounds={rounds}
           nearMatches={nearMatches}
         />
-        <SignUpGroup title="Confirmed" empty="Nobody is confirmed yet." list={confirmed} theme={settings.theme} nearMatches={nearMatches} />
-        {waitlist.length > 0 && <SignUpGroup title="Waitlist" empty="" list={waitlist} theme={settings.theme} nearMatches={nearMatches} />}
+        <SignUpGroup title="Confirmed" empty="Nobody is confirmed yet." list={confirmed} rounds={rounds} nearMatches={nearMatches} />
+        {waitlist.length > 0 && <SignUpGroup title="Waitlist" empty="" list={waitlist} rounds={rounds} nearMatches={nearMatches} />}
         {ended.length > 0 && (
           <details>
             <summary className="cursor-pointer text-sm font-medium text-ink-muted">
               Expired or cancelled ({ended.length})
             </summary>
             <div className="mt-3">
-              <SignUpGroup title="" empty="" list={ended} theme={settings.theme} nearMatches={nearMatches} />
+              <SignUpGroup title="" empty="" list={ended} rounds={rounds} nearMatches={nearMatches} />
             </div>
           </details>
         )}
@@ -223,8 +223,6 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           action={updateDate.bind(null, date.id)}
           date={date}
           template={{
-            theme: series.theme,
-            themeRequired: series.themeRequired,
             description: series.description,
             singerPriceCents: series.singerPriceCents,
             listenerPriceCents: series.listenerPriceCents,
@@ -331,13 +329,13 @@ function SignUpGroup({
   title,
   empty,
   list,
-  theme,
+  rounds,
   nearMatches,
 }: {
   title: string;
   empty: string;
   list: Row[];
-  theme: string | null;
+  rounds: RoundConfig[];
   nearMatches: NearMatches;
 }) {
   return (
@@ -352,7 +350,7 @@ function SignUpGroup({
       ) : (
         <ul className="space-y-3">
           {list.map((s) => (
-            <SignUpRow key={s.id} s={s} theme={theme} nearMatches={nearMatches} />
+            <SignUpRow key={s.id} s={s} rounds={rounds} nearMatches={nearMatches} />
           ))}
         </ul>
       )}
@@ -360,7 +358,7 @@ function SignUpGroup({
   );
 }
 
-function SignUpRow({ s, theme, nearMatches }: { s: Row; theme: string | null; nearMatches: NearMatches }) {
+function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; nearMatches: NearMatches }) {
   const active = s.songs.filter((x) => x.status === "ACTIVE");
   const rejected = s.songs.filter((x) => x.status === "REJECTED");
   const shot = s.screenshot ? `/api/screenshots/${s.id}` : null;
@@ -434,7 +432,7 @@ function SignUpRow({ s, theme, nearMatches }: { s: Row; theme: string | null; ne
                 <ReasonForm
                   action={rejectSong.bind(null, song.id)}
                   label="Reject song"
-                  placeholder={theme ? `e.g. doesn't fit "${theme}"` : "Reason"}
+                  placeholder={rounds[song.round - 1]?.theme ? `e.g. doesn't fit "${rounds[song.round - 1]?.theme}"` : "Reason"}
                 />
               </div>
             );

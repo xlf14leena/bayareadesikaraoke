@@ -3,6 +3,7 @@ import type { EventDate, EventSeries, Group } from "@prisma/client";
 import { bannerFor } from "@/lib/banner";
 import { eventPath } from "@/lib/event-url";
 import { settingsFor } from "@/lib/events";
+import { roundThemes, roundsFor } from "@/lib/rounds";
 import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
 export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
@@ -26,6 +27,7 @@ export default function EventDateList({
         const banner = bannerFor(d.bannerUrl, d.series.bannerUrl, d.series.group.bannerUrl).src;
         const badge = formatDateBadge(d.startsAt);
         const settings = settingsFor(d, d.series);
+        const themes = roundThemes(roundsFor(d, d.series));
         return (
           <li key={d.id}>
             <Link
@@ -43,11 +45,15 @@ export default function EventDateList({
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-semibold leading-snug">
                   {d.series.title}
-                  {settings.theme && <span className="text-lapis"> · {settings.theme}</span>}
                 </h3>
                 <p className="text-sm text-ink-muted">
                   {d.series.group.name} · {formatEventDate(d.startsAt)}, {formatEventTime(d.startsAt, d.endsAt)}
                 </p>
+                {themes.length > 0 && (
+                  <p className="truncate text-sm text-lapis" title={themes.join(" · ")}>
+                    {themes.length === 1 ? "Theme" : "Themes"}: {themes.join(" · ")}
+                  </p>
+                )}
                 <p className="text-sm text-ink-muted">
                   {d.series.venueName}
                   {d.signupsOpen && !past && (

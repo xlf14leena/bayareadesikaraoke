@@ -248,26 +248,6 @@ export default async function EventPage({ params, searchParams }: Props) {
       <SectionTabs tabs={tabs.filter((t) => t.show)} />
 
       <section id="details" className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
-        {settings.theme ? (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-royal px-4 py-3 text-white sm:px-5">
-            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-kicker">
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-gold" fill="currentColor" aria-hidden="true">
-                <path d="M9 18V5l12-2v13a3 3 0 1 1-2-2.83V7.3L11 8.63V18a3 3 0 1 1-2-2.83z" />
-              </svg>
-              Theme
-            </span>
-            <span className="font-display text-xl leading-tight sm:text-2xl">{settings.theme}</span>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                settings.themeRequired ? "bg-gold text-gold-ink" : "bg-white/15 text-white"
-              }`}
-            >
-              {settings.themeRequired ? "Songs must fit the theme" : "Theme is optional"}
-            </span>
-          </div>
-        ) : (
-          <p className="rounded-lg bg-mist px-4 py-3 text-ink-muted">No theme: sing anything you like</p>
-        )}
         <dl className="grid gap-5 sm:grid-cols-3">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
@@ -310,6 +290,37 @@ export default async function EventPage({ params, searchParams }: Props) {
             </dd>
           </div>
         </dl>
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            {roundConfig.length === 1 ? "The round" : `${roundConfig.length} rounds`}
+          </h2>
+          <ol className="mt-2 space-y-2">
+            {roundConfig.map((r, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-royal text-xs font-semibold text-white">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm text-ink-muted">{ROUND_KIND_LABEL[r.kind]}</p>
+                  {r.theme ? (
+                    <p className="mt-0.5 border-l-4 border-gold pl-3">
+                      <span className="font-medium text-royal">Theme: {r.theme}</span>
+                      <span
+                        className={`ml-2 inline-block rounded-full px-2 py-0.5 align-middle text-[11px] font-medium ${
+                          r.themeRequired ? "bg-gold/30 text-gold-ink" : "bg-mist text-ink-muted"
+                        }`}
+                      >
+                        {r.themeRequired ? "Songs must fit" : "Suggestion"}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-sm text-ink-muted">No theme: sing anything you like</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
         {settings.description && (
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">About this event</h2>
@@ -435,6 +446,9 @@ export default async function EventPage({ params, searchParams }: Props) {
                         <span className="ml-2 text-sm font-normal text-ink-muted">
                           {ROUND_KIND_LABEL[roundConfig[list[0].round - 1].kind]}
                         </span>
+                      )}
+                      {roundConfig[list[0].round - 1]?.theme && (
+                        <span className="ml-2 text-sm font-normal text-lapis">· {roundConfig[list[0].round - 1].theme}</span>
                       )}
                     </h3>
                   )}

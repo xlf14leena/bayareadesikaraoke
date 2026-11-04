@@ -5,7 +5,6 @@ import type { EventSeries, Frequency } from "@prisma/client";
 import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
-import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
 import RoundsFields from "@/components/admin/RoundsFields";
@@ -44,11 +43,6 @@ export default function SeriesForm({
         <Field label="Title" hint='For example "Saturday Night Sur".'>
           <input name="title" required maxLength={120} defaultValue={series?.title} className={inputClass} />
         </Field>
-        <ThemeFields
-          theme={series?.theme}
-          required={series?.themeRequired}
-          hint="Blank for no theme. You can change it for a single date later."
-        />
         <Field label="Description (optional)">
           <textarea name="description" rows={3} defaultValue={series?.description ?? ""} className={inputClass} />
         </Field>
@@ -174,7 +168,7 @@ export default function SeriesForm({
       <fieldset className="space-y-4">
         <legend className="mb-2 font-semibold text-royal">Rounds</legend>
         <p className="text-sm text-ink-muted">
-          How many rounds each date has. You can change them for a single date later.
+          How many rounds each date has, and each round&apos;s theme. You can change them for a single date later.
         </p>
         <RoundsFields initial={series ? parseRounds(series.rounds) : DEFAULT_ROUNDS} />
       </fieldset>
