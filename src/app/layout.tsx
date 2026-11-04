@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import { Hind, Rozha_One } from "next/font/google";
+import SiteFooter from "@/components/SiteFooter";
 import SiteHeader from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -24,14 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${hind.variable} ${rozha.variable}`}>
-      <body className="min-h-screen overflow-x-clip bg-mist font-sans text-ink antialiased">
+      <body className="flex min-h-screen flex-col overflow-x-clip bg-mist font-sans text-ink antialiased">
         <SiteHeader />
-        <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
-        <footer className="mx-auto max-w-5xl px-4 pb-8 text-sm text-ink-muted">
-          <Link href="/privacy" className="hover:text-cobalt">
-            Privacy policy
-          </Link>
-        </footer>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+        <SiteFooter />
       </body>
     </html>
   );
