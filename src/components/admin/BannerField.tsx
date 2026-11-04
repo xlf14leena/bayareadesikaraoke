@@ -67,7 +67,7 @@ export default function BannerField({ current, hint }: { current: string | null;
       <span className={labelClass}>Banner image (optional)</span>
       {preview ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="Banner preview" className="aspect-[3/1] w-full max-w-md rounded-lg border border-line object-cover" />
+        <img src={preview} alt="Banner preview" className="h-auto max-h-64 w-full max-w-md rounded-lg border border-line bg-mist object-contain" />
       ) : (
         <p className="text-sm text-ink-muted">No banner of its own.</p>
       )}
@@ -109,7 +109,7 @@ export default function BannerField({ current, hint }: { current: string | null;
       </label>
       {keep && !filePreview && !link && <input type="hidden" name="bannerKeep" value={current ?? ""} />}
       <span className={`block ${hintClass}`}>
-        A wide photo works best (about 3 times as wide as it is tall). {hint}
+        A wide image works best. It is shown whole, nothing is cut off. {hint}
       </span>
     </div>
   );

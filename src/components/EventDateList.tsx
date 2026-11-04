@@ -26,7 +26,7 @@ export default function EventDateList({ dates, privateKey }: { dates: ListedDate
                 <p className="font-display text-3xl leading-none">{badge.day}</p>
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={banner} alt="" className="hidden h-16 w-24 shrink-0 rounded-lg object-cover sm:block" />
+              <img src={banner} alt="" className="hidden h-16 w-28 shrink-0 rounded-lg bg-mist object-contain sm:block" />
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg font-semibold leading-snug">
                   {d.series.title}
