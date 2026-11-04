@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin, requireSuperUser } from "@/lib/roles";
+import { dropReplacedBanner, withBanner } from "@/lib/banner-upload";
 import { parseRounds, roundsFromForm } from "@/lib/rounds";
 import { syncSeriesDates, timesFor } from "@/lib/schedule";
 import { settle } from "@/lib/signups";
@@ -16,7 +17,6 @@ import {
   hm,
   optionalCap,
   optionalText,
-  optionalUrl,
   price,
   slugify,
   text,
@@ -55,7 +55,6 @@ function groupFields(form: FormData) {
     name,
     slug,
     description: optionalText(form, "description", { max: 1000 }),
-    bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
     zelleName: optionalText(form, "zelleName", { max: 100 }),
     zelleHandle: optionalText(form, "zelleHandle", { max: 100 }),
   };
@@ -91,10 +90,12 @@ export async function createGroup(_prev: FormState, form: FormData): Promise<For
   const result = await attempt(async () => {
     const data = groupFields(form);
     const admins = await usersByEmail(emailsIn(String(form.get("adminEmails") ?? "")));
-    const group = await prisma.group.create({
-      data: { ...data, admins: { create: admins.map((u) => ({ userId: u.id })) } },
+    await withBanner(form, null, async (bannerUrl) => {
+      const group = await prisma.group.create({
+        data: { ...data, bannerUrl, admins: { create: admins.map((u) => ({ userId: u.id })) } },
+      });
+      id = group.id;
     });
-    id = group.id;
   });
   if (result) return result;
   redirect(`/admin/groups/${id}`);
@@ -103,7 +104,11 @@ export async function createGroup(_prev: FormState, form: FormData): Promise<For
 export async function updateGroup(groupId: string, _prev: FormState, form: FormData): Promise<FormState> {
   await requireGroupAdmin(groupId);
   const result = await attempt(async () => {
-    await prisma.group.update({ where: { id: groupId }, data: groupFields(form) });
+    const data = groupFields(form);
+    const before = await prisma.group.findUniqueOrThrow({ where: { id: groupId }, select: { bannerUrl: true } });
+    await withBanner(form, before.bannerUrl, async (bannerUrl) => {
+      await prisma.group.update({ where: { id: groupId }, data: { ...data, bannerUrl } });
+    });
   });
   if (result) return result;
   revalidatePath(`/admin/groups/${groupId}`);
@@ -112,7 +117,12 @@ export async function updateGroup(groupId: string, _prev: FormState, form: FormD
 
 export async function deleteGroup(groupId: string): Promise<void> {
   await requireSuperUser();
+  const banners = await prisma.group.findUniqueOrThrow({
+    where: { id: groupId },
+    select: { bannerUrl: true, series: { select: { bannerUrl: true, dates: { select: { bannerUrl: true } } } } },
+  });
   await prisma.group.delete({ where: { id: groupId } });
+  await dropBanners([banners.bannerUrl, ...banners.series.flatMap((s) => [s.bannerUrl, ...s.dates.map((d) => d.bannerUrl)])]);
   redirect("/admin");
 }
 
@@ -174,7 +184,6 @@ function seriesFields(form: FormData) {
     listenerPriceCents: price(form, "listenerPrice", "Listener price"),
     maxSingers: optionalCap(form, "maxSingers", "Singer cap"),
     maxListeners: optionalCap(form, "maxListeners", "Listener cap"),
-    bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
     rounds: roundsFromForm(form),
   };
 }
@@ -227,15 +236,18 @@ export async function createSeries(groupId: string, _prev: FormState, form: Form
   let id = "";
   const result = await attempt(async () => {
     const data = seriesFields(form);
-    const series = await prisma.eventSeries.create({
-      data: {
-        ...data,
-        groupId,
-        privateToken: data.visibility === "PRIVATE" ? newPrivateToken() : null,
-      },
+    await withBanner(form, null, async (bannerUrl) => {
+      const series = await prisma.eventSeries.create({
+        data: {
+          ...data,
+          bannerUrl,
+          groupId,
+          privateToken: data.visibility === "PRIVATE" ? newPrivateToken() : null,
+        },
+      });
+      id = series.id;
     });
-    id = series.id;
-    await syncSeriesDates(series.id);
+    await syncSeriesDates(id);
   });
   if (result) return result;
   redirect(`/admin/events/${id}`);
@@ -249,12 +261,15 @@ export async function updateSeries(seriesId: string, _prev: FormState, form: For
     const following = await datesFollowingSeriesRounds(seriesId);
     await checkRoundCount(following, data.rounds.length, true);
     const before = await prisma.eventSeries.findUniqueOrThrow({ where: { id: seriesId } });
-    await prisma.eventSeries.update({
-      where: { id: seriesId },
-      data: {
-        ...data,
-        privateToken: data.visibility === "PRIVATE" ? (before.privateToken ?? newPrivateToken()) : before.privateToken,
-      },
+    await withBanner(form, before.bannerUrl, async (bannerUrl) => {
+      await prisma.eventSeries.update({
+        where: { id: seriesId },
+        data: {
+          ...data,
+          bannerUrl,
+          privateToken: data.visibility === "PRIVATE" ? (before.privateToken ?? newPrivateToken()) : before.privateToken,
+        },
+      });
     });
     // Dates follow these settings unless they override them, so there's nothing to copy.
     await syncSeriesDates(seriesId);
@@ -269,7 +284,12 @@ export async function updateSeries(seriesId: string, _prev: FormState, form: For
 export async function deleteSeries(seriesId: string): Promise<void> {
   const groupId = await seriesGroup(seriesId);
   await requireGroupAdmin(groupId);
+  const banners = await prisma.eventSeries.findUniqueOrThrow({
+    where: { id: seriesId },
+    select: { bannerUrl: true, dates: { select: { bannerUrl: true } } },
+  });
   await prisma.eventSeries.delete({ where: { id: seriesId } });
+  await dropBanners([banners.bannerUrl, ...banners.dates.map((d) => d.bannerUrl)]);
   redirect(`/admin/groups/${groupId}`);
 }
 
@@ -278,6 +298,11 @@ export async function resetPrivateLink(seriesId: string): Promise<void> {
   await requireGroupAdmin(groupId);
   await prisma.eventSeries.update({ where: { id: seriesId }, data: { privateToken: newPrivateToken() } });
   revalidatePath(`/admin/events/${seriesId}`);
+}
+
+/** Deletes uploaded banners left unused after a group or event is deleted. */
+async function dropBanners(urls: (string | null)[]) {
+  for (const url of new Set(urls)) await dropReplacedBanner(url, null);
 }
 
 // ---------- Single event dates ----------
@@ -291,6 +316,7 @@ async function dateGroup(dateId: string) {
       endsAt: true,
       originalStartsAt: true,
       status: true,
+      bannerUrl: true,
       series: { select: { groupId: true } },
     },
   });
@@ -321,9 +347,7 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
     const series = await prisma.eventSeries.findUniqueOrThrow({ where: { id: d.seriesId }, select: { rounds: true } });
     await checkRoundCount([dateId], (rounds ?? parseRounds(series.rounds)).length, false);
 
-    await prisma.eventDate.update({
-      where: { id: dateId },
-      data: {
+    const settings = {
         startsAt,
         endsAt,
         originalStartsAt,
@@ -335,9 +359,18 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
         maxSingers: own("capacity") ? optionalCap(form, "maxSingers", "Singer cap") : null,
         maxListeners: own("capacity") ? optionalCap(form, "maxListeners", "Listener cap") : null,
         rounds: rounds ?? Prisma.DbNull,
-        bannerUrl: optionalUrl(form, "bannerUrl", "Banner image"),
+    };
+    await withBanner(
+      form,
+      d.bannerUrl,
+      async (bannerUrl) => {
+        if (own("banner") && !bannerUrl) {
+          throw new FormError("Upload a banner image or paste a link, or untick \"Change for this date\" for the banner.");
+        }
+        await prisma.eventDate.update({ where: { id: dateId }, data: { ...settings, bannerUrl } });
       },
-    });
+      { use: own("banner") },
+    );
     if (d.status === "SCHEDULED") await settle(dateId);
   }, "This event already has a date starting at that time.");
   if (result) return result;

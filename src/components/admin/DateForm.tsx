@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { EventDate } from "@prisma/client";
+import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import ThemeFields from "@/components/admin/ThemeFields";
@@ -22,6 +23,7 @@ export default function DateForm({
   template,
   rounds,
   templateRounds,
+  templateBanner,
   when,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
@@ -30,6 +32,8 @@ export default function DateForm({
   /** The rounds this date uses now, and the event's. */
   rounds: RoundConfig[];
   templateRounds: RoundConfig[];
+  /** The banner dates get from the event (or the group, or the default photo). */
+  templateBanner: { src: string; isDefault: boolean };
   when: { day: string; startTime: string; endTime: string };
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
@@ -117,9 +121,19 @@ export default function DateForm({
         <RoundsFields initial={rounds} />
       </Overridable>
 
-      <Field label="Banner image link (optional)" hint="Blank uses the event's banner, or the default singing photo.">
-        <input name="bannerUrl" type="url" defaultValue={date.bannerUrl ?? ""} placeholder="https://…" className={inputClass} />
-      </Field>
+      <Overridable
+        name="banner"
+        title="Banner"
+        date={date}
+        inherited={
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={templateBanner.src} alt="" className="mt-1 aspect-[3/1] w-full max-w-md rounded-lg border border-line object-cover" />
+        }
+        inheritedNote={templateBanner.isDefault ? "The default singing photo" : undefined}
+      >
+        <BannerField current={date.bannerUrl} hint="Used for this date only." />
+      </Overridable>
+
       <FormStatus state={state} pending={pending} label="Save this date" />
     </form>
   );
@@ -131,12 +145,14 @@ function Overridable({
   title,
   date,
   inherited,
+  inheritedNote,
   children,
 }: {
   name: OverrideKey;
   title: string;
   date: EventDate;
-  inherited: string;
+  inherited: React.ReactNode;
+  inheritedNote?: string;
   children: React.ReactNode;
 }) {
   const [custom, setCustom] = useState(date.overrides.includes(name));
@@ -157,10 +173,15 @@ function Overridable({
       </div>
       {custom ? (
         children
-      ) : (
+      ) : typeof inherited === "string" ? (
         <p className="whitespace-pre-line text-sm text-ink-muted">
           From the event settings: <span className="text-ink">{inherited}</span>
         </p>
+      ) : (
+        <div className="text-sm text-ink-muted">
+          From the event settings{inheritedNote ? <>: <span className="text-ink">{inheritedNote}</span></> : null}
+          {inherited}
+        </div>
       )}
     </div>
   );

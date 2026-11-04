@@ -1,6 +1,7 @@
 "use client";
 
 import type { Group } from "@prisma/client";
+import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
@@ -29,15 +30,10 @@ export default function GroupForm({ action, group }: { action: Action; group?: G
       <Field label="Description (optional)">
         <textarea name="description" rows={3} defaultValue={group?.description ?? ""} className={inputClass} />
       </Field>
-      <Field label="Banner image link (optional)" hint="Shown on the group page and used for events that have no banner of their own. Blank uses the default singing photo.">
-        <input
-          name="bannerUrl"
-          type="url"
-          defaultValue={group?.bannerUrl ?? ""}
-          placeholder="https://…"
-          className={inputClass}
-        />
-      </Field>
+      <BannerField
+        current={group?.bannerUrl ?? null}
+        hint="Shown on the group page and used for events that have no banner of their own. Without one, the default singing photo is used."
+      />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Zelle recipient name (optional)">
           <input name="zelleName" defaultValue={group?.zelleName ?? ""} className={inputClass} />
