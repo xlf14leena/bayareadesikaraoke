@@ -272,7 +272,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Price</dt>
-            <dd className="max-w-xs space-y-1">
+            <dd className="max-w-xs">
               <PriceRow
                 label="Singer"
                 cents={settings.singerPriceCents}
@@ -470,12 +470,12 @@ function PriceRow({ label, cents, taken, cap }: { label: string; cents: number; 
   return (
     <div className="flex items-baseline justify-between gap-3">
       <div>
-        <p className="font-medium">{label}</p>
+        <p>{label}</p>
         {left != null && (
           <p className="text-xs text-ink-muted">{left === 0 ? "Full: waitlist only" : `${left} of ${cap} spots left`}</p>
         )}
       </div>
-      <p className="text-lg font-semibold">{formatPrice(cents)}</p>
+      <p className="tabular-nums">{formatPrice(cents)}</p>
     </div>
   );
 }
