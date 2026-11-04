@@ -7,8 +7,19 @@ import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "
 
 export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
 
-/** Cards for upcoming event dates; each opens the event page. `privateKey` is added to links for private events. */
-export default function EventDateList({ dates, privateKey }: { dates: ListedDate[]; privateKey?: string }) {
+/**
+ * Cards for event dates; each opens the event page. `privateKey` is added to links for private events.
+ * `past` drops what only matters before the night (the sign-ups badge and prices).
+ */
+export default function EventDateList({
+  dates,
+  privateKey,
+  past = false,
+}: {
+  dates: ListedDate[];
+  privateKey?: string;
+  past?: boolean;
+}) {
   return (
     <ul className="space-y-3">
       {dates.map((d) => {
@@ -21,7 +32,9 @@ export default function EventDateList({ dates, privateKey }: { dates: ListedDate
               href={eventPath(d, privateKey)}
               className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-white p-3 transition hover:border-lapis hover:shadow-sm sm:flex-nowrap sm:p-4"
             >
-              <div className="w-16 shrink-0 rounded-xl bg-gold py-1.5 text-center text-gold-ink">
+              <div
+                className={`w-16 shrink-0 rounded-xl py-1.5 text-center ${past ? "bg-mist text-ink-muted" : "bg-gold text-gold-ink"}`}
+              >
                 <p className="text-[11px] font-semibold uppercase tracking-wider">{badge.month}</p>
                 <p className="font-display text-3xl leading-none">{badge.day}</p>
               </div>
@@ -37,18 +50,20 @@ export default function EventDateList({ dates, privateKey }: { dates: ListedDate
                 </p>
                 <p className="text-sm text-ink-muted">
                   {d.series.venueName}
-                  {d.signupsOpen && (
+                  {d.signupsOpen && !past && (
                     <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
                       Sign-ups open
                     </span>
                   )}
                 </p>
               </div>
+              {!past && (
               <p className="w-full pl-20 text-sm text-ink-muted sm:w-auto sm:pl-0 sm:text-right sm:whitespace-nowrap">
                 Singer <span className="font-semibold text-ink">{formatPrice(settings.singerPriceCents)}</span>
                 {" · "}
                 Listener <span className="font-semibold text-ink">{formatPrice(settings.listenerPriceCents)}</span>
               </p>
+              )}
             </Link>
           </li>
         );

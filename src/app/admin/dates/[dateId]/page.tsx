@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Breadcrumbs from "@/app/admin/Breadcrumbs";
-import { cancelDate, deleteDate, restoreDate, setSignupsOpen, updateDate } from "@/app/admin/actions";
+import { cancelDate, deleteDate, restoreDate, setDateArchived, setSignupsOpen, updateDate } from "@/app/admin/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import DateForm from "@/components/admin/DateForm";
 import { approvePayment, addPerson, cancelSignUp, rejectPayment, rejectSong } from "@/app/admin/signup-actions";
@@ -90,6 +90,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   });
   const viewHref = eventPath(date, series.visibility === "PRIVATE" ? series.privateToken : null);
   const feedback = await feedbackSummary(date.id);
+  const isPast = date.endsAt < new Date();
 
   return (
     <div className="space-y-8">
@@ -110,6 +111,9 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
             <p className="text-ink-muted">
               {formatEventTime(date.startsAt, date.endsAt)} · {series.venueName}
               {date.status === "CANCELLED" && <span className="ml-2 font-semibold text-red-700">Cancelled</span>}
+              {date.archivedAt && (
+                <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-xs font-medium text-ink-muted">Archived</span>
+              )}
             </p>
             {date.originalStartsAt && (
               <p className="text-sm text-ink-muted">
@@ -237,6 +241,24 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           }}
         />
       </section>
+
+      {isPast && date.status === "SCHEDULED" && (
+        <section id="archive" className={`${cardClass} flex scroll-mt-4 flex-wrap items-center justify-between gap-3`}>
+          <div>
+            <h2 className="text-xl font-semibold">{date.archivedAt ? "This date is archived" : "Archive this date"}</h2>
+            <p className="text-sm text-ink-muted">
+              {date.archivedAt
+                ? `Archived ${formatDateTime(date.archivedAt)}. It's hidden from past karaoke nights on the group page; the event page and its sign-ups stay.`
+                : "Hides it from past karaoke nights on the group page. The event page and its sign-ups stay, and you can unarchive it any time."}
+            </p>
+          </div>
+          <form action={setDateArchived.bind(null, date.id, !date.archivedAt)}>
+            <button type="submit" className={secondaryButton}>
+              {date.archivedAt ? "Unarchive" : "Archive"}
+            </button>
+          </form>
+        </section>
+      )}
 
       <section className="rounded-xl border border-red-200 bg-white p-4 sm:p-6">
         {date.status === "CANCELLED" ? (

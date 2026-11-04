@@ -196,6 +196,9 @@ model EventDate {
   nowSlot            Int?
   // Comments and questions on the event page; an admin can turn them off per date
   commentsEnabled    Boolean         @default(true)
+  // Set when an admin archives a past date: it no longer shows under the
+  // group page's past karaoke nights. Unarchiving clears it.
+  archivedAt         DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
