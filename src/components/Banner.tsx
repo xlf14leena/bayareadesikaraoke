@@ -1,21 +1,15 @@
 import { DEFAULT_BANNER } from "@/lib/banner";
 
 /**
- * Wide banner image. A group's or event's own banner is shown whole, scaled
- * down to fit the strip, since posters often have text at the top and bottom;
- * a blurred copy fills the space at the sides. The default photo is cropped to
- * the strip and carries its credit, like the home hero.
+ * Wide banner image. A group's or event's own banner is shown whole at its own
+ * shape (full width, height follows the image), since posters often have text
+ * at the top and bottom. The default photo is cropped to a strip and carries
+ * its credit, like the home hero.
  */
 export default function Banner({ src, isDefault }: { src: string; isDefault: boolean }) {
   if (!isDefault) {
-    return (
-      <div className="relative h-48 w-full overflow-hidden rounded-2xl bg-royal sm:h-72">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" className="relative h-full w-full object-contain" />
-      </div>
-    );
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" className="h-auto w-full rounded-2xl" />;
   }
   return (
     <div className="relative">
