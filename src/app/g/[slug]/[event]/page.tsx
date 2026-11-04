@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Banner from "@/components/Banner";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import SectionTabs, { type SectionTab } from "@/components/SectionTabs";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton } from "@/components/ui";
 import { HOLDS_SPOT, STATUS_LABEL, mapUrl, settingsFor } from "@/lib/events";
@@ -183,18 +185,32 @@ export default async function EventPage({ params, searchParams }: Props) {
   }));
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
   const showLineup = date.signupsOpen || rounds.length > 0 || confirmedListeners > 0;
+  const showSlots = !!myRounds && !cancelled;
+  const showMine = !!myActive && !cancelled;
+  const showOrder = runningOrder.length > 0 && !cancelled;
+  // Tabs under the banner, in page order, for the sections that are showing.
+  const tabs: (SectionTab & { show: boolean })[] = [
+    { id: "details", label: "Details", icon: "details", show: true },
+    { id: "your-slots", label: "Your slots", icon: "slots", show: showSlots },
+    { id: "your-sign-up", label: "Your sign-up", icon: "signup", show: showMine },
+    { id: "running-order", label: "Running order", icon: "order", show: showOrder },
+    { id: "whos-singing", label: "Who's singing", icon: "singers", show: showLineup },
+    { id: "comments", label: "Comments", icon: "comments", show: date.commentsEnabled || isAdmin },
+  ];
 
   return (
     <article className="space-y-6">
       <Banner {...banner} />
+      <Breadcrumbs
+        items={[
+          { label: "Home", href: "/" },
+          { label: series.group.name, href: `/g/${series.group.slug}` },
+          { label: `${series.title}, ${formatEventDate(date.startsAt)}` },
+        ]}
+      />
 
-      <header>
-        <p className="text-sm font-medium text-ink-muted">
-          <Link href={`/g/${series.group.slug}`} className="hover:text-cobalt">
-            {series.group.name}
-          </Link>
-          {series.visibility === "PRIVATE" && <span> · Private event</span>}
-        </p>
+      <header className="!mt-3">
+        {series.visibility === "PRIVATE" && <p className="text-sm font-medium text-ink-muted">Private event</p>}
         <h1 className="font-display text-3xl leading-tight text-royal sm:text-4xl">{series.title}</h1>
         {settings.theme ? (
           <p className="text-lg text-lapis">
@@ -226,7 +242,9 @@ export default async function EventPage({ params, searchParams }: Props) {
         )}
       </header>
 
-      <section className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
+      <SectionTabs tabs={tabs.filter((t) => t.show)} />
+
+      <section id="details" className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
         <dl className="grid gap-5 sm:grid-cols-3">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
@@ -375,7 +393,7 @@ export default async function EventPage({ params, searchParams }: Props) {
       {runningOrder.length > 0 && !cancelled && !past && <LiveRefresh everyMs={20000} />}
 
       {showLineup && (
-        <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
+        <section id="whos-singing" className="rounded-xl border border-line bg-white p-4 sm:p-6">
           <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
           {!viewer ? (
             <p className="text-ink-muted">

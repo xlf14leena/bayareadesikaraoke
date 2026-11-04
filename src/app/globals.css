@@ -20,14 +20,6 @@
   --font-display: var(--font-rozha), Georgia, "Times New Roman", serif;
 }
 
-@utility toran {
-  /* Row of marigold beads hanging from a thin indigo string. */
-  height: 14px;
-  background:
-    radial-gradient(circle at 10px 0, var(--color-gold) 7px, transparent 8px) 0 0 / 20px 14px repeat-x,
-    linear-gradient(var(--color-royal), var(--color-royal)) 0 0 / 100% 4px no-repeat;
-}
-
 @utility dot-grid {
   background-image: radial-gradient(circle, rgb(255 255 255 / 0.09) 1.5px, transparent 2px);
   background-size: 18px 18px;
@@ -41,4 +33,14 @@
   background-position: right 0.6rem center;
   background-size: 1rem;
   padding-right: 2rem;
+}
+
+/* Section tabs on the event page land each section below the sticky header and tab bar. */
+section[id] {
+  scroll-margin-top: 8.5rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
