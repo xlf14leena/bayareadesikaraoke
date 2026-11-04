@@ -1,5 +1,6 @@
 -- Themes move from the event (and date) onto each round, inside the rounds JSON
--- (src/lib/rounds.ts). The old theme columns stay for now but are no longer read.
+-- (src/lib/rounds.ts). The old theme columns, and "theme" in date overrides, stay for now
+-- but are no longer read, so a site still running the previous code shows the same themes.
 
 -- Events: every round gets the event's theme.
 UPDATE "EventSeries" s
@@ -22,9 +23,6 @@ SET "rounds" = (
       CASE WHEN 'rounds' = ANY(d."overrides") AND d."rounds" IS NOT NULL THEN d."rounds" ELSE s."rounds" END
     ) WITH ORDINALITY AS e(r, i)
   ),
-  "overrides" = array_append(array_remove(array_remove(d."overrides", 'rounds'), 'theme'), 'rounds')
+  "overrides" = array_append(array_remove(d."overrides", 'rounds'), 'rounds')
 FROM "EventSeries" s
 WHERE s."id" = d."seriesId" AND 'theme' = ANY(d."overrides");
-
--- Nothing overrides "theme" any more.
-UPDATE "EventDate" SET "overrides" = array_remove("overrides", 'theme') WHERE 'theme' = ANY("overrides");
