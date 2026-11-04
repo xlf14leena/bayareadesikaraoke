@@ -2,19 +2,26 @@ import { DEFAULT_BANNER } from "@/lib/banner";
 
 /**
  * Wide banner image. A group's or event's own banner is shown whole at its own
- * shape (full width, height follows the image), since posters often have text
- * at the top and bottom. The default photo is cropped to a strip and carries
- * its credit, like the home hero.
+ * shape (full width, height follows the image, starting from the top), since
+ * posters often have text at the top and bottom. The default photo is cropped
+ * to a strip from the top and carries its credit, like the home hero.
  */
 export default function Banner({ src, isDefault }: { src: string; isDefault: boolean }) {
   if (!isDefault) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt="" className="h-auto w-full rounded-2xl" />;
+    // Scaled up 2% from the top-left corner and clipped, so a thin pale strip
+    // along the right or bottom edge of a poster (common in exported images)
+    // is cut off and the banner fills its rounded box edge to edge.
+    return (
+      <div className="overflow-hidden rounded-2xl bg-royal">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt="" className="block h-auto w-full origin-top-left scale-[1.02]" />
+      </div>
+    );
   }
   return (
     <div className="relative">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={DEFAULT_BANNER.alt} className="h-44 w-full rounded-2xl object-cover sm:h-64" />
+      <img src={src} alt={DEFAULT_BANNER.alt} className="h-44 w-full rounded-2xl object-cover object-top sm:h-64" />
       <a
         href={DEFAULT_BANNER.href}
         target="_blank"
