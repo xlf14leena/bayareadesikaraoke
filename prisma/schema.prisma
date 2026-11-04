@@ -75,8 +75,10 @@ model Group {
   slug        String   @unique
   description String?
   bannerUrl   String?
-  zelleName   String?
-  zelleHandle String? // Zelle email or phone
+  // Optional links shown on the group page
+  websiteUrl   String?
+  facebookUrl  String?
+  instagramUrl String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -141,6 +143,9 @@ model EventSeries {
   maxSingers              Int? // null = no cap
   maxListeners            Int? // null = no cap
   bannerUrl               String?
+  // Where members send Zelle payments; dates use these unless they override "zelle"
+  zelleName               String?
+  zelleHandle             String? // Zelle email or phone
   // Sign-up window, relative to each date's start (null = defaults in spec)
   signupOpensHoursBefore  Int?
   signupClosesHoursBefore Int?
@@ -163,7 +168,7 @@ enum EventDateStatus {
 
 // One occurrence. The series is its template: the date uses the series' theme,
 // description, prices and caps unless that setting is listed in overrides
-// ("theme", "description", "pricing", "capacity", "rounds", "banner"), in which case the date's
+// ("theme", "description", "pricing", "capacity", "rounds", "banner", "zelle"), in which case the date's
 // own columns apply. See settingsFor in src/lib/events.ts.
 model EventDate {
   id                 String          @id @default(cuid())
@@ -183,6 +188,8 @@ model EventDate {
   maxListeners       Int?
   rounds             Json? // used when overrides lists "rounds" (src/lib/rounds.ts)
   bannerUrl          String? // used when overrides lists "banner"
+  zelleName          String? // used when overrides lists "zelle"
+  zelleHandle        String?
   signupOpensAt      DateTime?
   signupClosesAt     DateTime?
   status             EventDateStatus @default(SCHEDULED)

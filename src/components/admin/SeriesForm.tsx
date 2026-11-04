@@ -20,8 +20,18 @@ function ymdOf(d: Date | null | undefined): string {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
-/** Create or edit an event series: details, schedule, prices, caps and banner. */
-export default function SeriesForm({ action, series }: { action: Action; series?: EventSeries }) {
+/** Create or edit an event series: details, schedule, prices, caps, Zelle details and banner. */
+export default function SeriesForm({
+  action,
+  series,
+  zelleDefaults,
+}: {
+  action: Action;
+  series?: EventSeries;
+  /** Starting Zelle details for a new event, from the group's latest one. */
+  zelleDefaults?: { zelleName: string | null; zelleHandle: string | null };
+}) {
+  const zelle = series ?? zelleDefaults;
   const { state, onSubmit, pending } = useFormAction(action);
   const [frequency, setFrequency] = useState<Frequency>(series?.frequency ?? "WEEKLY");
   const [firstDate, setFirstDate] = useState(ymdOf(series?.firstDate));
@@ -145,6 +155,14 @@ export default function SeriesForm({ action, series }: { action: Action; series?
           </Field>
           <Field label="Listener cap (optional)" hint="Blank for no cap.">
             <input name="maxListeners" inputMode="numeric" defaultValue={series?.maxListeners ?? ""} className={inputClass} />
+          </Field>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Zelle recipient name (optional)">
+            <input name="zelleName" maxLength={100} defaultValue={zelle?.zelleName ?? ""} className={inputClass} />
+          </Field>
+          <Field label="Zelle email or phone (optional)" hint="Shown to members who need to pay. You can change it for a single date later.">
+            <input name="zelleHandle" maxLength={100} defaultValue={zelle?.zelleHandle ?? ""} className={inputClass} />
           </Field>
         </div>
         <BannerField

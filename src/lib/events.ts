@@ -14,8 +14,9 @@ export const STATUS_LABEL: Record<SignUpStatus, string> = {
 };
 
 // Settings a date can override; anything not listed in date.overrides comes from the series.
-// Rounds are read with roundsFor in src/lib/rounds.ts; the banner with bannerFor (date.bannerUrl is set only when overridden).
-export const OVERRIDE_KEYS = ["theme", "description", "pricing", "capacity", "rounds", "banner"] as const;
+// Rounds are read with roundsFor in src/lib/rounds.ts; the banner with bannerFor (date.bannerUrl is set only when overridden);
+// Zelle details with zelleFor below.
+export const OVERRIDE_KEYS = ["theme", "description", "pricing", "capacity", "rounds", "banner", "zelle"] as const;
 export type OverrideKey = (typeof OVERRIDE_KEYS)[number];
 
 type DateSettings = Pick<
@@ -58,4 +59,15 @@ export function spotsLabel(taken: number, cap: number | null): string {
 /** Map link for a venue address. */
 export function mapUrl(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
+
+export type ZelleDetails = { name: string | null; handle: string | null };
+
+/** Where members send Zelle payments for a date: its own details, otherwise the event's. */
+export function zelleFor(
+  date: Pick<EventDate, "overrides" | "zelleName" | "zelleHandle">,
+  series: Pick<EventSeries, "zelleName" | "zelleHandle">,
+): ZelleDetails {
+  const from = date.overrides.includes("zelle") ? date : series;
+  return { name: from.zelleName, handle: from.zelleHandle };
 }

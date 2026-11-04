@@ -58,6 +58,21 @@ export function optionalUrl(form: FormData, name: string, label: string): string
   return raw;
 }
 
+/** Like optionalUrl, but "example.com" or "www.instagram.com/x" get https:// added. */
+export function optionalLink(form: FormData, name: string, label: string): string | null {
+  const raw = String(form.get(name) ?? "").trim();
+  if (!raw) return null;
+  if (raw.length > 300) throw new FormError(`${label} link is too long.`);
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const u = new URL(withScheme);
+    if ((u.protocol !== "https:" && u.protocol !== "http:") || !u.hostname.includes(".")) throw new Error();
+    return u.toString();
+  } catch {
+    throw new FormError(`${label} should be a web address like https://example.com`);
+  }
+}
+
 export function ymd(form: FormData, name: string, label: string, required = true): string | null {
   const raw = String(form.get(name) ?? "").trim();
   if (!raw) {

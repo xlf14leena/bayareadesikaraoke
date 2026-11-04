@@ -21,6 +21,7 @@ import { ROUND_KIND_LABEL, roundNumbers, roundsFor } from "@/lib/rounds";
 import { singerRounds } from "@/lib/slots";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
+import { zelleFor } from "@/lib/events";
 import { eventPath, eventSegment, findEventDate } from "@/lib/event-url";
 import { prisma } from "@/lib/prisma";
 import { canAdminGroup, getViewer } from "@/lib/roles";
@@ -374,7 +375,8 @@ export default async function EventPage({ params, searchParams }: Props) {
       {myActive && !cancelled && (
         <YourSignUp
           signUp={myActive}
-          group={series.group}
+          groupName={series.group.name}
+          zelle={zelleFor(date, series)}
           waitlistPosition={waitlistPosition}
           editable={stillEditable(date)}
           rounds={roundConfig}
