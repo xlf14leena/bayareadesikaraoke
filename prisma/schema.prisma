@@ -163,7 +163,7 @@ enum EventDateStatus {
 
 // One occurrence. The series is its template: the date uses the series' theme,
 // description, prices and caps unless that setting is listed in overrides
-// ("theme", "description", "pricing", "capacity", "rounds"), in which case the date's
+// ("theme", "description", "pricing", "capacity", "rounds", "banner"), in which case the date's
 // own columns apply. See settingsFor in src/lib/events.ts.
 model EventDate {
   id                 String          @id @default(cuid())
@@ -182,7 +182,7 @@ model EventDate {
   maxSingers         Int?
   maxListeners       Int?
   rounds             Json? // used when overrides lists "rounds" (src/lib/rounds.ts)
-  bannerUrl          String? // null = the series' banner
+  bannerUrl          String? // used when overrides lists "banner"
   signupOpensAt      DateTime?
   signupClosesAt     DateTime?
   status             EventDateStatus @default(SCHEDULED)
@@ -270,6 +270,16 @@ model SignUp {
   // one sign-up per account per date (no guest sign-ups)
   @@unique([eventDateId, userId])
   @@index([eventDateId, status])
+}
+
+// A banner image an admin uploaded for a group, event or date. The owner's
+// bannerUrl points at it as /api/banners/<id> (src/lib/banner-upload.ts), so
+// banners given as links keep working. Banners are public, like the pages.
+model BannerImage {
+  id          String   @id @default(cuid())
+  contentType String
+  bytes       Bytes
+  createdAt   DateTime @default(now())
 }
 
 // The Zelle payment screenshot for a sign-up, kept in the database so it stays

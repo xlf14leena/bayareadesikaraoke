@@ -14,8 +14,8 @@ export const STATUS_LABEL: Record<SignUpStatus, string> = {
 };
 
 // Settings a date can override; anything not listed in date.overrides comes from the series.
-// Rounds are read with roundsFor in src/lib/rounds.ts.
-export const OVERRIDE_KEYS = ["theme", "description", "pricing", "capacity", "rounds"] as const;
+// Rounds are read with roundsFor in src/lib/rounds.ts; the banner with bannerFor (date.bannerUrl is set only when overridden).
+export const OVERRIDE_KEYS = ["theme", "description", "pricing", "capacity", "rounds", "banner"] as const;
 export type OverrideKey = (typeof OVERRIDE_KEYS)[number];
 
 type DateSettings = Pick<

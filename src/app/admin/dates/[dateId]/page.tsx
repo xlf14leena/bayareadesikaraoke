@@ -14,6 +14,7 @@ import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
+import { bannerFor } from "@/lib/banner";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { settle } from "@/lib/signups";
@@ -228,6 +229,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           }}
           rounds={rounds}
           templateRounds={parseRounds(series.rounds)}
+          templateBanner={bannerFor(series.bannerUrl, series.group.bannerUrl)}
           when={{
             day: pacificDateOf(date.startsAt),
             startTime: pacificTimeOf(date.startsAt),
