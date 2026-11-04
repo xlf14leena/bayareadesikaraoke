@@ -9,10 +9,10 @@ import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
 import { type EventSettings, type OverrideKey, settingsFor } from "@/lib/events";
-import { type ZelleDetails, zelleFor } from "@/lib/events";
 import RoundsFields from "@/components/admin/RoundsFields";
 import { dollars, type FormState } from "@/lib/forms";
 import { type RoundConfig, describeRounds } from "@/lib/rounds";
+import { type ZelleDetails, zelleFor } from "@/lib/events";
 
 /**
  * Settings for one event date. Each setting follows the event (the template)

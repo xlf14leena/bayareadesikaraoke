@@ -51,6 +51,16 @@ export function settingsFor(date: DateSettings, series: SeriesSettings): EventSe
   };
 }
 
+/** "3 of 20" with a cap, or just "3" without one. */
+export function spotsLabel(taken: number, cap: number | null): string {
+  return cap == null ? String(taken) : `${taken} of ${cap}`;
+}
+
+/** Map link for a venue address. */
+export function mapUrl(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
+
 export type ZelleDetails = { name: string | null; handle: string | null };
 
 /** Where members send Zelle payments for a date: its own details, otherwise the event's. */
@@ -60,14 +70,4 @@ export function zelleFor(
 ): ZelleDetails {
   const from = date.overrides.includes("zelle") ? date : series;
   return { name: from.zelleName, handle: from.zelleHandle };
-}
-
-/** "3 of 20" with a cap, or just "3" without one. */
-export function spotsLabel(taken: number, cap: number | null): string {
-  return cap == null ? String(taken) : `${taken} of ${cap}`;
-}
-
-/** Map link for a venue address. */
-export function mapUrl(address: string): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
