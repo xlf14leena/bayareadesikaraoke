@@ -127,7 +127,7 @@ export default function DateForm({
         date={date}
         inherited={
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={templateBanner.src} alt="" className="mt-1 aspect-[3/1] w-full max-w-md rounded-lg border border-line object-cover" />
+          <img src={templateBanner.src} alt="" className="mt-1 h-auto max-h-64 w-full max-w-md rounded-lg border border-line bg-mist object-contain" />
         }
         inheritedNote={templateBanner.isDefault ? "The default singing photo" : undefined}
       >
