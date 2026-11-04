@@ -214,7 +214,7 @@ export default async function EventPage({ params, searchParams }: Props) {
 
       <header className="!mt-3">
         {series.visibility === "PRIVATE" && <p className="text-sm font-medium text-ink-muted">Private event</p>}
-        <div className="flex items-start gap-4">
+        <div className="flex items-start justify-between gap-4">
           <h1 className="font-display text-3xl leading-tight text-royal sm:text-4xl">{series.title}</h1>
           {isAdmin && (
             <Link
@@ -230,26 +230,6 @@ export default async function EventPage({ params, searchParams }: Props) {
             </Link>
           )}
         </div>
-        {settings.theme ? (
-          <div className="mt-2 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gold/60 bg-gold/15 px-4 py-2">
-            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gold-ink/70">
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-gold" fill="currentColor" aria-hidden="true">
-                <path d="M9 18V5l12-2v13a3 3 0 1 1-2-2.83V7.3L11 8.63V18a3 3 0 1 1-2-2.83z" />
-              </svg>
-              Theme
-            </span>
-            <span className="font-display text-xl leading-tight text-royal sm:text-2xl">{settings.theme}</span>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                settings.themeRequired ? "bg-royal text-white" : "bg-white text-ink-muted ring-1 ring-line"
-              }`}
-            >
-              {settings.themeRequired ? "Songs must fit the theme" : "Theme is optional"}
-            </span>
-          </div>
-        ) : (
-          <p className="text-lg text-ink-muted">No theme: sing anything you like</p>
-        )}
         {cancelled && (
           <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 font-medium text-red-700">This date has been cancelled.</p>
         )}
@@ -268,6 +248,26 @@ export default async function EventPage({ params, searchParams }: Props) {
       <SectionTabs tabs={tabs.filter((t) => t.show)} />
 
       <section id="details" className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
+        {settings.theme ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-royal px-4 py-3 text-white sm:px-5">
+            <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-kicker">
+              <svg viewBox="0 0 24 24" className="h-4 w-4 text-gold" fill="currentColor" aria-hidden="true">
+                <path d="M9 18V5l12-2v13a3 3 0 1 1-2-2.83V7.3L11 8.63V18a3 3 0 1 1-2-2.83z" />
+              </svg>
+              Theme
+            </span>
+            <span className="font-display text-xl leading-tight sm:text-2xl">{settings.theme}</span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                settings.themeRequired ? "bg-gold text-gold-ink" : "bg-white/15 text-white"
+              }`}
+            >
+              {settings.themeRequired ? "Songs must fit the theme" : "Theme is optional"}
+            </span>
+          </div>
+        ) : (
+          <p className="rounded-lg bg-mist px-4 py-3 text-ink-muted">No theme: sing anything you like</p>
+        )}
         <dl className="grid gap-5 sm:grid-cols-3">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
