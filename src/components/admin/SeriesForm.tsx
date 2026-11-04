@@ -6,7 +6,7 @@ import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import ThemeFields from "@/components/admin/ThemeFields";
 import { useFormAction } from "@/components/admin/useFormAction";
-import { inputClass } from "@/components/ui";
+import { inputClass, selectClass } from "@/components/ui";
 import RoundsFields from "@/components/admin/RoundsFields";
 import { dollars, type FormState } from "@/lib/forms";
 import { DEFAULT_ROUNDS, parseRounds } from "@/lib/rounds";
@@ -71,7 +71,7 @@ export default function SeriesForm({ action, series }: { action: Action; series?
               name="frequency"
               value={frequency}
               onChange={(e) => setFrequency(e.target.value as Frequency)}
-              className={inputClass}
+              className={selectClass}
             >
               <option value="ONCE">Does not repeat</option>
               <option value="WEEKLY">Every week</option>
@@ -91,7 +91,7 @@ export default function SeriesForm({ action, series }: { action: Action; series?
           </Field>
           {frequency === "MONTHLY" && (
             <Field label="Which week">
-              <select name="monthlyWeekOfMonth" defaultValue={series?.monthlyWeekOfMonth ?? ""} className={inputClass}>
+              <select name="monthlyWeekOfMonth" defaultValue={series?.monthlyWeekOfMonth ?? ""} className={selectClass}>
                 <option value="">Same week as the first date</option>
                 <option value="1">1st {weekday}</option>
                 <option value="2">2nd {weekday}</option>

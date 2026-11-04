@@ -4,7 +4,7 @@ import { useState } from "react";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
-import { inputClass } from "@/components/ui";
+import { inputClass, selectClass } from "@/components/ui";
 import type { FormState, NearMatch } from "@/lib/forms";
 import type { RoundConfig, RoundKind } from "@/lib/rounds";
 
@@ -136,7 +136,7 @@ function RoundFields({
                 name={`partner${r}`}
                 defaultValue={defaults?.duetPartnerId ?? ""}
                 aria-label={`Round ${r} duet partner`}
-                className={`${inputClass} sm:max-w-xs`}
+                className={selectClass}
               >
                 <option value="">Not picked yet</option>
                 {partners.map((p) => (

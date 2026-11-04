@@ -18,7 +18,7 @@ export default function ViewAsSelect({
           name="viewAs"
           defaultValue={current}
           onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          className="max-w-[12rem] rounded-full border border-line bg-white px-3 py-1 text-sm text-ink sm:max-w-none"
+          className="select-chevron max-w-[12rem] rounded-full border border-line bg-white py-1 pl-3 text-sm text-ink sm:max-w-none"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>

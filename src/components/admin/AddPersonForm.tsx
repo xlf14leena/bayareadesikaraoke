@@ -5,7 +5,7 @@ import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { type DuetPartnerOption, SongFields } from "@/components/signup/SongsForm";
-import { inputClass } from "@/components/ui";
+import { inputClass, selectClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
 import type { RoundConfig } from "@/lib/rounds";
 
@@ -33,7 +33,7 @@ export default function AddPersonForm({
           <input name="displayName" required maxLength={60} className={inputClass} />
         </Field>
         <Field label="Singer or listener">
-          <select name="role" value={role} onChange={(e) => setRole(e.target.value)} className={inputClass}>
+          <select name="role" value={role} onChange={(e) => setRole(e.target.value)} className={selectClass}>
             <option value="SINGER">Singer</option>
             <option value="LISTENER">Listener</option>
           </select>

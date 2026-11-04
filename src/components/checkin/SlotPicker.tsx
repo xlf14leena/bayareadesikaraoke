@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormAction } from "@/components/admin/useFormAction";
-import { inputClass, primaryButton, secondaryButton } from "@/components/ui";
+import { primaryButton, secondaryButton, selectClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
 
 /** A singer's slot choice for one round: the free slots, and a button. */
@@ -23,7 +23,7 @@ export default function SlotPicker({
       <label className="sr-only" htmlFor="slot">
         Slot
       </label>
-      <select name="slot" required defaultValue="" className={`${inputClass} w-auto`}>
+      <select name="slot" required defaultValue="" className={selectClass}>
         <option value="" disabled>
           {changing ? "Move to slot…" : "Pick a slot…"}
         </option>
