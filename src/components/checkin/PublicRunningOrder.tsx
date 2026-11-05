@@ -36,7 +36,7 @@ export default function PublicRunningOrder({
   const myNext = now ? rows.find((r) => r.signUpId === mySignUpId && r.round === now.round && r.slot > now.slot) : null;
   const before = myNext ? rows.filter((r) => r.round === now!.round && r.slot > now!.slot && r.slot < myNext.slot).length : 0;
   return (
-    <section id="running-order" className="rounded-xl border border-line bg-white p-4 sm:p-6">
+    <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
       <h2 className="mb-1 text-xl font-semibold">Running order</h2>
       <p className="mb-4 text-sm text-ink-muted">Singers get a slot after they check in at the venue.</p>
       {now && (

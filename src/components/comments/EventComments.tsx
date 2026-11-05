@@ -37,7 +37,7 @@ export default async function EventComments({ date, viewer, isAdmin, privateKey,
   const count = comments.reduce((n, c) => n + 1 + c.replies.length, 0);
 
   return (
-    <section id="comments" className={`${cardClass} space-y-4`}>
+    <section className={`${cardClass} space-y-4`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">
