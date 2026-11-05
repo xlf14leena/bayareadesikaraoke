@@ -147,7 +147,7 @@ model EventSeries {
   // Sign-up window, relative to each date's start (null = defaults in spec)
   signupOpensHoursBefore  Int?
   signupClosesHoursBefore Int?
-  // The rounds, round 1 first: [{ kind: SOLO|DUET|EITHER, slotMode, theme, themeRequired }] (src/lib/rounds.ts)
+  // The rounds, round 1 first: [{ kind: SOLO|DUET|EITHER, slotMode, theme, themeRequired, maxAppearances }] (src/lib/rounds.ts)
   rounds                  Json       @default("[{\"kind\":\"EITHER\",\"slotMode\":\"PICK\"},{\"kind\":\"EITHER\",\"slotMode\":\"CHECKIN_ORDER\"}]")
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt

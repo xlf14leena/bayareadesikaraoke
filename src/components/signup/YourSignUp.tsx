@@ -5,7 +5,7 @@ import ScreenshotForm from "@/components/signup/ScreenshotForm";
 import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";
 import { STATUS_LABEL, type ZelleDetails } from "@/lib/events";
 import { formatDateTime, formatPrice } from "@/lib/format";
-import type { RoundConfig } from "@/lib/rounds";
+import type { RoundAppearances, RoundConfig } from "@/lib/rounds";
 import { PICKS_SONGS } from "@/lib/signups";
 import { secondaryButton } from "@/components/ui";
 
@@ -25,6 +25,8 @@ type Props = {
   editable: boolean;
   /** The date's rounds, for the songs form. */
   rounds: RoundConfig[];
+  /** Per round, how many times each singer already sings, without this person's own songs (for "times per singer"). */
+  appearances?: RoundAppearances[];
 };
 
 const TONE: Record<string, string> = {
@@ -36,7 +38,7 @@ const TONE: Record<string, string> = {
 };
 
 /** The signed-in person's own sign-up for this date: status, how to pay, and their songs. */
-export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition, editable, partners, duetInvites, rounds }: Props) {
+export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition, editable, partners, duetInvites, rounds, appearances }: Props) {
   const role = signUp.role === "SINGER" ? "singer" : "listener";
   const needsProof = signUp.status === "RESERVED" || signUp.status === "REJECTED";
   const active = signUp.songs.filter((s) => s.status === "ACTIVE");
@@ -213,7 +215,14 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
               </p>
             ))}
             {editable ? (
-              <SongsForm action={saveSongs.bind(null, signUp.id)} rounds={rounds} defaults={defaults} partners={partners} />
+              <SongsForm
+                action={saveSongs.bind(null, signUp.id)}
+                rounds={rounds}
+                defaults={defaults}
+                partners={partners}
+                appearances={appearances}
+                selfId={signUp.id}
+              />
             ) : active.length ? (
               <ul className="text-sm">
                 {active.map((s) => (

@@ -165,7 +165,8 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
     dateId = signUp.eventDateId;
     if (signUp.role !== "SINGER") throw new FormError("Only singers pick songs.");
     if (!stillEditable(signUp.eventDate)) throw new FormError("Songs can't be changed after sign-ups close.");
-    const inputs = songInputs(form, roundsFor(signUp.eventDate, signUp.eventDate.series));
+    const rounds = roundsFor(signUp.eventDate, signUp.eventDate.series);
+    const inputs = songInputs(form, rounds);
 
     return withDateLock(dateId, async (tx) => {
       await settleDate(tx, dateId);
@@ -177,7 +178,7 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
             : "This sign-up no longer holds a spot, so it can't pick songs.",
         );
       }
-      for (const [i, input] of inputs.entries()) await setSong(tx, now, i + 1, input);
+      for (const [i, input] of inputs.entries()) await setSong(tx, now, i + 1, input, rounds[i].maxAppearances);
       return "Songs saved.";
     });
   });

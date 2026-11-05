@@ -134,7 +134,8 @@ export async function addPerson(dateId: string, _prev: FormState, form: FormData
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new FormError("That email address doesn't look right.");
     const paymentNote = optionalText(form, "paymentNote", { max: 120 });
     const overCap = form.get("overCap") === "on";
-    const songs = role === "SINGER" ? songInputs(form, roundsFor(date, date.series)) : [];
+    const rounds = roundsFor(date, date.series);
+    const songs = role === "SINGER" ? songInputs(form, rounds) : [];
 
     return withDateLock(dateId, async (tx) => {
       await settleDate(tx, dateId);
@@ -177,7 +178,7 @@ export async function addPerson(dateId: string, _prev: FormState, form: FormData
         : await tx.signUp.create({
             data: { ...data, eventDateId: dateId, userId: user?.id ?? null, memoCode: await newMemoCode(tx) },
           });
-      for (const [i, input] of songs.entries()) if (input) await setSong(tx, signUp, i + 1, input);
+      for (const [i, input] of songs.entries()) if (input) await setSong(tx, signUp, i + 1, input, rounds[i].maxAppearances);
       return `Added ${displayName}.`;
     });
   });

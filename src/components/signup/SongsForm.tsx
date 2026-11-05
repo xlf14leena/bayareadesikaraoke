@@ -6,7 +6,7 @@ import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
 import type { FormState, NearMatch } from "@/lib/forms";
-import type { RoundConfig, RoundKind } from "@/lib/rounds";
+import { type RoundAppearances, type RoundConfig, type RoundKind, timesLabel } from "@/lib/rounds";
 
 export type SongDefaults = {
   title: string;
@@ -25,27 +25,37 @@ export type DuetPartnerOption = { id: string; name: string };
  * A duet can name a partner from `partners`. Shared by singers and admins.
  * When the last save found a close title (`nearMatch`), that round offers
  * "It's a different song".
+ * In a round with a "times per singer" limit, `appearances` (without this
+ * person's own songs) marks partners who already sing that many times, and
+ * when `selfId` is one of them the round has no song fields.
  */
 export function SongFields({
   rounds,
   defaults,
   partners = [],
   nearMatch,
+  appearances,
+  selfId,
 }: {
   rounds: RoundConfig[];
   defaults?: Record<number, SongDefaults | undefined>;
   partners?: DuetPartnerOption[];
   nearMatch?: NearMatch;
+  appearances?: RoundAppearances[];
+  selfId?: string;
 }) {
   return (
     <div className="space-y-5">
-      {rounds.map(({ kind, theme, themeRequired }, i) => (
+      {rounds.map(({ kind, theme, themeRequired, maxAppearances }, i) => (
         <RoundFields
           key={i + 1}
           round={i + 1}
           kind={kind}
           theme={theme}
           themeRequired={themeRequired}
+          maxAppearances={maxAppearances}
+          appearances={appearances?.[i] ?? {}}
+          selfId={selfId}
           defaults={defaults?.[i + 1]}
           partners={partners}
           nearMatchKey={nearMatch?.round === i + 1 ? nearMatch.key : undefined}
@@ -60,6 +70,9 @@ function RoundFields({
   kind: roundKind,
   theme,
   themeRequired,
+  maxAppearances,
+  appearances,
+  selfId,
   defaults,
   partners,
   nearMatchKey,
@@ -68,12 +81,18 @@ function RoundFields({
   kind: RoundKind;
   theme: string | null;
   themeRequired: boolean;
+  maxAppearances: number | null;
+  appearances: RoundAppearances;
+  selfId?: string;
   defaults?: SongDefaults;
   partners: DuetPartnerOption[];
   nearMatchKey?: string;
 }) {
   const [chosenDuet, setDuet] = useState(!!defaults?.duet);
   const duet = roundKind === "EITHER" ? chosenDuet : roundKind === "DUET";
+  const full = (id: string) => maxAppearances != null && (appearances[id] ?? 0) >= maxAppearances;
+  // Already singing the most allowed as someone's duet partner, with no song of their own here to keep.
+  const selfFull = !!selfId && !defaults?.title && full(selfId);
   return (
     <fieldset className="overflow-hidden rounded-lg border border-line">
       {/* A filled header band so each round reads as its own block. */}
@@ -85,6 +104,11 @@ function RoundFields({
           <span className="ml-auto text-xs font-medium text-white/80">{roundKind === "SOLO" ? "Solos" : "Duets"}</span>
         )}
       </div>
+      {maxAppearances != null && (
+        <p className="border-b border-line bg-white px-3 py-1.5 text-xs text-ink-muted">
+          Each singer sings at most {timesLabel(maxAppearances)} this round, counting duets they&apos;re picked for.
+        </p>
+      )}
       {theme && (
         <p className="border-b border-gold/40 bg-gold/15 px-3 py-1.5 text-sm text-gold-ink">
           <span className="font-semibold">Theme: {theme}</span>
@@ -94,76 +118,88 @@ function RoundFields({
           </span>
         </p>
       )}
-      <div className="grid gap-3 bg-mist/60 p-3 sm:grid-cols-2">
-        <Field label="Song title">
-          <input
-            name={`title${r}`}
-            defaultValue={defaults?.title}
-            maxLength={150}
-            placeholder="e.g. Pehla Nasha"
-            className={inputClass}
-          />
-        </Field>
-        <Field label="Film or artist (optional)">
-          <input name={`artist${r}`} defaultValue={defaults?.artist} maxLength={150} className={inputClass} />
-        </Field>
-        {nearMatchKey && (
-          // Keyed so a new near match starts unticked. The value ties the tick to the title it was for.
-          <label key={nearMatchKey} className="flex items-center gap-2 rounded bg-gold/30 px-2 py-1 text-sm sm:col-span-2">
-            <input type="checkbox" name={`different${r}`} value={nearMatchKey} className="accent-royal" />
-            It&apos;s a different song
-          </label>
-        )}
-        <Field label="YouTube karaoke track (optional)" className="sm:col-span-2">
-          <input
-            name={`youtube${r}`}
-            type="url"
-            inputMode="url"
-            defaultValue={defaults?.youtubeUrl}
-            placeholder="https://youtu.be/…"
-            className={inputClass}
-          />
-        </Field>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:col-span-2">
-          {roundKind === "EITHER" ? (
-            <div role="radiogroup" aria-label={`Round ${r}: solo or duet`} className="flex items-center gap-4">
-              {(["solo", "duet"] as const).map((kind) => (
-                <label key={kind} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={`kind${r}`}
-                    value={kind}
-                    checked={(kind === "duet") === duet}
-                    onChange={() => setDuet(kind === "duet")}
-                    className="accent-royal"
-                  />
-                  {kind === "solo" ? "Solo" : "Duet"}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <span className="text-ink-muted">{roundKind === "SOLO" ? "This round is solos." : "This round is duets."}</span>
-          )}
-          {duet && (
-            <label className="flex min-w-[14rem] flex-1 items-center gap-2">
-              <span className="shrink-0 text-ink-muted">with</span>
-              <select
-                name={`partner${r}`}
-                defaultValue={defaults?.duetPartnerId ?? ""}
-                aria-label={`Round ${r} duet partner`}
-                className={selectClass}
-              >
-                <option value="">Not picked yet</option>
-                {partners.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+      {selfFull ? (
+        <p className="bg-mist/60 p-3 text-sm">
+          You&apos;re already singing {timesLabel(appearances[selfId!] ?? 0)} this round as a duet partner, the most
+          allowed, so you can&apos;t add your own song here.
+        </p>
+      ) : (
+        <div className="grid gap-3 bg-mist/60 p-3 sm:grid-cols-2">
+          <Field label="Song title">
+            <input
+              name={`title${r}`}
+              defaultValue={defaults?.title}
+              maxLength={150}
+              placeholder="e.g. Pehla Nasha"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Film or artist (optional)">
+            <input name={`artist${r}`} defaultValue={defaults?.artist} maxLength={150} className={inputClass} />
+          </Field>
+          {nearMatchKey && (
+            // Keyed so a new near match starts unticked. The value ties the tick to the title it was for.
+            <label key={nearMatchKey} className="flex items-center gap-2 rounded bg-gold/30 px-2 py-1 text-sm sm:col-span-2">
+              <input type="checkbox" name={`different${r}`} value={nearMatchKey} className="accent-royal" />
+              It&apos;s a different song
             </label>
           )}
+          <Field label="YouTube karaoke track (optional)" className="sm:col-span-2">
+            <input
+              name={`youtube${r}`}
+              type="url"
+              inputMode="url"
+              defaultValue={defaults?.youtubeUrl}
+              placeholder="https://youtu.be/…"
+              className={inputClass}
+            />
+          </Field>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:col-span-2">
+            {roundKind === "EITHER" ? (
+              <div role="radiogroup" aria-label={`Round ${r}: solo or duet`} className="flex items-center gap-4">
+                {(["solo", "duet"] as const).map((kind) => (
+                  <label key={kind} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`kind${r}`}
+                      value={kind}
+                      checked={(kind === "duet") === duet}
+                      onChange={() => setDuet(kind === "duet")}
+                      className="accent-royal"
+                    />
+                    {kind === "solo" ? "Solo" : "Duet"}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <span className="text-ink-muted">{roundKind === "SOLO" ? "This round is solos." : "This round is duets."}</span>
+            )}
+            {duet && (
+              <label className="flex min-w-[14rem] flex-1 items-center gap-2">
+                <span className="shrink-0 text-ink-muted">with</span>
+                <select
+                  name={`partner${r}`}
+                  defaultValue={defaults?.duetPartnerId ?? ""}
+                  aria-label={`Round ${r} duet partner`}
+                  className={selectClass}
+                >
+                  <option value="">Not picked yet</option>
+                  {partners.map((p) => {
+                    // A partner already saved on this song stays pickable even if the limit was lowered since.
+                    const taken = full(p.id) && p.id !== defaults?.duetPartnerId;
+                    return (
+                      <option key={p.id} value={p.id} disabled={taken}>
+                        {p.name}
+                        {taken && ` (already singing ${timesLabel(appearances[p.id] ?? 0)})`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </fieldset>
   );
 }
@@ -173,16 +209,27 @@ export default function SongsForm({
   rounds,
   defaults,
   partners,
+  appearances,
+  selfId,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
   rounds: RoundConfig[];
   defaults: Record<number, SongDefaults | undefined>;
   partners: DuetPartnerOption[];
+  appearances?: RoundAppearances[];
+  selfId?: string;
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <SongFields rounds={rounds} defaults={defaults} partners={partners} nearMatch={state?.nearMatch} />
+      <SongFields
+        rounds={rounds}
+        defaults={defaults}
+        partners={partners}
+        nearMatch={state?.nearMatch}
+        appearances={appearances}
+        selfId={selfId}
+      />
       <FormStatus state={state} pending={pending} label="Save songs" />
     </form>
   );
