@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EventSeries, Frequency } from "@prisma/client";
 import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
+import FormSection from "@/components/admin/FormSection";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
@@ -37,9 +38,8 @@ export default function SeriesForm({
   const weekday = firstDate ? WEEKDAYS[new Date(`${firstDate}T00:00:00Z`).getUTCDay()] : "day";
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <fieldset className="space-y-4">
-        <legend className="mb-2 font-semibold text-royal">Details</legend>
+    <form onSubmit={onSubmit} className="space-y-5">
+      <FormSection title="Details">
         <Field label="Title" hint='For example "Saturday Night Sur".'>
           <input name="title" required maxLength={120} defaultValue={series?.title} className={inputClass} />
         </Field>
@@ -66,10 +66,9 @@ export default function SeriesForm({
             </label>
           </div>
         </Field>
-      </fieldset>
+      </FormSection>
 
-      <fieldset className="space-y-4">
-        <legend className="mb-2 font-semibold text-royal">Schedule (Pacific time)</legend>
+      <FormSection title="Schedule" note="Pacific time">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Repeats">
             <select
@@ -121,10 +120,9 @@ export default function SeriesForm({
         {frequency !== "ONCE" && (
           <p className="text-xs text-ink-muted">Dates are created 5 weeks ahead and topped up every day.</p>
         )}
-      </fieldset>
+      </FormSection>
 
-      <fieldset className="space-y-4">
-        <legend className="mb-2 font-semibold text-royal">Prices and spots</legend>
+      <FormSection title="Prices and spots">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Singer price ($)" hint="0 for free.">
             <input
@@ -163,15 +161,14 @@ export default function SeriesForm({
           current={series?.bannerUrl ?? null}
           hint="Every date uses it unless you change it for that date. Without one, dates use the group's banner, or the default singing photo."
         />
-      </fieldset>
+      </FormSection>
 
-      <fieldset className="space-y-4">
-        <legend className="mb-2 font-semibold text-royal">Rounds</legend>
+      <FormSection title="Rounds">
         <p className="text-sm text-ink-muted">
           How many rounds each date has, and each round&apos;s theme. You can change them for a single date later.
         </p>
         <RoundsFields initial={series ? parseRounds(series.rounds) : DEFAULT_ROUNDS} />
-      </fieldset>
+      </FormSection>
 
       <FormStatus state={state} pending={pending} label={series ? "Save event" : "Create event"} />
     </form>

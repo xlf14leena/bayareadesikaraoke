@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { EventDate } from "@prisma/client";
 import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
+import FormSection from "@/components/admin/FormSection";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
@@ -47,8 +48,7 @@ export default function DateForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <fieldset className="space-y-2">
-        <legend className="mb-2 font-semibold text-royal">When (Pacific time)</legend>
+      <FormSection title="When" note="Pacific time">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Date">
             <input name="date" type="date" required defaultValue={when.day} className={inputClass} />
@@ -63,7 +63,7 @@ export default function DateForm({
         <p className="text-xs text-ink-muted">
           Change these to reschedule just this date. The rest of the schedule stays the same.
         </p>
-      </fieldset>
+      </FormSection>
 
       <Overridable name="description" title="Description" date={date} inherited={template.description ?? "No description"}>
         <Field label="Description for this date" hint="Blank for no description on this date.">
@@ -168,9 +168,9 @@ function Overridable({
 }) {
   const [custom, setCustom] = useState(date.overrides.includes(name));
   return (
-    <div className="space-y-3 rounded-lg border border-line p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold text-royal">{title}</h3>
+    <FormSection
+      title={title}
+      action={
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -181,7 +181,8 @@ function Overridable({
           />
           Change for this date
         </label>
-      </div>
+      }
+    >
       {custom ? (
         children
       ) : typeof inherited === "string" ? (
@@ -194,6 +195,6 @@ function Overridable({
           {inherited}
         </div>
       )}
-    </div>
+    </FormSection>
   );
 }

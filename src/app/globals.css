@@ -12,6 +12,10 @@
   --color-gold: #f0b93a;
   --color-gold-ink: #2a1d05;
   --color-kicker: #ffd27a;
+  /* Marigold cream for form section headers, so they stand apart from the lavender page. */
+  --color-cream: #fdf1d6;
+  --color-cream-line: #f4dfa8;
+  --color-cream-edge: #ecdcae;
 }
 
 /* Fonts come from next/font in layout.tsx. */
