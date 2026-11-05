@@ -165,7 +165,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         />
       )}
 
-      <section className={`${cardClass} space-y-6`}>
+      <section className={`${cardClass} space-y-4`}>
         <div>
           <h2 className="mb-1 text-xl font-semibold">Sign-ups</h2>
           <p className="text-sm text-ink-muted">
@@ -175,25 +175,35 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           </p>
         </div>
 
-        <SignUpGroup title="Needs review" empty="No payments waiting for review." list={review} rounds={rounds} nearMatches={nearMatches} />
+        <SignUpGroup
+          title="Needs review"
+          empty="No payments waiting for review."
+          list={review}
+          rounds={rounds}
+          nearMatches={nearMatches}
+          defaultOpen
+        />
         <SignUpGroup
           title="Waiting for payment"
           empty="Nobody is waiting to pay."
           list={awaiting}
           rounds={rounds}
           nearMatches={nearMatches}
+          defaultOpen
         />
-        <SignUpGroup title="Confirmed" empty="Nobody is confirmed yet." list={confirmed} rounds={rounds} nearMatches={nearMatches} />
-        {waitlist.length > 0 && <SignUpGroup title="Waitlist" empty="" list={waitlist} rounds={rounds} nearMatches={nearMatches} />}
+        <SignUpGroup
+          title="Confirmed"
+          empty="Nobody is confirmed yet."
+          list={confirmed}
+          rounds={rounds}
+          nearMatches={nearMatches}
+          defaultOpen={review.length === 0 && awaiting.length === 0 && waitlist.length === 0}
+        />
+        {waitlist.length > 0 && (
+          <SignUpGroup title="Waitlist" empty="" list={waitlist} rounds={rounds} nearMatches={nearMatches} defaultOpen />
+        )}
         {ended.length > 0 && (
-          <details>
-            <summary className="cursor-pointer text-sm font-medium text-ink-muted">
-              Expired or cancelled ({ended.length})
-            </summary>
-            <div className="mt-3">
-              <SignUpGroup title="" empty="" list={ended} rounds={rounds} nearMatches={nearMatches} />
-            </div>
-          </details>
+          <SignUpGroup title="Expired or cancelled" empty="" list={ended} rounds={rounds} nearMatches={nearMatches} />
         )}
       </section>
 
@@ -331,30 +341,37 @@ function SignUpGroup({
   list,
   rounds,
   nearMatches,
+  defaultOpen = false,
 }: {
   title: string;
   empty: string;
   list: Row[];
   rounds: RoundConfig[];
   nearMatches: NearMatches;
+  defaultOpen?: boolean;
 }) {
   return (
-    <div>
-      {title && (
-        <h3 className="mb-2 font-semibold text-royal">
-          {title} {list.length > 0 && <span className="font-normal text-ink-muted">({list.length})</span>}
-        </h3>
-      )}
-      {list.length === 0 ? (
-        <p className="text-sm text-ink-muted">{empty}</p>
-      ) : (
-        <ul className="space-y-3">
-          {list.map((s) => (
-            <SignUpRow key={s.id} s={s} rounds={rounds} nearMatches={nearMatches} />
-          ))}
-        </ul>
-      )}
-    </div>
+    <details open={defaultOpen} className="group">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg bg-mist px-3 py-2 font-semibold text-royal [&::-webkit-details-marker]:hidden">
+        <span>
+          {title} <span className="font-normal text-ink-muted">({list.length})</span>
+        </span>
+        <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <div className="mt-3">
+        {list.length === 0 ? (
+          <p className="text-sm text-ink-muted">{empty}</p>
+        ) : (
+          <ul className="space-y-3">
+            {list.map((s) => (
+              <SignUpRow key={s.id} s={s} rounds={rounds} nearMatches={nearMatches} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
   );
 }
 
