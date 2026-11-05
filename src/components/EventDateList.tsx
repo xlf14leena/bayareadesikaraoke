@@ -34,7 +34,7 @@ export default function EventDateList({
             className="relative flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-white p-3 transition hover:border-lapis hover:shadow-sm has-[a:focus-visible]:border-lapis sm:flex-nowrap sm:p-4"
           >
             <div
-              className={`w-16 shrink-0 rounded-xl py-1.5 text-center ${past ? "bg-mist text-ink-muted" : "bg-gold text-gold-ink"}`}
+              className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl text-center ${past ? "bg-mist text-ink-muted" : "bg-gold text-gold-ink"}`}
             >
               <p className="text-[11px] font-semibold uppercase tracking-wider">{badge.month}</p>
               <p className="font-display text-3xl leading-none">{badge.day}</p>
@@ -45,7 +45,7 @@ export default function EventDateList({
               href={`/g/${d.series.group.slug}`}
               aria-label={`${d.series.group.name} group page`}
               title={d.series.group.name}
-              className="relative z-10 hidden shrink-0 overflow-hidden rounded-lg bg-mist ring-lapis transition hover:ring-2 sm:block"
+              className="relative z-10 hidden shrink-0 overflow-hidden rounded-xl bg-mist ring-lapis transition hover:ring-2 sm:block"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={banner} alt="" className="h-16 w-16 object-cover" />
