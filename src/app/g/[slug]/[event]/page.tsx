@@ -133,6 +133,14 @@ export default async function EventPage({ params, searchParams }: Props) {
   const confirmedListeners = viewer
     ? await prisma.signUp.count({ where: { eventDateId: date.id, role: "LISTENER", status: "CONFIRMED" } })
     : 0;
+  // Every confirmed singer belongs on the list, even before they pick a song.
+  const confirmedSingers = viewer
+    ? await prisma.signUp.findMany({
+        where: { eventDateId: date.id, role: "SINGER", status: "CONFIRMED" },
+        orderBy: { displayName: "asc" },
+        select: { id: true, displayName: true },
+      })
+    : [];
 
   const myRounds =
     myActive?.checkedInAt && myActive.role === "SINGER" && CAN_CHECK_IN.includes(myActive.status) && date.endsAt > new Date()
@@ -152,6 +160,8 @@ export default async function EventPage({ params, searchParams }: Props) {
     .sort((a, b) => a - b)
     .map((r) => singers.filter((s) => s.round === r))
     .filter((list) => list.length > 0);
+  const withSongs = new Set(singers.map((s) => s.signUpId));
+  const noSongYet = confirmedSingers.filter((s) => !withSongs.has(s.id));
   // The running order: checked-in singers by slot, with their song for that round.
   const orderSlots = viewer
     ? await prisma.roundSlot.findMany({
@@ -185,7 +195,7 @@ export default async function EventPage({ params, searchParams }: Props) {
     song: r.signUp.songs.find((s) => s.round === r.round) ?? null,
   }));
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
-  const showLineup = date.signupsOpen || rounds.length > 0 || confirmedListeners > 0;
+  const showLineup = date.signupsOpen || rounds.length > 0 || noSongYet.length > 0 || confirmedListeners > 0;
   const showSlots = !!myRounds && !cancelled;
   const showMine = !!myActive && !cancelled;
   // Not signed up yet: the Your sign-up section holds the sign-up form (or why you can't sign up).
@@ -431,7 +441,7 @@ export default async function EventPage({ params, searchParams }: Props) {
               </Link>{" "}
               to see who has signed up and the songs they picked.
             </p>
-          ) : rounds.length === 0 ? (
+          ) : rounds.length === 0 && noSongYet.length === 0 ? (
             <p className="text-ink-muted">
               No confirmed singers yet. Singers show here once the organizers approve their payment.
             </p>
@@ -480,6 +490,19 @@ export default async function EventPage({ params, searchParams }: Props) {
                   </ol>
                 </div>
               ))}
+              {noSongYet.length > 0 && (
+                <div>
+                  {rounds.length > 0 && <h3 className="mb-1 font-semibold text-royal">Song not picked yet</h3>}
+                  <ul className="space-y-1">
+                    {noSongYet.map((s) => (
+                      <li key={s.id}>
+                        <span className="font-medium">{s.displayName}</span>
+                        {rounds.length === 0 && <span className="text-ink-muted"> · song not picked yet</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
           {viewer && (
