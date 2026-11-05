@@ -17,7 +17,7 @@ export default function ReasonForm({
   const { state, onSubmit, pending } = useFormAction(action);
   return (
     <details className="text-sm">
-      <summary className="cursor-pointer font-medium text-red-700">{label}</summary>
+      <summary className={`${dangerButton} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>{label}</summary>
       <form onSubmit={onSubmit} className="mt-2 flex flex-wrap items-center gap-2">
         <input name="reason" required maxLength={300} placeholder={placeholder} className={`${inputClass} flex-1`} />
         <button type="submit" className={dangerButton} disabled={pending}>

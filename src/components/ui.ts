@@ -8,9 +8,21 @@ export const selectClass =
 export const labelClass = "mb-1 block text-sm font-medium text-ink";
 export const hintClass = "mt-1 text-xs text-ink-muted";
 export const cardClass = "rounded-xl border border-line bg-white p-4 sm:p-6";
-export const primaryButton =
-  "inline-flex items-center justify-center rounded-full bg-royal px-5 py-2 text-sm font-medium text-white hover:bg-cobalt disabled:opacity-60";
-export const secondaryButton =
-  "inline-flex items-center justify-center rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:border-lapis hover:text-cobalt";
-export const dangerButton =
-  "inline-flex items-center justify-center rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50";
+
+/*
+ * Buttons. Every action in the app (submit, edit, manage, open a page to change
+ * something) uses one of these three, so they share one shape and size:
+ * a pill with the same padding, text size and weight. Plain text links are
+ * only for links inside a sentence and for navigation.
+ */
+const buttonBase =
+  "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-60";
+/** The main action on a page or card. */
+export const primaryButton = `${buttonBase} border-royal bg-royal text-white hover:border-cobalt hover:bg-cobalt`;
+/** Other actions: Manage, View, Edit, Cancel. */
+export const secondaryButton = `${buttonBase} border-line bg-white text-royal hover:border-lapis hover:text-cobalt`;
+/** Deleting or removing something. */
+export const dangerButton = `${buttonBase} border-red-200 bg-white text-red-700 hover:bg-red-50`;
+
+/** Small status pill next to a title, e.g. "Recurring" or "Sign-ups open". */
+export const badgeClass = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium align-middle";

@@ -4,7 +4,7 @@ import Banner from "@/components/Banner";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import SectionTabs, { type SectionTab } from "@/components/SectionTabs";
 import { notFound, redirect } from "next/navigation";
-import { primaryButton } from "@/components/ui";
+import { primaryButton, secondaryButton } from "@/components/ui";
 import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { ENDED, acceptingSignUps, settle, stillEditable } from "@/lib/signups";
@@ -260,7 +260,7 @@ export default async function EventPage({ params, searchParams }: Props) {
             <Link
               href={`/admin/dates/${date.id}`}
               title="Manage this date and its sign-ups"
-              className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-royal shadow-sm hover:border-cobalt hover:text-cobalt sm:mt-1.5"
+              className={`${secondaryButton} mt-1 sm:mt-1.5`}
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />

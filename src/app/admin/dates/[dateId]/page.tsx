@@ -121,14 +121,14 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-4 text-sm font-medium">
+          <div className="flex flex-wrap gap-2">
             {feedbackOpen(date) && (
-              <Link href={`/admin/dates/${date.id}/feedback`} className="text-cobalt hover:underline">
-                Feedback{feedback.count > 0 && ` (${feedback.count})`} →
+              <Link href={`/admin/dates/${date.id}/feedback`} className={secondaryButton}>
+                Feedback{feedback.count > 0 && ` (${feedback.count})`}
               </Link>
             )}
-            <Link href={viewHref} className="text-cobalt hover:underline">
-              View event page →
+            <Link href={viewHref} className={secondaryButton}>
+              View event page
             </Link>
           </div>
         </div>
@@ -226,8 +226,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
       <section id="date-settings" className={`${cardClass} scroll-mt-4`}>
         <h2 className="mb-1 text-xl font-semibold">Settings for this date</h2>
         <p className="mb-4 text-sm text-ink-muted">
-          This date uses the event settings. Tick &ldquo;Change for this date&rdquo; to override one for this date
-          only; later changes to the event settings won&apos;t touch it.
+          This date uses the event template settings. Tick &ldquo;Change for this date&rdquo; to override one for this date
+          only; later changes to the event template won&apos;t touch it.
         </p>
         <DateForm
           action={updateDate.bind(null, date.id)}

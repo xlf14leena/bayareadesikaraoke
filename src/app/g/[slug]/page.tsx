@@ -8,6 +8,7 @@ import { bannerFor } from "@/lib/banner";
 import { formatEventDate } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { canAdminGroup, getViewer } from "@/lib/roles";
+import { secondaryButton } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -88,8 +89,8 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
                     <span>
                       {d.series.title} · {formatEventDate(d.startsAt)}
                     </span>
-                    <Link href={`/admin/dates/${d.id}#archive`} className="font-medium text-cobalt hover:underline">
-                      Unarchive →
+                    <Link href={`/admin/dates/${d.id}#archive`} className={secondaryButton}>
+                      Unarchive
                     </Link>
                   </li>
                 ))}

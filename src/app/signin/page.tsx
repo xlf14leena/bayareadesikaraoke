@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
+import { primaryButton } from "@/components/ui";
 
 export default async function SignInPage({
   searchParams,
@@ -27,7 +28,7 @@ export default async function SignInPage({
       >
         <button
           type="submit"
-          className="w-full rounded-full bg-royal px-4 py-2.5 font-medium text-white hover:bg-cobalt"
+          className={`${primaryButton} w-full`}
         >
           Sign in with Google
         </button>

@@ -39,11 +39,14 @@ export default async function FeedbackPrompt({
             : "This event is over. Tell the organizers what you thought: it takes a minute."}
         </p>
         {isAdmin && (
-          <p className="mt-1 text-sm">
-            <Link href={`/admin/dates/${date.id}/feedback`} className="font-medium text-cobalt hover:underline">
-              {summaryLabel(summary?.count ?? 0, summary?.average ?? null) ?? "No feedback yet"} · see responses →
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+            <span className="text-ink-muted">
+              {summaryLabel(summary?.count ?? 0, summary?.average ?? null) ?? "No feedback yet"}
+            </span>
+            <Link href={`/admin/dates/${date.id}/feedback`} className={secondaryButton}>
+              See responses
             </Link>
-          </p>
+          </div>
         )}
       </div>
       <Link href={href} className={mine ? secondaryButton : primaryButton}>

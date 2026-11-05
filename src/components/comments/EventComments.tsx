@@ -86,7 +86,7 @@ export default async function EventComments({ date, viewer, isAdmin, privateKey,
                       body={c.body}
                       badge={c.isQuestion ? (answered ? "Answered" : "Question") : null}
                     />
-                    <div className="mt-1 flex flex-wrap items-center gap-4">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       {date.commentsEnabled && <ReplyForm action={postComment.bind(null, date.id, privateKey, c.id)} />}
                       {canDelete(c.userId) && (
                         <DeleteCommentButton action={deleteComment.bind(null, c.id)} hasReplies={c.replies.length > 0} />
@@ -98,7 +98,7 @@ export default async function EventComments({ date, viewer, isAdmin, privateKey,
                           <li key={r.id}>
                             <Comment name={r.authorName} organizer={isOrganizer(r.userId)} at={r.createdAt} body={r.body} badge={null} />
                             {canDelete(r.userId) && (
-                              <div className="mt-1">
+                              <div className="mt-2">
                                 <DeleteCommentButton action={deleteComment.bind(null, r.id)} hasReplies={false} />
                               </div>
                             )}

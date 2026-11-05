@@ -1,5 +1,6 @@
 import { HOLDS_SPOT } from "@/lib/events";
 import type { SignUpStatus } from "@prisma/client";
+import { secondaryButton } from "@/components/ui";
 
 export type PublicOrderRow = {
   round: number;
@@ -109,7 +110,7 @@ export default function PublicRunningOrder({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`Play the track for ${song.title}`}
-                        className="shrink-0 rounded-full border border-line px-3 py-1 text-sm font-medium text-cobalt hover:border-lapis"
+                        className={secondaryButton}
                       >
                         ▶ Track
                       </a>

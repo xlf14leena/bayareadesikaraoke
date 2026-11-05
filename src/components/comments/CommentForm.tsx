@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormAction } from "@/components/admin/useFormAction";
-import { inputClass, primaryButton, secondaryButton } from "@/components/ui";
+import { dangerButton, inputClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
 
 type Action = (prev: FormState, form: FormData) => Promise<FormState>;
@@ -42,7 +42,7 @@ export function CommentForm({ action }: { action: Action }) {
   );
 }
 
-/** "Reply" link that opens a small reply box under a comment. */
+/** "Reply" button that opens a small reply box under a comment. */
 export function ReplyForm({ action }: { action: Action }) {
   const [open, setOpen] = useState(false);
   const { state, onSubmit, pending } = useFormAction(action);
@@ -51,13 +51,13 @@ export function ReplyForm({ action }: { action: Action }) {
   }, [state]);
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="text-sm font-medium text-cobalt hover:underline">
+      <button type="button" onClick={() => setOpen(true)} className={secondaryButton}>
         Reply
       </button>
     );
   }
   return (
-    <form onSubmit={onSubmit} className="mt-2 space-y-2">
+    <form onSubmit={onSubmit} className="w-full space-y-2">
       <textarea
         name="body"
         rows={2}
@@ -81,7 +81,7 @@ export function ReplyForm({ action }: { action: Action }) {
   );
 }
 
-/** Small "Delete" link that asks first. */
+/** "Delete" button that asks first. */
 export function DeleteCommentButton({ action, hasReplies }: { action: () => Promise<void>; hasReplies: boolean }) {
   return (
     <form
@@ -90,7 +90,7 @@ export function DeleteCommentButton({ action, hasReplies }: { action: () => Prom
         if (!window.confirm(hasReplies ? "Delete this comment and its replies?" : "Delete this comment?")) e.preventDefault();
       }}
     >
-      <button type="submit" className="text-sm text-ink-muted hover:text-red-700 hover:underline">
+      <button type="submit" className={dangerButton}>
         Delete
       </button>
     </form>

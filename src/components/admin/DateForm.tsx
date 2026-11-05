@@ -187,11 +187,11 @@ function Overridable({
         children
       ) : typeof inherited === "string" ? (
         <p className="whitespace-pre-line text-sm text-ink-muted">
-          From the event settings: <span className="text-ink">{inherited}</span>
+          From the event template: <span className="text-ink">{inherited}</span>
         </p>
       ) : (
         <div className="text-sm text-ink-muted">
-          From the event settings{inheritedNote ? <>: <span className="text-ink">{inheritedNote}</span></> : null}
+          From the event template{inheritedNote ? <>: <span className="text-ink">{inheritedNote}</span></> : null}
           {inherited}
         </div>
       )}
