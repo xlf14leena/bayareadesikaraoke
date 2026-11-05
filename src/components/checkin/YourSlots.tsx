@@ -5,7 +5,7 @@ import type { RoundSlotInfo } from "@/lib/slots";
 /** A checked-in singer's place in each round: pick a slot, or see the one check-in or payment order gave them. */
 export default function YourSlots({ dateId, rounds }: { dateId: string; rounds: RoundSlotInfo[] }) {
   return (
-    <section id="your-slots" className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
+    <section className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
       <h2 className="text-lg font-semibold">Your singing slots</h2>
       <ul className="space-y-3">
         {rounds.map((r) => (

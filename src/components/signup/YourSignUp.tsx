@@ -67,7 +67,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
   const canLeave = ["WAITLISTED", "RESERVED", "REJECTED", "UNDER_REVIEW"].includes(signUp.status);
 
   return (
-    <section id="your-sign-up" className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
+    <section className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 className="text-lg font-semibold">Your sign-up</h2>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${TONE[signUp.status] ?? "bg-mist"}`}>
@@ -87,7 +87,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
 
       {signUp.status === "CONFIRMED" && (
         <p className="text-sm">
-          You&apos;re in! {signUp.role === "SINGER" ? "Your songs show on the singer list below." : "See you there."}
+          You&apos;re in! {signUp.role === "SINGER" ? "Your songs show in the Who's singing tab." : "See you there."}
           {signUp.paymentNote && <span className="text-ink-muted"> ({signUp.paymentNote})</span>}
         </p>
       )}
@@ -96,7 +96,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
         <p>
           Thanks! The organizers will check your payment
           {signUp.screenshot && <> (screenshot sent {formatDateTime(signUp.screenshot.uploadedAt)})</>}. Your spot is
-          held while they review it. Once they approve it, you and your songs show on the singer list below.
+          held while they review it. Once they approve it, you and your songs show in the Who&apos;s singing tab.
         </p>
       )}
 

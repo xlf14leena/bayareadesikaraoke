@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Banner from "@/components/Banner";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import SectionTabs, { type SectionTab } from "@/components/SectionTabs";
+import EventTabs, { type EventTab } from "@/components/EventTabs";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton, secondaryButton } from "@/components/ui";
 import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
@@ -244,19 +244,236 @@ export default async function EventPage({ params, searchParams }: Props) {
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
   const showLineup = date.signupsOpen || people.length > 0;
   const showSlots = !!myRounds && !cancelled;
-  const showMine = !!myActive && !cancelled;
-  // Not signed up yet: the Your sign-up section holds the sign-up form (or why you can't sign up).
+  // Not signed up yet: the sign-up tab holds the sign-up form (or why you can't sign up).
   const showJoin = !myActive && !cancelled && !past;
   const showOrder = runningOrder.length > 0 && !cancelled;
-  // Tabs under the banner, in page order, for the sections that are showing.
-  const tabs: (SectionTab & { show: boolean })[] = [
-    { id: "details", label: "Details", icon: "details", show: true },
-    { id: "your-slots", label: "Your slots", icon: "slots", show: showSlots },
-    { id: "your-sign-up", label: "Your sign-up", icon: "signup", show: showMine || showJoin },
-    { id: "running-order", label: "Running order", icon: "order", show: showOrder },
-    { id: "whos-singing", label: "Who's singing", icon: "singers", show: showLineup },
-    { id: "comments", label: "Comments", icon: "comments", show: date.commentsEnabled || isAdmin },
+  const showComments = date.commentsEnabled || isAdmin;
+  const commentCount =
+    viewer && showComments ? await prisma.eventComment.count({ where: { eventDateId: date.id } }) : 0;
+  const singerPrice = formatPrice(settings.singerPriceCents);
+  const listenerPrice = formatPrice(settings.listenerPriceCents);
+  const priceLine =
+    settings.singerPriceCents === settings.listenerPriceCents
+      ? settings.singerPriceCents === 0
+        ? "Free to sing or listen"
+        : `${singerPrice} to sing or listen`
+      : `Sing ${singerPrice} · Listen ${listenerPrice}`;
+
+  const checkInNote = myActive?.checkedInAt ? (
+    <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+      ✓ You checked in at {formatClock(pacificTimeOf(myActive.checkedInAt))}.
+    </p>
+  ) : myActive && CAN_CHECK_IN.includes(myActive.status) && checkInIsOpen(date) ? (
+    <p className="rounded-lg bg-gold/30 px-3 py-2 text-sm font-medium text-gold-ink">
+      Check-in is open. When you arrive, scan the QR code on the check-in screen at the venue
+      {myActive.role === "SINGER" && ", then get your singing slots"}.
+    </p>
+  ) : null;
+
+  // Tonight: your slots beside the running order while the event is on (just the order once it's over).
+  const tonight = (showSlots || showOrder) && (
+    <div className={showSlots && showOrder ? "grid items-start gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]" : ""}>
+      {showSlots && (
+        <div className="lg:order-2">
+          <YourSlots dateId={date.id} rounds={myRounds!} />
+        </div>
+      )}
+      {showOrder && (
+        <PublicRunningOrder
+          rows={runningOrder}
+          mySignUpId={myActive?.id ?? null}
+          now={date.nowRound != null && date.nowSlot != null && !past ? { round: date.nowRound, slot: date.nowSlot } : null}
+        />
+      )}
+    </div>
+  );
+
+  const join = showJoin && (
+    <section className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
+      <h2 className="text-lg font-semibold">Sign up</h2>
+      {!accepting ? (
+        <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">
+          {date.signupsOpen ? "Sign-ups for this date are closed." : "Sign-ups aren't open yet."}
+        </p>
+      ) : viewer ? (
+        <>
+          {mine && (
+            <p className="text-sm text-ink-muted">
+              {mine.status === "EXPIRED"
+                ? "Your earlier hold ran out. You can sign up again."
+                : "Your earlier sign-up was cancelled. You can sign up again."}
+            </p>
+          )}
+          <div className="max-w-md">
+            <SignUpForm
+              action={signUpForDate.bind(null, date.id, k ?? null)}
+              defaultName={mine?.displayName ?? viewer.name ?? ""}
+              options={[
+                {
+                  role: "SINGER",
+                  label: "Sing",
+                  price: singerPrice,
+                  full: settings.maxSingers != null && taken("SINGER") >= settings.maxSingers,
+                },
+                {
+                  role: "LISTENER",
+                  label: "Listen",
+                  price: listenerPrice,
+                  full: settings.maxListeners != null && taken("LISTENER") >= settings.maxListeners,
+                },
+              ]}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
+          <Link
+            href={`/signin?callbackUrl=${encodeURIComponent(`${here}#your-sign-up`)}`}
+            className={`${primaryButton} w-full sm:w-auto`}
+          >
+            Sign in to sign up
+          </Link>
+        </>
+      )}
+    </section>
+  );
+
+  const yours = myActive && !cancelled && (
+    <YourSignUp
+      signUp={myActive}
+      groupName={series.group.name}
+      zelle={zelleFor(date, series)}
+      waitlistPosition={waitlistPosition}
+      editable={stillEditable(date)}
+      rounds={roundConfig}
+      appearances={appearances}
+      partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName }))}
+      duetInvites={invites.map((i) => ({
+        songId: i.id,
+        round: i.round,
+        title: i.title,
+        singer: i.signUp.displayName,
+        accepted: i.duetStatus === "ACCEPTED",
+      }))}
+    />
+  );
+
+  const lineup = showLineup && (
+    <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
+      <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
+      {!viewer ? (
+        <p className="text-ink-muted">
+          <Link href={`/signin?callbackUrl=${encodeURIComponent(`${here}#whos-singing`)}`} className="font-medium text-cobalt hover:underline">
+            Sign in
+          </Link>{" "}
+          to see who has signed up and the songs they picked.
+        </p>
+      ) : people.length === 0 ? (
+        <p className="text-ink-muted">
+          No one is confirmed yet. People show here once the organizers approve their payment.
+        </p>
+      ) : (
+        <WhosSinging rounds={lineupRounds} singers={lineupSingers} waitlisted={waitlisted} listeners={listeners.map((p) => ({ id: p.id, name: p.displayName }))} />
+      )}
+    </section>
+  );
+
+  const details = (
+    <section className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
+      <dl className="grid gap-5 sm:grid-cols-3">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
+          <dd>
+            {formatEventDate(date.startsAt)}
+            <br />
+            {formatEventTime(date.startsAt, date.endsAt)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Where</dt>
+          <dd>
+            {series.venueName}
+            <br />
+            <a href={mapUrl(series.venueAddress)} target="_blank" rel="noopener noreferrer" className="text-cobalt hover:underline">
+              {series.venueAddress}
+            </a>
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Price</dt>
+          <dd className="max-w-xs">
+            <PriceRow label="Singer" cents={settings.singerPriceCents} taken={taken("SINGER")} cap={settings.maxSingers} />
+            <PriceRow label="Listener" cents={settings.listenerPriceCents} taken={taken("LISTENER")} cap={settings.maxListeners} />
+          </dd>
+        </div>
+      </dl>
+      <div>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+          {roundConfig.length === 1 ? "The round" : `${roundConfig.length} rounds`}
+        </h2>
+        <ol className="mt-2 space-y-2">
+          {roundConfig.map((r, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-royal text-xs font-semibold text-white">
+                {i + 1}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm text-ink-muted">{ROUND_KIND_LABEL[r.kind]}</p>
+                {r.theme ? (
+                  <p className="mt-0.5 border-l-4 border-gold pl-3">
+                    <span className="font-medium text-royal">Theme: {r.theme}</span>
+                    <span
+                      className={`ml-2 inline-block rounded-full px-2 py-0.5 align-middle text-[11px] font-medium ${
+                        r.themeRequired ? "bg-gold/30 text-gold-ink" : "bg-mist text-ink-muted"
+                      }`}
+                    >
+                      {r.themeRequired ? "Songs must fit" : "Suggestion"}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-sm text-ink-muted">No theme: sing anything you like</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+      {settings.description && (
+        <div>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">About this event</h2>
+          <p className="whitespace-pre-line text-ink">{settings.description}</p>
+        </div>
+      )}
+    </section>
+  );
+
+  // One tab shows at a time. Tabs that have nothing to show are left out.
+  const tabs: (EventTab & { show: unknown })[] = [
+    {
+      id: "tonight",
+      label: past ? "Running order" : "Tonight",
+      icon: "tonight",
+      aliases: ["your-slots", "running-order"],
+      show: tonight,
+      content: tonight,
+    },
+    { id: "your-sign-up", label: myActive ? "Your sign-up" : "Sign up", icon: "signup", show: join || yours, content: join || yours },
+    { id: "whos-singing", label: "Who's singing", icon: "singers", count: confirmedSingers.length, show: lineup, content: lineup },
+    { id: "details", label: "Details", icon: "details", show: true, content: details },
+    {
+      id: "comments",
+      label: "Comments",
+      icon: "comments",
+      count: commentCount,
+      show: showComments,
+      content: <EventComments date={date} viewer={viewer} isAdmin={isAdmin} privateKey={k ?? null} here={here} />,
+    },
   ];
+  const visible: EventTab[] = tabs.flatMap(({ show, ...t }) => (show ? [t] : []));
+  // Open on what matters now: tonight's order and slots once they exist, then your sign-up
+  // (or the form, while sign-ups are open), otherwise the details.
+  const initial = tonight && !past ? "tonight" : yours || (join && accepting) ? "your-sign-up" : "details";
 
   return (
     <article className="space-y-6">
@@ -287,6 +504,30 @@ export default async function EventPage({ params, searchParams }: Props) {
             </Link>
           )}
         </div>
+        {/* The key facts on one line; the Details tab has the rest. */}
+        <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-ink-muted">
+          <li className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+            </svg>
+            {formatEventDate(date.startsAt)} · {formatEventTime(date.startsAt, date.endsAt)}
+          </li>
+          <li className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
+              <circle cx="12" cy="10" r="2.5" />
+            </svg>
+            <a href={mapUrl(series.venueAddress)} target="_blank" rel="noopener noreferrer" className="text-cobalt hover:underline">
+              {series.venueName}
+            </a>
+          </li>
+          <li className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 9a3 3 0 0 0 0 6v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3a3 3 0 0 1 0-6V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3Z" />
+            </svg>
+            {priceLine}
+          </li>
+        </ul>
         {cancelled && (
           <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 font-medium text-red-700">This date has been cancelled.</p>
         )}
@@ -302,210 +543,11 @@ export default async function EventPage({ params, searchParams }: Props) {
         )}
       </header>
 
-      <SectionTabs tabs={tabs.filter((t) => t.show)} />
-
-      <section id="details" className="space-y-5 rounded-xl border border-line bg-white p-4 sm:p-6">
-        <dl className="grid gap-5 sm:grid-cols-3">
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">When</dt>
-            <dd>
-              {formatEventDate(date.startsAt)}
-              <br />
-              {formatEventTime(date.startsAt, date.endsAt)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Where</dt>
-            <dd>
-              {series.venueName}
-              <br />
-              <a
-                href={mapUrl(series.venueAddress)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-cobalt hover:underline"
-              >
-                {series.venueAddress}
-              </a>
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Price</dt>
-            <dd className="max-w-xs">
-              <PriceRow
-                label="Singer"
-                cents={settings.singerPriceCents}
-                taken={taken("SINGER")}
-                cap={settings.maxSingers}
-              />
-              <PriceRow
-                label="Listener"
-                cents={settings.listenerPriceCents}
-                taken={taken("LISTENER")}
-                cap={settings.maxListeners}
-              />
-            </dd>
-          </div>
-        </dl>
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            {roundConfig.length === 1 ? "The round" : `${roundConfig.length} rounds`}
-          </h2>
-          <ol className="mt-2 space-y-2">
-            {roundConfig.map((r, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-royal text-xs font-semibold text-white">
-                  {i + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm text-ink-muted">{ROUND_KIND_LABEL[r.kind]}</p>
-                  {r.theme ? (
-                    <p className="mt-0.5 border-l-4 border-gold pl-3">
-                      <span className="font-medium text-royal">Theme: {r.theme}</span>
-                      <span
-                        className={`ml-2 inline-block rounded-full px-2 py-0.5 align-middle text-[11px] font-medium ${
-                          r.themeRequired ? "bg-gold/30 text-gold-ink" : "bg-mist text-ink-muted"
-                        }`}
-                      >
-                        {r.themeRequired ? "Songs must fit" : "Suggestion"}
-                      </span>
-                    </p>
-                  ) : (
-                    <p className="mt-0.5 text-sm text-ink-muted">No theme: sing anything you like</p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-        {settings.description && (
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">About this event</h2>
-            <p className="whitespace-pre-line text-ink">{settings.description}</p>
-          </div>
-        )}
-      </section>
-
       <FeedbackPrompt date={date} viewer={viewer} isAdmin={isAdmin} privateKey={k ?? null} />
+      {checkInNote}
 
-      {myActive?.checkedInAt ? (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
-          ✓ You checked in at {formatClock(pacificTimeOf(myActive.checkedInAt))}.
-        </p>
-      ) : (
-        myActive &&
-        CAN_CHECK_IN.includes(myActive.status) &&
-        checkInIsOpen(date) && (
-          <p className="rounded-lg bg-gold/30 px-3 py-2 text-sm font-medium text-gold-ink">
-            Check-in is open. When you arrive, scan the QR code on the check-in screen at the venue
-            {myActive.role === "SINGER" && ", then get your singing slots"}.
-          </p>
-        )
-      )}
-
-      {myRounds && !cancelled && <YourSlots dateId={date.id} rounds={myRounds} />}
-
-      {showJoin && (
-        <section id="your-sign-up" className="space-y-3 rounded-xl border border-line bg-white p-4 text-sm sm:px-5">
-          <h2 className="text-lg font-semibold">Your sign-up</h2>
-          {!accepting ? (
-            <p className="rounded-lg bg-mist px-3 py-2 text-sm text-ink-muted">
-              {date.signupsOpen ? "Sign-ups for this date are closed." : "Sign-ups aren't open yet."}
-            </p>
-          ) : viewer ? (
-            <>
-              {mine && (
-                <p className="text-sm text-ink-muted">
-                  {mine.status === "EXPIRED"
-                    ? "Your earlier hold ran out. You can sign up again."
-                    : "Your earlier sign-up was cancelled. You can sign up again."}
-                </p>
-              )}
-              <div className="max-w-md">
-                <SignUpForm
-                  action={signUpForDate.bind(null, date.id, k ?? null)}
-                  defaultName={mine?.displayName ?? viewer.name ?? ""}
-                  options={[
-                    {
-                      role: "SINGER",
-                      label: "Sing",
-                      price: formatPrice(settings.singerPriceCents),
-                      full: settings.maxSingers != null && taken("SINGER") >= settings.maxSingers,
-                    },
-                    {
-                      role: "LISTENER",
-                      label: "Listen",
-                      price: formatPrice(settings.listenerPriceCents),
-                      full: settings.maxListeners != null && taken("LISTENER") >= settings.maxListeners,
-                    },
-                  ]}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-emerald-800">Sign-ups are open.</p>
-              <Link
-                href={`/signin?callbackUrl=${encodeURIComponent(here)}`}
-                className={`${primaryButton} w-full sm:w-auto`}
-              >
-                Sign in to sign up
-              </Link>
-            </>
-          )}
-        </section>
-      )}
-
-      {myActive && !cancelled && (
-        <YourSignUp
-          signUp={myActive}
-          groupName={series.group.name}
-          zelle={zelleFor(date, series)}
-          waitlistPosition={waitlistPosition}
-          editable={stillEditable(date)}
-          rounds={roundConfig}
-          appearances={appearances}
-          partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName }))}
-          duetInvites={invites.map((i) => ({
-            songId: i.id,
-            round: i.round,
-            title: i.title,
-            singer: i.signUp.displayName,
-            accepted: i.duetStatus === "ACCEPTED",
-          }))}
-        />
-      )}
-
-      {runningOrder.length > 0 && !cancelled && (
-        <PublicRunningOrder
-          rows={runningOrder}
-          mySignUpId={myActive?.id ?? null}
-          now={date.nowRound != null && date.nowSlot != null && !past ? { round: date.nowRound, slot: date.nowSlot } : null}
-        />
-      )}
-      {runningOrder.length > 0 && !cancelled && !past && <LiveRefresh everyMs={20000} />}
-
-      {showLineup && (
-        <section id="whos-singing" className="rounded-xl border border-line bg-white p-4 sm:p-6">
-          <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
-          {!viewer ? (
-            <p className="text-ink-muted">
-              <Link href={`/signin?callbackUrl=${encodeURIComponent(here)}`} className="font-medium text-cobalt hover:underline">
-                Sign in
-              </Link>{" "}
-              to see who has signed up and the songs they picked.
-            </p>
-          ) : people.length === 0 ? (
-            <p className="text-ink-muted">
-              No one is confirmed yet. People show here once the organizers approve their payment.
-            </p>
-          ) : (
-            <WhosSinging rounds={lineupRounds} singers={lineupSingers} waitlisted={waitlisted} listeners={listeners.map((p) => ({ id: p.id, name: p.displayName }))} />
-          )}
-        </section>
-      )}
-
-      <EventComments date={date} viewer={viewer} isAdmin={isAdmin} privateKey={k ?? null} here={here} />
+      <EventTabs tabs={visible} initial={initial} />
+      {showOrder && !past && <LiveRefresh everyMs={20000} />}
     </article>
   );
 }
