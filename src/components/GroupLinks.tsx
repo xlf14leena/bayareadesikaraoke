@@ -3,7 +3,7 @@ import type { Group } from "@prisma/client";
 type Links = Pick<Group, "name" | "websiteUrl" | "facebookUrl" | "instagramUrl">;
 
 /** The group's website, Facebook and Instagram, as round icon links. Nothing when none are set. */
-export default function GroupLinks({ group }: { group: Links }) {
+export default function GroupLinks({ group, className = "mt-3" }: { group: Links; className?: string }) {
   const links = [
     { href: group.websiteUrl, label: "Website", icon: <GlobeIcon /> },
     { href: group.facebookUrl, label: "Facebook", icon: <FacebookIcon /> },
@@ -12,7 +12,7 @@ export default function GroupLinks({ group }: { group: Links }) {
   if (links.length === 0) return null;
 
   return (
-    <ul className="mt-3 flex flex-wrap gap-2" aria-label={`${group.name} online`}>
+    <ul className={`flex flex-wrap gap-2 ${className}`} aria-label={`${group.name} online`}>
       {links.map((l) => (
         <li key={l.label}>
           <a

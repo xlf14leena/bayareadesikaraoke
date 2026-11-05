@@ -48,10 +48,14 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
     <div className="space-y-6">
       <Banner {...bannerFor(group.bannerUrl)} />
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: group.name }]} />
+      {/* Name on the left and the website / Facebook / Instagram icons on the right, across the
+          same width as the event cards below. */}
       <header className="!mt-3">
-        <h1 className="font-display text-3xl text-royal sm:text-4xl">{group.name}</h1>
-        {group.description && <p className="mt-1 whitespace-pre-line text-ink-muted">{group.description}</p>}
-        <GroupLinks group={group} />
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h1 className="font-display text-3xl text-royal sm:text-4xl">{group.name}</h1>
+          <GroupLinks group={group} className="shrink-0" />
+        </div>
+        {group.description && <p className="mt-2 whitespace-pre-line text-ink-muted">{group.description}</p>}
       </header>
       <section>
         <h2 className="mb-4 text-xl font-semibold">Upcoming karaoke nights</h2>
