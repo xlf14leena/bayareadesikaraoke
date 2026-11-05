@@ -1,26 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Breadcrumbs from "@/app/admin/Breadcrumbs";
-import { cancelDate, deleteDate, restoreDate, setDateArchived, setSignupsOpen, updateDate } from "@/app/admin/actions";
+import { cancelDate, deleteDate, restoreDate, setDateArchived, setSignupsOpen } from "@/app/admin/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
-import DateForm from "@/components/admin/DateForm";
+import MoreMenu, { menuDangerItem, menuItem } from "@/components/admin/MoreMenu";
+import SidePanel, { OpenPanelButton } from "@/components/admin/SidePanel";
+import SignUpFilter, { type FilterGroup } from "@/components/admin/SignUpFilter";
 import { approvePayment, addPerson, cancelSignUp, rejectPayment, rejectSong } from "@/app/admin/signup-actions";
 import AddPersonForm from "@/components/admin/AddPersonForm";
 import CheckInPanel from "@/components/checkin/CheckInPanel";
 import RunningOrder from "@/components/checkin/RunningOrder";
-import { CAN_CHECK_IN } from "@/lib/checkin";
-import { type RoundConfig, parseRounds, roundNumbers, roundsFor } from "@/lib/rounds";
+import { openCheckIn } from "@/app/admin/checkin-actions";
+import { CAN_CHECK_IN, canOpenCheckIn, checkInIsOpen, checkInOpensAt } from "@/lib/checkin";
+import { type RoundConfig, roundNumbers, roundsFor } from "@/lib/rounds";
 import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
-import { bannerFor } from "@/lib/banner";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { settle } from "@/lib/signups";
 import { looksAlike } from "@/lib/song-match";
 import { feedbackOpen, feedbackSummary } from "@/lib/feedback";
-import { pacificDateOf, pacificTimeOf } from "@/lib/schedule";
+import { pacificTimeOf } from "@/lib/schedule";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
 
@@ -92,8 +94,73 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   const feedback = await feedbackSummary(date.id);
   const isPast = date.endsAt < new Date();
 
+  const now = new Date();
+  const checkInOpen = checkInIsOpen(date, now);
+  const checkInReady = canOpenCheckIn(date, now);
+  const checkedIn = date.signUps.filter((s) => s.checkedInAt && CAN_CHECK_IN.includes(s.status)).length;
+  const showCheckIn = checkInOpen || checkInReady || checkedIn > 0;
+  const scheduled = date.status === "SCHEDULED";
+  const settingsHref = `/admin/dates/${date.id}/settings`;
+  const row = (s: Row) => ({
+    id: s.id,
+    name: s.displayName,
+    node: <SignUpRow s={s} rounds={rounds} nearMatches={nearMatches} />,
+  });
+  const groups: FilterGroup[] = [
+    { key: "review", label: "Needs review", empty: "No payments waiting for review.", alert: true, rows: review.map(row) },
+    { key: "awaiting", label: "Waiting to pay", empty: "Nobody is waiting to pay.", rows: awaiting.map(row) },
+    { key: "confirmed", label: "Confirmed", empty: "Nobody is confirmed yet.", rows: confirmed.map(row) },
+    { key: "waitlist", label: "Waitlist", empty: "Nobody is on the waitlist.", rows: waitlist.map(row) },
+    { key: "ended", label: "Expired or cancelled", empty: "No expired or cancelled sign-ups.", rows: ended.map(row) },
+  ];
+  // Start on the first list that needs the admin, else the confirmed list.
+  const firstChip = groups.find((g) => ["review", "awaiting", "waitlist"].includes(g.key) && g.rows.length > 0)?.key ?? "confirmed";
+
+  // Less-used actions, in the "⋯" menu.
+  const more = (
+    <>
+      {feedbackOpen(date) && (
+        <Link href={`/admin/dates/${date.id}/feedback`} className={menuItem}>
+          Feedback{feedback.count > 0 && ` (${feedback.count})`}
+        </Link>
+      )}
+      <Link href={`/admin/events/${series.id}`} className={menuItem}>
+        Event template
+      </Link>
+      {isPast && scheduled && !date.archivedAt && (
+        <form action={setDateArchived.bind(null, date.id, true)}>
+          <button type="submit" className={menuItem}>
+            Archive date
+          </button>
+        </form>
+      )}
+      <hr className="my-1 border-line" />
+      {scheduled && (
+        <ConfirmButton
+          action={cancelDate.bind(null, date.id)}
+          label="Cancel date…"
+          className={menuDangerItem}
+          confirm={`Cancel ${formatEventDate(date.startsAt)} and every sign-up for it? It's hidden from the home page. Refunds happen outside the app. You can restore the date later, but not the sign-ups.`}
+        />
+      )}
+      <ConfirmButton
+        action={deleteDate.bind(null, date.id)}
+        label="Delete date…"
+        className={menuDangerItem}
+        confirm={`Delete ${formatEventDate(date.startsAt)} and cancel every sign-up for it? It's removed from the site and won't come back. This can't be undone.`}
+      />
+    </>
+  );
+  const dots = (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
+    </svg>
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <div>
         <Breadcrumbs
           items={[
@@ -121,40 +188,98 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
               </p>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {feedbackOpen(date) && (
-              <Link href={`/admin/dates/${date.id}/feedback`} className={secondaryButton}>
-                Feedback{feedback.count > 0 && ` (${feedback.count})`}
-              </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {scheduled && (
+              <OpenPanelButton panel="add-person" className={`${primaryButton} max-sm:hidden`}>
+                <Icon d={ADD_PERSON} />
+                Add someone
+              </OpenPanelButton>
             )}
+            <Link href={settingsHref} className={`${secondaryButton} max-sm:hidden`}>
+              <Icon d={GEAR} />
+              Settings
+            </Link>
             <Link href={viewHref} className={secondaryButton}>
+              <Icon d={EYE} />
               View event page
             </Link>
+            <div className="max-sm:hidden">
+              <MoreMenu trigger={<span className={`${secondaryButton} !px-2.5`} aria-label="More actions">{dots}</span>}>
+                {more}
+              </MoreMenu>
+            </div>
           </div>
         </div>
       </div>
 
-      {date.status === "SCHEDULED" && (
-        <section className={`${cardClass} flex flex-wrap items-center justify-between gap-3`}>
+      {date.status === "CANCELLED" && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
           <div>
-            <h2 className="text-xl font-semibold">
-              {date.signupsOpen ? "Sign-ups are open" : "Sign-ups are not open yet"}
-            </h2>
-            <p className="text-sm text-ink-muted">
-              {date.signupsOpen
-                ? "The event page tells people they can sign up for this date."
-                : "Open sign-ups when you're ready for people to sign up for this date."}
+            <h2 className="font-semibold text-red-800">This date is cancelled</h2>
+            <p className="text-sm text-red-800/80">
+              It&apos;s hidden from the event page and home page. Restoring puts it back; cancelled sign-ups stay cancelled.
             </p>
           </div>
-          <form action={setSignupsOpen.bind(null, date.id, !date.signupsOpen)}>
-            <button type="submit" className={date.signupsOpen ? secondaryButton : primaryButton}>
-              {date.signupsOpen ? "Close sign-ups" : "Open sign-ups"}
+          <ConfirmButton action={restoreDate.bind(null, date.id)} label="Restore date" danger={false} confirm="Restore this date?" />
+        </section>
+      )}
+
+      {date.archivedAt && (
+        <section id="archived" className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white p-4">
+          <div>
+            <h2 className="font-semibold">This date is archived</h2>
+            <p className="text-sm text-ink-muted">
+              Archived {formatDateTime(date.archivedAt)}. It&apos;s hidden from past karaoke nights on the group page; the
+              event page and its sign-ups stay.
+            </p>
+          </div>
+          <form action={setDateArchived.bind(null, date.id, false)}>
+            <button type="submit" className={secondaryButton}>
+              Unarchive
             </button>
           </form>
         </section>
       )}
 
-      <CheckInPanel date={date} signUps={date.signUps} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {scheduled && (
+          <Tile label="Sign-ups" dot={date.signupsOpen ? "bg-emerald-500" : "bg-line"} value={date.signupsOpen ? "Open" : "Not open yet"}>
+            <form action={setSignupsOpen.bind(null, date.id, !date.signupsOpen)} className="mt-3">
+              <button type="submit" className={`${date.signupsOpen ? secondaryButton : primaryButton} ${small}`}>
+                {date.signupsOpen ? "Close sign-ups" : "Open sign-ups"}
+              </button>
+            </form>
+          </Tile>
+        )}
+        {scheduled && (
+          <Tile
+            label="Check-in"
+            dot={checkInOpen ? "bg-emerald-500" : "bg-line"}
+            value={checkInOpen ? `Open · ${checkedIn} here` : isPast ? "Ended" : checkInReady ? "Ready to open" : "Not yet"}
+            sub={!checkInOpen && !checkInReady && !isPast ? `Opens ${formatDateTime(checkInOpensAt(date))}` : undefined}
+          >
+            {checkInOpen ? (
+              <Link href={`/admin/dates/${date.id}/checkin`} target="_blank" className={`${primaryButton} ${small} mt-3`}>
+                Show check-in screen
+              </Link>
+            ) : checkInReady ? (
+              <form action={openCheckIn.bind(null, date.id)} className="mt-3">
+                <button type="submit" className={`${primaryButton} ${small}`}>
+                  Open check-in
+                </button>
+              </form>
+            ) : null}
+          </Tile>
+        )}
+        <Tile label="Singers" value={spotsLabel(held("SINGER"), settings.maxSingers)} sub={spotsLeft(held("SINGER"), settings.maxSingers)}>
+          <Meter taken={held("SINGER")} cap={settings.maxSingers} />
+        </Tile>
+        <Tile label="Listeners" value={spotsLabel(held("LISTENER"), settings.maxListeners)} sub={spotsLeft(held("LISTENER"), settings.maxListeners)}>
+          <Meter taken={held("LISTENER")} cap={settings.maxListeners} />
+        </Tile>
+      </div>
+
+      {showCheckIn && <CheckInPanel date={date} signUps={date.signUps} />}
 
       {(slotRows.length > 0 || arrivedSingers.length > 0) && (
         <RunningOrder
@@ -165,54 +290,22 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         />
       )}
 
-      <section className={`${cardClass} space-y-4`}>
+      <section id="sign-ups" className={`${cardClass} space-y-4`}>
         <div>
           <h2 className="mb-1 text-xl font-semibold">Sign-ups</h2>
           <p className="text-sm text-ink-muted">
-            Singers {spotsLabel(held("SINGER"), settings.maxSingers)} · Listeners{" "}
-            {spotsLabel(held("LISTENER"), settings.maxListeners)} (counting held spots). Match each screenshot&apos;s
-            memo code and amount in your bank app before approving.
+            Spots count held sign-ups. Match each screenshot&apos;s memo code and amount in your bank app before approving.
           </p>
         </div>
-
-        <SignUpGroup
-          title="Needs review"
-          empty="No payments waiting for review."
-          list={review}
-          rounds={rounds}
-          nearMatches={nearMatches}
-          defaultOpen
-        />
-        <SignUpGroup
-          title="Waiting for payment"
-          empty="Nobody is waiting to pay."
-          list={awaiting}
-          rounds={rounds}
-          nearMatches={nearMatches}
-          defaultOpen
-        />
-        <SignUpGroup
-          title="Confirmed"
-          empty="Nobody is confirmed yet."
-          list={confirmed}
-          rounds={rounds}
-          nearMatches={nearMatches}
-          defaultOpen={review.length === 0 && awaiting.length === 0 && waitlist.length === 0}
-        />
-        {waitlist.length > 0 && (
-          <SignUpGroup title="Waitlist" empty="" list={waitlist} rounds={rounds} nearMatches={nearMatches} defaultOpen />
-        )}
-        {ended.length > 0 && (
-          <SignUpGroup title="Expired or cancelled" empty="" list={ended} rounds={rounds} nearMatches={nearMatches} />
-        )}
+        <SignUpFilter groups={groups} initial={firstChip} />
       </section>
 
-      {date.status === "SCHEDULED" && (
-        <section className={cardClass}>
-          <h2 className="mb-1 text-xl font-semibold">Add someone by hand</h2>
-          <p className="mb-4 text-sm text-ink-muted">
-            For people who paid in person or don&apos;t use the site. They&apos;re confirmed right away.
-          </p>
+      {scheduled && (
+        <SidePanel
+          id="add-person"
+          title="Add someone by hand"
+          note="For people who paid in person or don't use the site. They're confirmed right away."
+        >
           <AddPersonForm
             action={addPerson.bind(null, date.id)}
             rounds={rounds}
@@ -220,96 +313,94 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
               .filter((s) => s.role === "SINGER" && HOLDS_SPOT.includes(s.status))
               .map((s) => ({ id: s.id, name: s.displayName }))}
           />
-        </section>
+        </SidePanel>
       )}
 
-      <section id="date-settings" className={`${cardClass} scroll-mt-4`}>
-        <h2 className="mb-1 text-xl font-semibold">Settings for this date</h2>
-        <p className="mb-4 text-sm text-ink-muted">
-          This date uses the event template settings. Tick &ldquo;Change for this date&rdquo; to override one for this date
-          only; later changes to the event template won&apos;t touch it.
-        </p>
-        <DateForm
-          action={updateDate.bind(null, date.id)}
-          date={date}
-          template={{
-            description: series.description,
-            singerPriceCents: series.singerPriceCents,
-            listenerPriceCents: series.listenerPriceCents,
-            maxSingers: series.maxSingers,
-            maxListeners: series.maxListeners,
-          }}
-          rounds={rounds}
-          templateRounds={parseRounds(series.rounds)}
-          templateBanner={bannerFor(series.bannerUrl, series.group.bannerUrl)}
-          templateZelle={{ name: series.zelleName, handle: series.zelleHandle }}
-          when={{
-            day: pacificDateOf(date.startsAt),
-            startTime: pacificTimeOf(date.startsAt),
-            endTime: pacificTimeOf(date.endsAt),
-          }}
-        />
-      </section>
+      {/* On a phone the main actions sit in a bar at the bottom of the screen. */}
+      <nav aria-label="Date actions" className="sticky bottom-0 z-20 -mx-4 border-t border-line bg-white sm:hidden">
+        <ul className="grid grid-cols-4 text-xs text-ink-muted">
+          <li>
+            {scheduled ? (
+              <OpenPanelButton panel="add-person" className={barItem}>
+                <Icon d={ADD_PERSON} className="h-5 w-5" />
+                Add someone
+              </OpenPanelButton>
+            ) : (
+              <a href="#sign-ups" className={barItem}>
+                <Icon d={PEOPLE} className="h-5 w-5" />
+                Sign-ups
+              </a>
+            )}
+          </li>
+          <li>
+            <a href={showCheckIn ? "#check-in" : "#"} aria-disabled={!showCheckIn} className={`${barItem} ${showCheckIn ? "" : "pointer-events-none opacity-40"}`}>
+              <Icon d={QR} className="h-5 w-5" />
+              Check-in
+            </a>
+          </li>
+          <li>
+            <Link href={settingsHref} className={barItem}>
+              <Icon d={GEAR} className="h-5 w-5" />
+              Settings
+            </Link>
+          </li>
+          <li>
+            <MoreMenu up trigger={<span className={barItem}>{dots}More</span>}>
+              {more}
+            </MoreMenu>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  );
+}
 
-      {isPast && date.status === "SCHEDULED" && (
-        <section id="archive" className={`${cardClass} flex scroll-mt-4 flex-wrap items-center justify-between gap-3`}>
-          <div>
-            <h2 className="text-xl font-semibold">{date.archivedAt ? "This date is archived" : "Archive this date"}</h2>
-            <p className="text-sm text-ink-muted">
-              {date.archivedAt
-                ? `Archived ${formatDateTime(date.archivedAt)}. It's hidden from past karaoke nights on the group page; the event page and its sign-ups stay.`
-                : "Hides it from past karaoke nights on the group page. The event page and its sign-ups stay, and you can unarchive it any time."}
-            </p>
-          </div>
-          <form action={setDateArchived.bind(null, date.id, !date.archivedAt)}>
-            <button type="submit" className={secondaryButton}>
-              {date.archivedAt ? "Unarchive" : "Archive"}
-            </button>
-          </form>
-        </section>
-      )}
+const small = "!px-3 !py-1 !text-[13px]";
+const barItem = "flex w-full cursor-pointer flex-col items-center gap-0.5 py-2 hover:text-royal";
 
-      <section className="rounded-xl border border-red-200 bg-white p-4 sm:p-6">
-        {date.status === "CANCELLED" ? (
-          <>
-            <h2 className="mb-1 text-xl font-semibold">Restore this date</h2>
-            <p className="mb-4 text-sm text-ink-muted">
-              Puts it back on the event page and home page. Cancelled sign-ups stay cancelled.
-            </p>
-            <ConfirmButton
-              action={restoreDate.bind(null, date.id)}
-              label="Restore date"
-              danger={false}
-              confirm="Restore this date?"
-            />
-          </>
-        ) : (
-          <>
-            <h2 className="mb-1 text-xl font-semibold">Cancel this date</h2>
-            <p className="mb-4 text-sm text-ink-muted">
-              Hides it from the home page and cancels every sign-up. Refunds happen outside the app.
-            </p>
-            <ConfirmButton
-              action={cancelDate.bind(null, date.id)}
-              label="Cancel date"
-              confirm={`Cancel ${formatEventDate(date.startsAt)} and every sign-up for it?`}
-            />
-          </>
-        )}
-      </section>
+const ADD_PERSON = "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M22 11h-6";
+const PEOPLE = "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75";
+const QR = "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14v2";
+const EYE = "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z";
+const GEAR =
+  "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z";
 
-      <section className="rounded-xl border border-red-200 bg-white p-4 sm:p-6">
-        <h2 className="mb-1 text-xl font-semibold">Delete this date</h2>
-        <p className="mb-4 text-sm text-ink-muted">
-          Removes it from the site completely and cancels every sign-up. The other dates of this event stay, and
-          this one won&apos;t come back.
-        </p>
-        <ConfirmButton
-          action={deleteDate.bind(null, date.id)}
-          label="Delete date"
-          confirm={`Delete ${formatEventDate(date.startsAt)} and cancel every sign-up for it? This can't be undone.`}
-        />
-      </section>
+function Icon({ d, className = "h-4 w-4" }: { d: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** A status tile at the top of the page: a small label, the value, and an optional action. */
+function Tile({ label, value, sub, dot, children }: { label: string; value: string; sub?: string; dot?: string; children?: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-line bg-white p-3 sm:p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">{label}</p>
+      <p className="mt-1 text-lg font-semibold">
+        {dot && <span aria-hidden className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${dot}`} />}
+        {value}
+      </p>
+      {sub && <p className="text-sm text-ink-muted">{sub}</p>}
+      {children}
+    </div>
+  );
+}
+
+function spotsLeft(taken: number, cap: number | null): string {
+  if (cap == null) return "No limit";
+  const left = cap - taken;
+  return left > 0 ? `${left} ${left === 1 ? "spot" : "spots"} left` : left === 0 ? "Full" : `${-left} over the cap`;
+}
+
+/** How full a role is, as a thin bar. */
+function Meter({ taken, cap }: { taken: number; cap: number | null }) {
+  if (cap == null || cap <= 0) return null;
+  const pct = Math.min(100, Math.round((taken / cap) * 100));
+  return (
+    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-mist" aria-hidden>
+      <div className={`h-full rounded-full ${taken >= cap ? "bg-gold" : "bg-lapis"}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -335,53 +426,13 @@ function possibleDuplicates(signUps: { displayName: string; songs: Song[] }[]): 
   return out;
 }
 
-function SignUpGroup({
-  title,
-  empty,
-  list,
-  rounds,
-  nearMatches,
-  defaultOpen = false,
-}: {
-  title: string;
-  empty: string;
-  list: Row[];
-  rounds: RoundConfig[];
-  nearMatches: NearMatches;
-  defaultOpen?: boolean;
-}) {
-  return (
-    <details open={defaultOpen} className="group">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg bg-mist px-3 py-2 font-semibold text-royal [&::-webkit-details-marker]:hidden">
-        <span>
-          {title} <span className="font-normal text-ink-muted">({list.length})</span>
-        </span>
-        <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">
-          ▾
-        </span>
-      </summary>
-      <div className="mt-3">
-        {list.length === 0 ? (
-          <p className="text-sm text-ink-muted">{empty}</p>
-        ) : (
-          <ul className="space-y-3">
-            {list.map((s) => (
-              <SignUpRow key={s.id} s={s} rounds={rounds} nearMatches={nearMatches} />
-            ))}
-          </ul>
-        )}
-      </div>
-    </details>
-  );
-}
-
 function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; nearMatches: NearMatches }) {
   const active = s.songs.filter((x) => x.status === "ACTIVE");
   const rejected = s.songs.filter((x) => x.status === "REJECTED");
   const shot = s.screenshot ? `/api/screenshots/${s.id}` : null;
   const showsImage = shot && !/hei[cf]/.test(s.screenshot!.contentType);
   return (
-    <li className="rounded-lg border border-line p-3">
+    <div className="rounded-lg border border-line p-3">
       <div className="flex flex-wrap gap-4">
         {shot && (
           <a href={shot} target="_blank" rel="noopener noreferrer" className="shrink-0">
@@ -486,6 +537,6 @@ function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; 
           </div>
         </div>
       </div>
-    </li>
+    </div>
   );
 }

@@ -35,9 +35,9 @@ export default function RunningOrder({
         <h2 className="mb-1 text-xl font-semibold">Running order</h2>
         <p className="text-sm text-ink-muted">
           Singers get a slot in each round after they check in. Change the rounds and how slots work in{" "}
-          <a href="#date-settings" className="text-cobalt hover:underline">
+          <Link href={`/admin/dates/${dateId}/settings`} className="text-cobalt hover:underline">
             this date&apos;s settings
-          </a>{" "}
+          </Link>{" "}
           or the{" "}
           <Link href={`/admin/events/${seriesId}`} className="text-cobalt hover:underline">
             event template settings

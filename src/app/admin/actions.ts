@@ -377,6 +377,7 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
   }, "This event already has a date starting at that time.");
   if (result) return result;
   revalidatePath(`/admin/dates/${dateId}`);
+  revalidatePath(`/admin/dates/${dateId}/settings`);
   return { ok: "Saved." };
 }
 

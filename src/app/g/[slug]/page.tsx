@@ -89,7 +89,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
                     <span>
                       {d.series.title} · {formatEventDate(d.startsAt)}
                     </span>
-                    <Link href={`/admin/dates/${d.id}#archive`} className={secondaryButton}>
+                    <Link href={`/admin/dates/${d.id}#archived`} className={secondaryButton}>
                       Unarchive
                     </Link>
                   </li>
