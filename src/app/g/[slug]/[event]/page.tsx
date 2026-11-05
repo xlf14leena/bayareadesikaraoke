@@ -18,7 +18,8 @@ import PublicRunningOrder from "@/components/checkin/PublicRunningOrder";
 import EventComments from "@/components/comments/EventComments";
 import FeedbackPrompt from "@/components/feedback/FeedbackPrompt";
 import { ROUND_KIND_LABEL, roundNumbers, roundsFor } from "@/lib/rounds";
-import { singerRounds } from "@/lib/slots";
+import { paidAt, singerRounds } from "@/lib/slots";
+import WhosSinging from "@/components/signup/WhosSinging";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
 import { zelleFor } from "@/lib/events";
@@ -130,17 +131,31 @@ export default async function EventPage({ params, searchParams }: Props) {
       ])
     : [[], []];
   const taken = (role: "SINGER" | "LISTENER") => held.find((h) => h.role === role)?._count ?? 0;
-  const confirmedListeners = viewer
-    ? await prisma.signUp.count({ where: { eventDateId: date.id, role: "LISTENER", status: "CONFIRMED" } })
-    : 0;
-  // Every confirmed singer belongs on the list, even before they pick a song.
-  const confirmedSingers = viewer
+  // Everyone confirmed or waiting is listed: singers and listeners in payment order, the waitlist in its order.
+  const people = viewer
     ? await prisma.signUp.findMany({
-        where: { eventDateId: date.id, role: "SINGER", status: "CONFIRMED" },
-        orderBy: { displayName: "asc" },
-        select: { id: true, displayName: true },
+        where: { eventDateId: date.id, status: { in: ["CONFIRMED", "WAITLISTED"] } },
+        select: {
+          id: true,
+          displayName: true,
+          role: true,
+          status: true,
+          registeredAt: true,
+          reviewedAt: true,
+          waitlistedAt: true,
+          screenshot: { select: { uploadedAt: true } },
+        },
       })
     : [];
+  const byPayment = (a: (typeof people)[number], b: (typeof people)[number]) =>
+    paidAt(a) - paidAt(b) || a.registeredAt.getTime() - b.registeredAt.getTime();
+  const confirmedSingers = people.filter((p) => p.role === "SINGER" && p.status === "CONFIRMED").sort(byPayment);
+  const listeners = people.filter((p) => p.role === "LISTENER" && p.status === "CONFIRMED").sort(byPayment);
+  const waitTime = (p: (typeof people)[number]) => (p.waitlistedAt ?? p.registeredAt).getTime();
+  const waitlisted = people
+    .filter((p) => p.status === "WAITLISTED")
+    .sort((a, b) => waitTime(a) - waitTime(b))
+    .map((p, i) => ({ id: p.id, name: p.displayName, role: p.role, place: i + 1 }));
 
   const myRounds =
     myActive?.checkedInAt && myActive.role === "SINGER" && CAN_CHECK_IN.includes(myActive.status) && date.endsAt > new Date()
@@ -155,13 +170,28 @@ export default async function EventPage({ params, searchParams }: Props) {
   const toReview = isAdmin
     ? await prisma.signUp.count({ where: { eventDateId: date.id, status: "UNDER_REVIEW" } })
     : 0;
-  // Songs are listed by the round they were picked for, even one a past date no longer has.
-  const rounds = [...new Set([...roundNumbers(roundConfig), ...singers.map((s) => s.round)])]
+  // A column per round, plus any round a past date no longer has but a song was picked for.
+  const lineupRounds = [...new Set([...roundNumbers(roundConfig), ...singers.map((s) => s.round)])]
     .sort((a, b) => a - b)
-    .map((r) => singers.filter((s) => s.round === r))
-    .filter((list) => list.length > 0);
-  const withSongs = new Set(singers.map((s) => s.signUpId));
-  const noSongYet = confirmedSingers.filter((s) => !withSongs.has(s.id));
+    .map((round) => ({ round, config: roundConfig[round - 1] ?? null }));
+  const lineupSingers = confirmedSingers.map((p) => ({
+    id: p.id,
+    name: p.displayName,
+    songs: new Map(
+      singers
+        .filter((s) => s.signUpId === p.id)
+        .map((s) => [
+          s.round,
+          {
+            title: s.title,
+            artist: s.artist,
+            youtubeUrl: s.youtubeUrl,
+            duet: s.duet,
+            duetWith: s.duetPartner && HOLDS_SPOT.includes(s.duetPartner.status) ? s.duetPartner.displayName : null,
+          },
+        ]),
+    ),
+  }));
   // The running order: checked-in singers by slot, with their song for that round.
   const orderSlots = viewer
     ? await prisma.roundSlot.findMany({
@@ -195,7 +225,7 @@ export default async function EventPage({ params, searchParams }: Props) {
     song: r.signUp.songs.find((s) => s.round === r.round) ?? null,
   }));
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
-  const showLineup = date.signupsOpen || rounds.length > 0 || noSongYet.length > 0 || confirmedListeners > 0;
+  const showLineup = date.signupsOpen || people.length > 0;
   const showSlots = !!myRounds && !cancelled;
   const showMine = !!myActive && !cancelled;
   // Not signed up yet: the Your sign-up section holds the sign-up form (or why you can't sign up).
@@ -441,74 +471,12 @@ export default async function EventPage({ params, searchParams }: Props) {
               </Link>{" "}
               to see who has signed up and the songs they picked.
             </p>
-          ) : rounds.length === 0 && noSongYet.length === 0 ? (
+          ) : people.length === 0 ? (
             <p className="text-ink-muted">
-              No confirmed singers yet. Singers show here once the organizers approve their payment.
+              No one is confirmed yet. People show here once the organizers approve their payment.
             </p>
           ) : (
-            <div className="space-y-4">
-              {rounds.map((list) => (
-                <div key={list[0].round}>
-                  {(rounds.length > 1 || roundConfig.length > 1) && (
-                    <h3 className="mb-1 font-semibold text-royal">
-                      Round {list[0].round}
-                      {roundConfig[list[0].round - 1]?.kind !== "EITHER" && roundConfig[list[0].round - 1] && (
-                        <span className="ml-2 text-sm font-normal text-ink-muted">
-                          {ROUND_KIND_LABEL[roundConfig[list[0].round - 1].kind]}
-                        </span>
-                      )}
-                      {roundConfig[list[0].round - 1]?.theme && (
-                        <span className="ml-2 text-sm font-normal text-lapis">· {roundConfig[list[0].round - 1].theme}</span>
-                      )}
-                    </h3>
-                  )}
-                  <ol className="list-decimal space-y-1 pl-5">
-                    {list.map((s) => (
-                      <li key={s.id}>
-                        <span className="font-medium">{s.signUp.displayName}</span>
-                        <span className="text-ink-muted">
-                          {" "}
-                          · {s.title}
-                          {s.artist && ` (${s.artist})`}
-                          {s.duet &&
-                            (s.duetPartner && HOLDS_SPOT.includes(s.duetPartner.status)
-                              ? ` · duet with ${s.duetPartner.displayName}`
-                              : " · duet")}
-                        </span>
-                        {s.youtubeUrl && (
-                          <a
-                            href={s.youtubeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 text-sm text-cobalt hover:underline"
-                          >
-                            Track
-                          </a>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-              {noSongYet.length > 0 && (
-                <div>
-                  {rounds.length > 0 && <h3 className="mb-1 font-semibold text-royal">Song not picked yet</h3>}
-                  <ul className="space-y-1">
-                    {noSongYet.map((s) => (
-                      <li key={s.id}>
-                        <span className="font-medium">{s.displayName}</span>
-                        {rounds.length === 0 && <span className="text-ink-muted"> · song not picked yet</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-          {viewer && (
-            <p className="mt-4 text-sm text-ink-muted">
-              {confirmedListeners} {confirmedListeners === 1 ? "listener" : "listeners"} coming.
-            </p>
+            <WhosSinging rounds={lineupRounds} singers={lineupSingers} waitlisted={waitlisted} listeners={listeners.map((p) => ({ id: p.id, name: p.displayName }))} />
           )}
         </section>
       )}
