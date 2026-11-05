@@ -3,6 +3,7 @@
 import type { Group } from "@prisma/client";
 import BannerField from "@/components/admin/BannerField";
 import Field from "@/components/admin/Field";
+import FormSection from "@/components/admin/FormSection";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
@@ -34,8 +35,7 @@ export default function GroupForm({ action, group }: { action: Action; group?: G
         current={group?.bannerUrl ?? null}
         hint="Shown on the group page and used for events that have no banner of their own. Without one, the default singing photo is used."
       />
-      <fieldset className="space-y-2">
-        <legend className="mb-2 font-semibold text-royal">Links (optional)</legend>
+      <FormSection title="Links" note="optional">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Website">
             <input name="websiteUrl" inputMode="url" defaultValue={group?.websiteUrl ?? ""} placeholder="https://..." className={inputClass} />
@@ -48,7 +48,7 @@ export default function GroupForm({ action, group }: { action: Action; group?: G
           </Field>
         </div>
         <p className="text-xs text-ink-muted">Shown as icon links under the group name on the group page.</p>
-      </fieldset>
+      </FormSection>
       {!group && (
         <Field
           label="Group admins (optional)"
