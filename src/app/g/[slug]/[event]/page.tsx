@@ -7,7 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { primaryButton, secondaryButton } from "@/components/ui";
 import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
-import { ENDED, acceptingSignUps, settle, stillEditable } from "@/lib/signups";
+import { ENDED, acceptingSignUps, appearancesByRound, settle, stillEditable } from "@/lib/signups";
 import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
 import { pacificTimeOf } from "@/lib/schedule";
 import SignUpForm from "@/components/signup/SignUpForm";
@@ -116,7 +116,7 @@ export default async function EventPage({ params, searchParams }: Props) {
       : Promise.resolve([]),
   ]);
   // Duet partners: other singers holding a spot on this date, and duets that name me.
-  const [partnerSignUps, invites] = myActive
+  const [partnerSignUps, invites, appearances] = myActive
     ? await Promise.all([
         prisma.signUp.findMany({
           where: { eventDateId: date.id, role: "SINGER", status: { in: HOLDS_SPOT }, id: { not: myActive.id } },
@@ -124,12 +124,21 @@ export default async function EventPage({ params, searchParams }: Props) {
           select: { id: true, displayName: true },
         }),
         prisma.song.findMany({
-          where: { duetPartnerId: myActive.id, status: "ACTIVE", signUp: { status: { in: HOLDS_SPOT } } },
+          where: {
+            duetPartnerId: myActive.id,
+            duetStatus: { not: "DECLINED" },
+            status: "ACTIVE",
+            signUp: { status: { in: HOLDS_SPOT } },
+          },
           orderBy: { round: "asc" },
-          select: { round: true, title: true, signUp: { select: { displayName: true } } },
+          select: { id: true, round: true, title: true, duetStatus: true, signUp: { select: { displayName: true } } },
         }),
+        // Only needed when a round limits how many times each singer sings.
+        roundConfig.some((r) => r.maxAppearances != null)
+          ? appearancesByRound(prisma, date.id, roundConfig.length, myActive.id)
+          : undefined,
       ])
-    : [[], []];
+    : [[], [], undefined];
   const taken = (role: "SINGER" | "LISTENER") => held.find((h) => h.role === role)?._count ?? 0;
   // Everyone confirmed or waiting is listed: singers and listeners in payment order, the waitlist in its order.
   const people = viewer
@@ -187,7 +196,10 @@ export default async function EventPage({ params, searchParams }: Props) {
             artist: s.artist,
             youtubeUrl: s.youtubeUrl,
             duet: s.duet,
-            duetWith: s.duetPartner && HOLDS_SPOT.includes(s.duetPartner.status) ? s.duetPartner.displayName : null,
+            duetWith:
+              s.duetPartner && s.duetStatus === "ACCEPTED" && HOLDS_SPOT.includes(s.duetPartner.status)
+                ? s.duetPartner.displayName
+                : null,
           },
         ]),
     ),
@@ -209,6 +221,7 @@ export default async function EventPage({ params, searchParams }: Props) {
                   artist: true,
                   youtubeUrl: true,
                   duet: true,
+                  duetStatus: true,
                   duetPartner: { select: { displayName: true, status: true } },
                 },
               },
@@ -222,7 +235,11 @@ export default async function EventPage({ params, searchParams }: Props) {
     slot: r.slot,
     signUpId: r.signUpId,
     name: r.signUp.displayName,
-    song: r.signUp.songs.find((s) => s.round === r.round) ?? null,
+    // A duet partner shows only once they've accepted.
+    song: (() => {
+      const song = r.signUp.songs.find((s) => s.round === r.round);
+      return song ? { ...song, duetPartner: song.duetStatus === "ACCEPTED" ? song.duetPartner : null } : null;
+    })(),
   }));
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).
   const showLineup = date.signupsOpen || people.length > 0;
@@ -447,8 +464,15 @@ export default async function EventPage({ params, searchParams }: Props) {
           waitlistPosition={waitlistPosition}
           editable={stillEditable(date)}
           rounds={roundConfig}
+          appearances={appearances}
           partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName }))}
-          duetInvites={invites.map((i) => ({ round: i.round, title: i.title, singer: i.signUp.displayName }))}
+          duetInvites={invites.map((i) => ({
+            songId: i.id,
+            round: i.round,
+            title: i.title,
+            singer: i.signUp.displayName,
+            accepted: i.duetStatus === "ACCEPTED",
+          }))}
         />
       )}
 

@@ -19,7 +19,7 @@ import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
-import { settle } from "@/lib/signups";
+import { appearancesByRound, settle } from "@/lib/signups";
 import { looksAlike } from "@/lib/song-match";
 import { feedbackOpen, feedbackSummary } from "@/lib/feedback";
 import { pacificTimeOf } from "@/lib/schedule";
@@ -57,6 +57,9 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   const { series } = date;
   const settings = settingsFor(date, series);
   const rounds = roundsFor(date, series);
+  const appearances = rounds.some((r) => r.maxAppearances != null)
+    ? await appearancesByRound(prisma, date.id, rounds.length)
+    : undefined;
   const by = (statuses: string[]) => date.signUps.filter((s) => statuses.includes(s.status));
   const review = by(["UNDER_REVIEW"]).sort(
     (a, b) => (a.screenshot?.uploadedAt.getTime() ?? 0) - (b.screenshot?.uploadedAt.getTime() ?? 0),
@@ -309,6 +312,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           <AddPersonForm
             action={addPerson.bind(null, date.id)}
             rounds={rounds}
+            appearances={appearances}
             partners={date.signUps
               .filter((s) => s.role === "SINGER" && HOLDS_SPOT.includes(s.status))
               .map((s) => ({ id: s.id, name: s.displayName }))}
@@ -481,6 +485,8 @@ function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; 
                   Round {song.round}: <span className="font-medium">{song.title}</span>
                   {song.artist && ` (${song.artist})`}
                   {song.duet && (song.duetPartner ? ` · duet with ${song.duetPartner.displayName}` : " · duet")}
+                  {song.duetPartner && song.duetStatus === "PENDING" && " (not confirmed yet)"}
+                  {song.duetPartner && song.duetStatus === "DECLINED" && " (declined)"}
                   {song.youtubeUrl && (
                     <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-cobalt hover:underline">
                       Track

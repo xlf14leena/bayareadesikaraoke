@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { Prisma, type AttendeeRole, type EventDate, type EventSeries, type SignUpStatus } from "@prisma/client";
-import { type RoundConfig, type RoundKind, roundsFor } from "@/lib/rounds";
+import { Prisma, type AttendeeRole, type DuetStatus, type EventDate, type EventSeries, type SignUpStatus } from "@prisma/client";
+import { type RoundAppearances, type RoundConfig, type RoundKind, roundsFor, timesLabel } from "@/lib/rounds";
 import { fillCheckInOrderSlots } from "@/lib/slots";
 import { HOLDS_SPOT, settingsFor } from "@/lib/events";
 import { FormError } from "@/lib/forms";
@@ -224,18 +224,66 @@ export function songInput(form: FormData, round: number, kind: RoundKind = "EITH
 }
 
 /**
+ * The songs that count toward how often someone sings: active, from a sign-up that holds a spot.
+ * A partner who declined isn't singing it, so their id is dropped; a pending ask still counts,
+ * so accepting it can never go over the limit.
+ */
+async function appearanceSongs(db: Tx, dateId: string, round?: number) {
+  const songs = await db.song.findMany({
+    where: { eventDateId: dateId, round, status: "ACTIVE", signUp: { status: { in: HOLDS_SPOT } } },
+    select: { round: true, signUpId: true, duetPartnerId: true, duetStatus: true },
+  });
+  return songs.map((s) => ({ ...s, duetPartnerId: s.duetStatus === "DECLINED" ? null : s.duetPartnerId }));
+}
+
+/** How many times signUpId sings in a list of songs: their own songs plus the duets that name them. */
+function countAppearances(songs: { signUpId: string; duetPartnerId: string | null }[], signUpId: string) {
+  return songs.filter((s) => s.signUpId === signUpId || s.duetPartnerId === signUpId).length;
+}
+
+/**
+ * For each round of a date (round 1 first), how many times each sign-up sings in it: their own
+ * song plus the duets that name them as partner. Songs of `skipSongsOf` are left out, so a singer's
+ * form sees what the others have done without its own picks (which it is about to replace).
+ */
+export async function appearancesByRound(
+  db: Tx,
+  dateId: string,
+  roundCount: number,
+  skipSongsOf?: string,
+): Promise<RoundAppearances[]> {
+  const songs = (await appearanceSongs(db, dateId)).filter((s) => s.signUpId !== skipSongsOf);
+  return Array.from({ length: roundCount }, (_, i) => {
+    const counts: RoundAppearances = {};
+    for (const s of songs) {
+      if (s.round !== i + 1) continue;
+      counts[s.signUpId] = (counts[s.signUpId] ?? 0) + 1;
+      if (s.duetPartnerId) counts[s.duetPartnerId] = (counts[s.duetPartnerId] ?? 0) + 1;
+    }
+    return counts;
+  });
+}
+
+/**
  * Sets a sign-up's song for one round, first pick wins. The same song (same
  * song key or same YouTube video) is blocked; a close title (a typo, an extra
  * word) is refused with a nearMatch until the singer confirms it's a
  * different song. Changing the title
  * releases the old song and gives the new one a fresh song time; changing
  * only the artist, link or solo/duet keeps the song time. null clears the round.
+ * With maxAppearances (the round's "times per singer"), a singer who already sings that many
+ * times in the round as someone's duet partner can't add their own song, and a duet can't
+ * name a partner who already sings that many times. Songs saved before a limit was set or
+ * lowered stay; only new songs and new partners are checked.
+ * A named partner has to accept: duetStatus is PENDING until they accept or decline (respondToDuet
+ * on the event page), and a new partner or a new title asks them again.
  */
 export async function setSong(
   tx: Tx,
   signUp: { id: string; eventDateId: string },
   round: number,
   input: SongInput | null,
+  maxAppearances: number | null = null,
 ) {
   const current = await tx.song.findFirst({ where: { signUpId: signUp.id, round, status: "ACTIVE" } });
   if (!input) {
@@ -257,6 +305,30 @@ export async function setSong(
       !HOLDS_SPOT.includes(partner.status)
     ) {
       throw new FormError(`Pick a duet partner for round ${round} from the singers signed up for this date.`);
+    }
+  }
+  if (maxAppearances != null) {
+    // Everyone else's songs in this round; this sign-up's own song is the one being set.
+    const roundSongs = (await appearanceSongs(tx, signUp.eventDateId, round)).filter((s) => s.signUpId !== signUp.id);
+    const mine = countAppearances(roundSongs, signUp.id);
+    if (!current && mine >= maxAppearances) {
+      throw new FormError(
+        `Round ${round}: you're already singing ${timesLabel(mine)} in this round as a duet partner, ` +
+          `the most allowed. Leave your own round ${round} song blank.`,
+      );
+    }
+    // A partner already on this song (and not declined) is kept even if the limit was lowered since.
+    const keptPartner =
+      !!current && current.duetPartnerId === input.duetPartnerId && current.duetStatus !== "DECLINED";
+    if (input.duetPartnerId && !keptPartner) {
+      const partnerCount = countAppearances(roundSongs, input.duetPartnerId);
+      if (partnerCount >= maxAppearances) {
+        const partner = await tx.signUp.findUnique({ where: { id: input.duetPartnerId }, select: { displayName: true } });
+        throw new FormError(
+          `Round ${round}: ${partner?.displayName ?? "That singer"} is already singing ${timesLabel(partnerCount)} ` +
+            `in this round, the most allowed. Pick another partner or leave it as "Not picked yet".`,
+        );
+      }
     }
   }
   const normalizedTitle = songKey(input.title);
@@ -294,6 +366,13 @@ export async function setSong(
     }
   }
 
+  // The partner is asked again when they're new or the song is new; otherwise their answer stands.
+  const duetStatus: DuetStatus | null = !input.duetPartnerId
+    ? null
+    : sameSong && current.duetPartnerId === input.duetPartnerId && current.duetStatus
+      ? current.duetStatus
+      : "PENDING";
+
   try {
     if (sameSong) {
       await tx.song.update({
@@ -306,6 +385,7 @@ export async function setSong(
           youtubeVideoId: videoId,
           duet: input.duet,
           duetPartnerId: input.duetPartnerId,
+          duetStatus,
         },
       });
     } else {
@@ -324,6 +404,7 @@ export async function setSong(
           youtubeVideoId: videoId,
           duet: input.duet,
           duetPartnerId: input.duetPartnerId,
+          duetStatus,
         },
       });
     }

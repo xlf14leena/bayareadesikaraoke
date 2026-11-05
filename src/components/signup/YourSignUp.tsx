@@ -1,13 +1,13 @@
-import type { SignUp, Song } from "@prisma/client";
-import { leaveSignUp, saveSongs, uploadScreenshot } from "@/app/g/[slug]/[event]/actions";
+import type { DuetStatus, SignUp, Song } from "@prisma/client";
+import { leaveSignUp, respondToDuet, saveSongs, uploadScreenshot } from "@/app/g/[slug]/[event]/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import ScreenshotForm from "@/components/signup/ScreenshotForm";
 import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";
 import { STATUS_LABEL, type ZelleDetails } from "@/lib/events";
 import { formatDateTime, formatPrice } from "@/lib/format";
-import type { RoundConfig } from "@/lib/rounds";
+import type { RoundAppearances, RoundConfig } from "@/lib/rounds";
 import { PICKS_SONGS } from "@/lib/signups";
-import { secondaryButton } from "@/components/ui";
+import { primaryButton, secondaryButton } from "@/components/ui";
 
 type Props = {
   signUp: SignUp & {
@@ -16,8 +16,8 @@ type Props = {
   };
   /** People signed up for this date who can be picked as a duet partner. */
   partners: DuetPartnerOption[];
-  /** Other singers' duets on this date that name this person as the partner. */
-  duetInvites: { round: number; title: string; singer: string }[];
+  /** Other singers' duets on this date that name this person as the partner (not the ones they declined). */
+  duetInvites: { songId: string; round: number; title: string; singer: string; accepted: boolean }[];
   groupName: string;
   /** Where to send the payment, from the event template or this date. */
   zelle: ZelleDetails;
@@ -25,6 +25,15 @@ type Props = {
   editable: boolean;
   /** The date's rounds, for the songs form. */
   rounds: RoundConfig[];
+  /** Per round, how many times each singer already sings, without this person's own songs (for "times per singer"). */
+  appearances?: RoundAppearances[];
+};
+
+/** After the partner's name on your own duet. */
+const DUET_NOTE: Record<DuetStatus, string> = {
+  PENDING: " (waiting for them to accept)",
+  ACCEPTED: "",
+  DECLINED: " (they declined, pick someone else)",
 };
 
 const TONE: Record<string, string> = {
@@ -36,7 +45,7 @@ const TONE: Record<string, string> = {
 };
 
 /** The signed-in person's own sign-up for this date: status, how to pay, and their songs. */
-export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition, editable, partners, duetInvites, rounds }: Props) {
+export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition, editable, partners, duetInvites, rounds, appearances }: Props) {
   const role = signUp.role === "SINGER" ? "singer" : "listener";
   const needsProof = signUp.status === "RESERVED" || signUp.status === "REJECTED";
   const active = signUp.songs.filter((s) => s.status === "ACTIVE");
@@ -51,6 +60,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
       youtubeUrl: s.youtubeUrl ?? "",
       duet: s.duet,
       duetPartnerId: s.duetPartnerId,
+      duetStatus: s.duetStatus,
     };
   }
   const sorted = [...active].sort((a, b) => a.round - b.round);
@@ -169,10 +179,43 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
       )}
 
       {duetInvites.length > 0 && (
-        <ul className="space-y-1 rounded-lg bg-lapis/5 px-3 py-2">
+        <ul className="divide-y divide-line rounded-lg bg-lapis/5 px-3">
           {duetInvites.map((d) => (
-            <li key={`${d.round}-${d.singer}`}>
-              {d.singer} picked you as their duet partner for round {d.round}: &ldquo;{d.title}&rdquo;
+            <li key={d.songId} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2">
+              <span className="min-w-0 flex-1">
+                {d.accepted ? (
+                  <>
+                    You&apos;re singing a duet with {d.singer} in round {d.round}: &ldquo;{d.title}&rdquo;
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold">{d.singer}</span> asked you to sing a duet in round {d.round}:
+                    &ldquo;{d.title}&rdquo;
+                  </>
+                )}
+              </span>
+              {editable &&
+                (d.accepted ? (
+                  <ConfirmButton
+                    action={respondToDuet.bind(null, d.songId, false)}
+                    label="Back out"
+                    danger={false}
+                    confirm={`Back out of the duet with ${d.singer}? They'll need to pick someone else.`}
+                  />
+                ) : (
+                  <span className="flex gap-2">
+                    <form action={respondToDuet.bind(null, d.songId, true)}>
+                      <button type="submit" className={primaryButton}>
+                        Accept
+                      </button>
+                    </form>
+                    <form action={respondToDuet.bind(null, d.songId, false)}>
+                      <button type="submit" className={secondaryButton}>
+                        Decline
+                      </button>
+                    </form>
+                  </span>
+                ))}
             </li>
           ))}
         </ul>
@@ -189,7 +232,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
                     <span className="shrink-0 text-xs font-semibold text-royal">Round {s.round}</span>
                     <span className="truncate">
                       {s.title}
-                      {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}` : " · duet")}
+                      {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}${DUET_NOTE[s.duetStatus ?? "ACCEPTED"]}` : " · duet")}
                     </span>
                   </span>
                 ))
@@ -213,14 +256,21 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
               </p>
             ))}
             {editable ? (
-              <SongsForm action={saveSongs.bind(null, signUp.id)} rounds={rounds} defaults={defaults} partners={partners} />
+              <SongsForm
+                action={saveSongs.bind(null, signUp.id)}
+                rounds={rounds}
+                defaults={defaults}
+                partners={partners}
+                appearances={appearances}
+                selfId={signUp.id}
+              />
             ) : active.length ? (
               <ul className="text-sm">
                 {active.map((s) => (
                   <li key={s.id}>
                     Round {s.round}: {s.title}
                     {s.artist && ` (${s.artist})`}
-                    {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}` : " · duet")}
+                    {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}${DUET_NOTE[s.duetStatus ?? "ACCEPTED"]}` : " · duet")}
                   </li>
                 ))}
               </ul>

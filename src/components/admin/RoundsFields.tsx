@@ -3,12 +3,13 @@
 import { useState } from "react";
 import type { SlotMode } from "@prisma/client";
 import { inputClass, labelClass, selectClass } from "@/components/ui";
-import { MAX_ROUNDS, MAX_THEME_LENGTH, type RoundConfig, type RoundKind } from "@/lib/rounds";
+import { MAX_APPEARANCES, MAX_ROUNDS, MAX_THEME_LENGTH, type RoundConfig, type RoundKind } from "@/lib/rounds";
 
 /**
  * How many rounds an event has, and for each one solo/duet, how singers get
- * their slot, and an optional theme. Posts "roundCount" and "round{n}Kind" /
- * "round{n}SlotMode" / "round{n}Theme" / "round{n}ThemeRequired" (read by
+ * their slot, an optional theme, and for rounds with duets how many times one
+ * singer can sing. Posts "roundCount" and "round{n}Kind" / "round{n}SlotMode" /
+ * "round{n}Theme" / "round{n}ThemeRequired" / "round{n}MaxAppearances" (read by
  * roundsFromForm in src/lib/rounds.ts).
  */
 export default function RoundsFields({ initial }: { initial: RoundConfig[] }) {
@@ -16,7 +17,13 @@ export default function RoundsFields({ initial }: { initial: RoundConfig[] }) {
   // Settings for every possible round, so lowering the count and raising it again keeps them.
   const [rounds, setRounds] = useState<RoundConfig[]>(() =>
     Array.from({ length: MAX_ROUNDS }, (_, i) => {
-      const r = initial[i] ?? { kind: "EITHER", slotMode: "CHECKIN_ORDER", theme: null, themeRequired: true };
+      const r = initial[i] ?? {
+        kind: "EITHER",
+        slotMode: "CHECKIN_ORDER",
+        theme: null,
+        themeRequired: true,
+        maxAppearances: null,
+      } satisfies RoundConfig;
       // With no theme yet, "Songs must fit" starts ticked for when one is typed.
       return r.theme ? r : { ...r, themeRequired: true };
     }),
@@ -74,6 +81,23 @@ export default function RoundsFields({ initial }: { initial: RoundConfig[] }) {
                 <option value="PAYMENT_ORDER">Payment order</option>
               </select>
             </label>
+            {r.kind !== "SOLO" && (
+              <label className="block w-36 max-w-full">
+                <span className={labelClass}>Times per singer</span>
+                <input
+                  name={`round${i + 1}MaxAppearances`}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={MAX_APPEARANCES}
+                  step={1}
+                  value={r.maxAppearances ?? ""}
+                  onChange={(e) => change(i, { maxAppearances: e.target.value ? Number(e.target.value) : null })}
+                  placeholder="No limit"
+                  className={inputClass}
+                />
+              </label>
+            )}
             <div className="w-full space-y-1.5 sm:pl-24">
               <label className="block">
                 <span className={labelClass}>Theme (optional)</span>
@@ -104,7 +128,9 @@ export default function RoundsFields({ initial }: { initial: RoundConfig[] }) {
       <p className="text-xs text-ink-muted">
         Each singer picks one song per round. In a solo-or-duet round the singer chooses. The singing order says how
         singers get their slot in that round once they check in: they pick one, they go in the order they arrived,
-        or the first to pay sings first. A round&apos;s theme is optional; leave it blank for anything goes.
+        or the first to pay sings first. In a round with duets, &ldquo;Times per singer&rdquo; caps how often one
+        person sings in it, counting their own song and the duets they&apos;re picked for; leave it blank for no
+        limit. A round&apos;s theme is optional; leave it blank for anything goes.
       </p>
     </div>
   );

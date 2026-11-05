@@ -165,7 +165,8 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
     dateId = signUp.eventDateId;
     if (signUp.role !== "SINGER") throw new FormError("Only singers pick songs.");
     if (!stillEditable(signUp.eventDate)) throw new FormError("Songs can't be changed after sign-ups close.");
-    const inputs = songInputs(form, roundsFor(signUp.eventDate, signUp.eventDate.series));
+    const rounds = roundsFor(signUp.eventDate, signUp.eventDate.series);
+    const inputs = songInputs(form, rounds);
 
     return withDateLock(dateId, async (tx) => {
       await settleDate(tx, dateId);
@@ -177,7 +178,7 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
             : "This sign-up no longer holds a spot, so it can't pick songs.",
         );
       }
-      for (const [i, input] of inputs.entries()) await setSong(tx, now, i + 1, input);
+      for (const [i, input] of inputs.entries()) await setSong(tx, now, i + 1, input, rounds[i].maxAppearances);
       return "Songs saved.";
     });
   });
@@ -194,6 +195,35 @@ export async function leaveSignUp(signUpId: string): Promise<void> {
     await tx.signUp.update({ where: { id: signUpId }, data: { status: "CANCELLED", reservedUntil: null } });
     await releaseSongs(tx, [signUpId]);
     await settleDate(tx, signUp.eventDateId);
+  });
+  refresh();
+}
+
+/**
+ * The duet partner's answer to a duet that names them. A pending ask can be accepted or declined,
+ * and an accepted one can still be declined until sign-ups close. A declined duet stays a duet
+ * with no partner singing it, until the singer picks someone else.
+ */
+export async function respondToDuet(songId: string, accept: boolean): Promise<void> {
+  const song = await prisma.song.findUnique({ where: { id: songId }, select: { duetPartnerId: true } });
+  if (!song?.duetPartnerId) return;
+  const partner = await ownSignUp(song.duetPartnerId);
+  if (!stillEditable(partner.eventDate)) return;
+  await withDateLock(partner.eventDateId, async (tx) => {
+    const now = await tx.song.findUnique({ where: { id: songId }, include: { signUp: { select: { status: true } } } });
+    const me = await tx.signUp.findUniqueOrThrow({ where: { id: partner.id }, select: { status: true } });
+    if (
+      !now ||
+      now.status !== "ACTIVE" ||
+      now.duetPartnerId !== partner.id ||
+      !PICKS_SONGS.includes(me.status) ||
+      !PICKS_SONGS.includes(now.signUp.status)
+    ) {
+      return;
+    }
+    const from = now.duetStatus ?? "PENDING";
+    if (accept ? from !== "PENDING" : from === "DECLINED") return;
+    await tx.song.update({ where: { id: songId }, data: { duetStatus: accept ? "ACCEPTED" : "DECLINED" } });
   });
   refresh();
 }
