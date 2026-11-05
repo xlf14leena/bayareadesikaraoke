@@ -118,7 +118,7 @@ export default function SeriesForm({
           </Field>
         </div>
         {frequency !== "ONCE" && (
-          <p className="text-xs text-ink-muted">Dates are created 5 weeks ahead and topped up every day.</p>
+          <p className="text-xs text-ink-muted">Dates are created 4 weeks ahead and topped up every day.</p>
         )}
       </FormSection>
 
