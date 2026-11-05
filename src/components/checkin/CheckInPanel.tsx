@@ -2,8 +2,9 @@ import Link from "next/link";
 import type { EventDate, SignUp } from "@prisma/client";
 import { adminCheckIn, closeCheckIn, openCheckIn, undoCheckIn } from "@/app/admin/checkin-actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import CheckInList from "@/components/checkin/CheckInList";
 import LiveRefresh from "@/components/checkin/LiveRefresh";
-import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
+import { badgeClass, cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { STATUS_LABEL } from "@/lib/events";
 import { CAN_CHECK_IN, canOpenCheckIn, checkInIsOpen, checkInOpensAt } from "@/lib/checkin";
 import { formatClock, formatDateTime } from "@/lib/format";
@@ -30,8 +31,13 @@ export default function CheckInPanel({
   const arrived = people
     .filter((s) => s.checkedInAt)
     .sort((a, b) => a.checkedInAt!.getTime() - b.checkedInAt!.getTime());
-  const notYet = people.filter((s) => !s.checkedInAt);
+  const notYet = people
+    .filter((s) => !s.checkedInAt)
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
   const at = (d: Date) => formatClock(pacificTimeOf(d));
+  const canCheckInByHand = byHandAllowed && now < date.endsAt && date.status === "SCHEDULED";
+  const who = (s: Person) =>
+    `${s.role === "SINGER" ? "Singer" : "Listener"}${s.status !== "CONFIRMED" ? ` · ${STATUS_LABEL[s.status]}` : ""}`;
 
   return (
     <section id="check-in" className={`${cardClass} space-y-5`}>
@@ -47,7 +53,7 @@ export default function CheckInPanel({
                 : now >= date.endsAt
                   ? "This event has ended."
                   : canOpen
-                    ? "Open check-in when you're at the venue. Guests can only check in by scanning the code on your check-in screen."
+                    ? "Open check-in when you're at the venue. Guests check in by scanning the code on your check-in screen, and you can check anyone in by hand below."
                     : `You can open check-in from ${formatDateTime(opensAt)}, an hour before the start.`}
           </p>
         </div>
@@ -78,57 +84,66 @@ export default function CheckInPanel({
 
       {(arrived.length > 0 || byHandAllowed) && people.length > 0 && (
         <div className="space-y-4">
-          <p className="font-semibold">
-            {arrived.length} of {people.length} checked in
-          </p>
-          {arrived.length > 0 && (
-            <ul className="divide-y divide-line rounded-lg border border-line">
-              {arrived.map((s) => (
-                <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                  <span>
-                    <span className="font-medium">{s.displayName}</span>{" "}
-                    <span className="text-ink-muted">
-                      · {s.role === "SINGER" ? "Singer" : "Listener"}
-                      {s.status !== "CONFIRMED" && ` · ${STATUS_LABEL[s.status]}`} · {at(s.checkedInAt!)}
-                      {s.checkInMethod === "ADMIN"
-                        ? ` · checked in by ${s.checkedInBy?.name ?? "an admin"}`
-                        : " · scanned"}
+          <div>
+            <p className="font-semibold">
+              {arrived.length} of {people.length} checked in
+            </p>
+            {canCheckInByHand && notYet.length > 0 && (
+              <p className="text-sm text-ink-muted">
+                Someone without their phone, or signed in with another account? Check them in here. Check-in
+                doesn&rsquo;t need to be open for this.
+              </p>
+            )}
+          </div>
+          <CheckInList
+            notYet={(canCheckInByHand ? notYet : []).map((s) => ({
+              id: s.id,
+              name: s.displayName,
+              node: (
+                <>
+                  <span className="min-w-0">
+                    <span className="font-medium">{s.displayName}</span> <span className="text-ink-muted">· {who(s)}</span>
+                  </span>
+                  <form action={adminCheckIn.bind(null, s.id)}>
+                    <button type="submit" className={secondaryButton}>
+                      Check in
+                    </button>
+                  </form>
+                </>
+              ),
+            }))}
+            arrived={arrived.map((s) => ({
+              id: s.id,
+              name: s.displayName,
+              node: (
+                <>
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                    <span>
+                      <span className="font-medium">{s.displayName}</span>{" "}
+                      <span className="text-ink-muted">
+                        · {who(s)} · {at(s.checkedInAt!)}
+                      </span>
                     </span>
+                    {s.checkInMethod === "ADMIN" ? (
+                      <span
+                        className={`${badgeClass} bg-gold/30 text-gold-ink`}
+                        title={`Checked in by ${s.checkedInBy?.name ?? "an admin"}`}
+                      >
+                        Manual{s.checkedInBy?.name ? ` · by ${s.checkedInBy.name}` : ""}
+                      </span>
+                    ) : (
+                      <span className={`${badgeClass} bg-lapis/10 text-cobalt`}>Scanned</span>
+                    )}
                   </span>
                   <ConfirmButton
                     action={undoCheckIn.bind(null, s.id)}
                     label="Undo"
-                    confirm={`Undo ${s.displayName}'s check-in? They can scan again to check in.`}
+                    confirm={`Undo ${s.displayName}'s check-in? Their running-order slots are freed. They can scan again, or you can check them in here.`}
                   />
-                </li>
-              ))}
-            </ul>
-          )}
-          {notYet.length > 0 && byHandAllowed && now < date.endsAt && date.status === "SCHEDULED" && (
-            <details>
-              <summary className="cursor-pointer text-sm font-medium text-ink-muted">
-                Not checked in yet ({notYet.length}): check someone in by hand
-              </summary>
-              <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
-                {notYet.map((s) => (
-                  <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                    <span>
-                      <span className="font-medium">{s.displayName}</span>{" "}
-                      <span className="text-ink-muted">
-                        · {s.role === "SINGER" ? "Singer" : "Listener"}
-                        {s.status !== "CONFIRMED" && ` · ${STATUS_LABEL[s.status]}`}
-                      </span>
-                    </span>
-                    <form action={adminCheckIn.bind(null, s.id)}>
-                      <button type="submit" className={secondaryButton}>
-                        Check in
-                      </button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+                </>
+              ),
+            }))}
+          />
         </div>
       )}
     </section>
