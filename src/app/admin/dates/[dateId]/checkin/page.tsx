@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Check-in screen · Desi Karaoke", robots: { index: false } };
+export const metadata: Metadata = { title: "Check-in screen · Karaoke Adda", robots: { index: false } };
 
 // The screen an admin puts up at the venue (phone, tablet or laptop).
 export default async function CheckInScreenPage({ params }: { params: Promise<{ dateId: string }> }) {

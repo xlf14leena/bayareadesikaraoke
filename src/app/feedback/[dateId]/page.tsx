@@ -11,7 +11,7 @@ import { requireViewer } from "@/lib/roles";
 import { sendFeedback } from "./actions";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Feedback · Desi Karaoke", robots: { index: false } };
+export const metadata: Metadata = { title: "Feedback · Karaoke Adda", robots: { index: false } };
 
 type Props = { params: Promise<{ dateId: string }>; searchParams: Promise<{ k?: string }> };
 
