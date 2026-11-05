@@ -1,4 +1,4 @@
-# Desi Karaoke
+# Karaoke Adda
 
 A responsive site where local karaoke groups publish recurring events and people sign up to sing or listen.
 

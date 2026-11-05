@@ -8,7 +8,7 @@ const hind = Hind({ subsets: ["latin"], weight: ["400", "500", "600"], variable:
 const rozha = Rozha_One({ subsets: ["latin"], weight: "400", variable: "--font-rozha" });
 
 export const metadata: Metadata = {
-  title: "Desi Karaoke",
+  title: "Karaoke Adda",
   description: "Find and sign up for Desi karaoke nights near you.",
 };
 

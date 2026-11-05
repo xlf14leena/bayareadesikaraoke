@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { requireViewer } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "My events · Desi Karaoke" };
+export const metadata: Metadata = { title: "My events · Karaoke Adda" };
 
 const TONE: Record<string, string> = {
   CONFIRMED: "bg-emerald-100 text-emerald-800",

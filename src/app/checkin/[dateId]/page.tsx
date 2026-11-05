@@ -16,7 +16,7 @@ import { requireViewer } from "@/lib/roles";
 import { checkInAtVenue } from "./actions";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Check in · Desi Karaoke", robots: { index: false } };
+export const metadata: Metadata = { title: "Check in · Karaoke Adda", robots: { index: false } };
 
 type Props = { params: Promise<{ dateId: string }>; searchParams: Promise<{ scan?: string }> };
 

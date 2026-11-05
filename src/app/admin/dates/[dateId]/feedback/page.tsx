@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Feedback · Desi Karaoke", robots: { index: false } };
+export const metadata: Metadata = { title: "Feedback · Karaoke Adda", robots: { index: false } };
 
 // Feedback responses for one date (src/lib/feedback.ts), for that group's admins and super users.
 export default async function DateFeedbackPage({ params }: { params: Promise<{ dateId: string }> }) {
