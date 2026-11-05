@@ -8,11 +8,14 @@ export default function ConfirmButton({
   label,
   confirm,
   danger = true,
+  className,
 }: {
   action: () => Promise<void>;
   label: string;
   confirm: string;
   danger?: boolean;
+  /** Replaces the button's look, e.g. to show it as a menu item. */
+  className?: string;
 }) {
   return (
     <form
@@ -21,7 +24,7 @@ export default function ConfirmButton({
         if (!window.confirm(confirm)) e.preventDefault();
       }}
     >
-      <button type="submit" className={danger ? dangerButton : secondaryButton}>
+      <button type="submit" className={className ?? (danger ? dangerButton : secondaryButton)}>
         {label}
       </button>
     </form>
