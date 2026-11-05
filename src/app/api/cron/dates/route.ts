@@ -3,7 +3,7 @@ import { settleAll } from "@/lib/signups";
 
 export const dynamic = "force-dynamic";
 
-// Daily Vercel Cron (vercel.json): keeps recurring events generated 5 weeks ahead,
+// Daily Vercel Cron (vercel.json): keeps recurring events generated 4 weeks ahead,
 // and expires overdue 24-hour holds (pages also do this whenever a date is opened).
 // Vercel sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET is set.
 export async function GET(request: Request) {

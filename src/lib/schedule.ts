@@ -3,7 +3,7 @@ import { TIME_ZONE } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 // Dates are generated this far ahead (spec: "Events and recurrence").
-export const GENERATE_WEEKS_AHEAD = 5;
+export const GENERATE_WEEKS_AHEAD = 4;
 
 // ---------- Calendar dates as "YYYY-MM-DD" strings ----------
 
@@ -178,7 +178,7 @@ export function describeSchedule(rule: ScheduleRule): string {
 // ---------- Keeping EventDates in step with the series ----------
 
 /**
- * Creates the series' missing future dates (5 weeks ahead) and removes future
+ * Creates the series' missing future dates (4 weeks ahead) and removes future
  * dates the schedule no longer produces, unless someone has signed up for
  * them. Dates without sign-ups also pick up a changed end time.
  *
