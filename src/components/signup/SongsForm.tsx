@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { DuetStatus } from "@prisma/client";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
@@ -14,6 +15,8 @@ export type SongDefaults = {
   youtubeUrl: string;
   duet: boolean;
   duetPartnerId: string | null;
+  /** The partner's answer: PENDING, ACCEPTED or DECLINED. */
+  duetStatus?: DuetStatus | null;
 };
 
 /** Another singer signed up for the same date, who can be picked as a duet partner. */
@@ -22,7 +25,7 @@ export type DuetPartnerOption = { id: string; name: string };
 /**
  * Song title, film or artist, YouTube track, and solo or duet for each round
  * of the event (a solos-only or duets-only round doesn't ask).
- * A duet can name a partner from `partners`. Shared by singers and admins.
+ * A duet can name a partner from `partners`, who then accepts or declines. Shared by singers and admins.
  * When the last save found a close title (`nearMatch`), that round offers
  * "It's a different song".
  * In a round with a "times per singer" limit, `appearances` (without this
@@ -196,6 +199,13 @@ function RoundFields({
                   })}
                 </select>
               </label>
+            )}
+            {duet && defaults?.duetPartnerId && defaults.duetStatus && defaults.duetStatus !== "ACCEPTED" && (
+              <p className={`w-full text-xs ${defaults.duetStatus === "DECLINED" ? "text-red-700" : "text-ink-muted"}`}>
+                {defaults.duetStatus === "DECLINED"
+                  ? `${partners.find((p) => p.id === defaults.duetPartnerId)?.name ?? "Your partner"} declined. Pick someone else.`
+                  : `Waiting for ${partners.find((p) => p.id === defaults.duetPartnerId)?.name ?? "your partner"} to accept.`}
+              </p>
             )}
           </div>
         </div>

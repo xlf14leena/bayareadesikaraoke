@@ -311,6 +311,12 @@ enum SongStatus {
 // event date (title and YouTube video) and one ACTIVE song per sign-up per round
 // are enforced by partial unique indexes in the migration SQL (Prisma can't
 // express them).
+enum DuetStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model Song {
   id              String     @id @default(cuid())
   signUpId        String
@@ -323,6 +329,9 @@ model Song {
   youtubeVideoId  String?
   duet            Boolean    @default(false) // solo unless the singer marks it a duet
   duetPartnerId   String? // optional: another sign-up for the same date singing this duet
+  // The partner's answer: PENDING until they accept or decline; null with no partner.
+  // A new partner, or a new song title, asks again.
+  duetStatus      DuetStatus?
   // The song time: when this title was entered. Priority goes by this time,
   // not by registration time. Changing the title releases this row and
   // creates a new one with a fresh enteredAt (history is kept). Editing only

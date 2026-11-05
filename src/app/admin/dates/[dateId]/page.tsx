@@ -485,6 +485,8 @@ function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; 
                   Round {song.round}: <span className="font-medium">{song.title}</span>
                   {song.artist && ` (${song.artist})`}
                   {song.duet && (song.duetPartner ? ` · duet with ${song.duetPartner.displayName}` : " · duet")}
+                  {song.duetPartner && song.duetStatus === "PENDING" && " (not confirmed yet)"}
+                  {song.duetPartner && song.duetStatus === "DECLINED" && " (declined)"}
                   {song.youtubeUrl && (
                     <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-cobalt hover:underline">
                       Track

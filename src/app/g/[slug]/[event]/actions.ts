@@ -198,3 +198,32 @@ export async function leaveSignUp(signUpId: string): Promise<void> {
   });
   refresh();
 }
+
+/**
+ * The duet partner's answer to a duet that names them. A pending ask can be accepted or declined,
+ * and an accepted one can still be declined until sign-ups close. A declined duet stays a duet
+ * with no partner singing it, until the singer picks someone else.
+ */
+export async function respondToDuet(songId: string, accept: boolean): Promise<void> {
+  const song = await prisma.song.findUnique({ where: { id: songId }, select: { duetPartnerId: true } });
+  if (!song?.duetPartnerId) return;
+  const partner = await ownSignUp(song.duetPartnerId);
+  if (!stillEditable(partner.eventDate)) return;
+  await withDateLock(partner.eventDateId, async (tx) => {
+    const now = await tx.song.findUnique({ where: { id: songId }, include: { signUp: { select: { status: true } } } });
+    const me = await tx.signUp.findUniqueOrThrow({ where: { id: partner.id }, select: { status: true } });
+    if (
+      !now ||
+      now.status !== "ACTIVE" ||
+      now.duetPartnerId !== partner.id ||
+      !PICKS_SONGS.includes(me.status) ||
+      !PICKS_SONGS.includes(now.signUp.status)
+    ) {
+      return;
+    }
+    const from = now.duetStatus ?? "PENDING";
+    if (accept ? from !== "PENDING" : from === "DECLINED") return;
+    await tx.song.update({ where: { id: songId }, data: { duetStatus: accept ? "ACCEPTED" : "DECLINED" } });
+  });
+  refresh();
+}

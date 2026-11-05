@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { Prisma, type AttendeeRole, type EventDate, type EventSeries, type SignUpStatus } from "@prisma/client";
+import { Prisma, type AttendeeRole, type DuetStatus, type EventDate, type EventSeries, type SignUpStatus } from "@prisma/client";
 import { type RoundAppearances, type RoundConfig, type RoundKind, roundsFor, timesLabel } from "@/lib/rounds";
 import { fillCheckInOrderSlots } from "@/lib/slots";
 import { HOLDS_SPOT, settingsFor } from "@/lib/events";
@@ -223,12 +223,17 @@ export function songInput(form: FormData, round: number, kind: RoundKind = "EITH
   return { title, artist, youtubeUrl, duet, duetPartnerId, confirmedDifferent };
 }
 
-/** The songs that count toward how often someone sings: active, from a sign-up that holds a spot. */
-function appearanceSongs(db: Tx, dateId: string, round?: number) {
-  return db.song.findMany({
+/**
+ * The songs that count toward how often someone sings: active, from a sign-up that holds a spot.
+ * A partner who declined isn't singing it, so their id is dropped; a pending ask still counts,
+ * so accepting it can never go over the limit.
+ */
+async function appearanceSongs(db: Tx, dateId: string, round?: number) {
+  const songs = await db.song.findMany({
     where: { eventDateId: dateId, round, status: "ACTIVE", signUp: { status: { in: HOLDS_SPOT } } },
-    select: { round: true, signUpId: true, duetPartnerId: true },
+    select: { round: true, signUpId: true, duetPartnerId: true, duetStatus: true },
   });
+  return songs.map((s) => ({ ...s, duetPartnerId: s.duetStatus === "DECLINED" ? null : s.duetPartnerId }));
 }
 
 /** How many times signUpId sings in a list of songs: their own songs plus the duets that name them. */
@@ -270,6 +275,8 @@ export async function appearancesByRound(
  * times in the round as someone's duet partner can't add their own song, and a duet can't
  * name a partner who already sings that many times. Songs saved before a limit was set or
  * lowered stay; only new songs and new partners are checked.
+ * A named partner has to accept: duetStatus is PENDING until they accept or decline (respondToDuet
+ * on the event page), and a new partner or a new title asks them again.
  */
 export async function setSong(
   tx: Tx,
@@ -310,7 +317,10 @@ export async function setSong(
           `the most allowed. Leave your own round ${round} song blank.`,
       );
     }
-    if (input.duetPartnerId && input.duetPartnerId !== current?.duetPartnerId) {
+    // A partner already on this song (and not declined) is kept even if the limit was lowered since.
+    const keptPartner =
+      !!current && current.duetPartnerId === input.duetPartnerId && current.duetStatus !== "DECLINED";
+    if (input.duetPartnerId && !keptPartner) {
       const partnerCount = countAppearances(roundSongs, input.duetPartnerId);
       if (partnerCount >= maxAppearances) {
         const partner = await tx.signUp.findUnique({ where: { id: input.duetPartnerId }, select: { displayName: true } });
@@ -356,6 +366,13 @@ export async function setSong(
     }
   }
 
+  // The partner is asked again when they're new or the song is new; otherwise their answer stands.
+  const duetStatus: DuetStatus | null = !input.duetPartnerId
+    ? null
+    : sameSong && current.duetPartnerId === input.duetPartnerId && current.duetStatus
+      ? current.duetStatus
+      : "PENDING";
+
   try {
     if (sameSong) {
       await tx.song.update({
@@ -368,6 +385,7 @@ export async function setSong(
           youtubeVideoId: videoId,
           duet: input.duet,
           duetPartnerId: input.duetPartnerId,
+          duetStatus,
         },
       });
     } else {
@@ -386,6 +404,7 @@ export async function setSong(
           youtubeVideoId: videoId,
           duet: input.duet,
           duetPartnerId: input.duetPartnerId,
+          duetStatus,
         },
       });
     }
