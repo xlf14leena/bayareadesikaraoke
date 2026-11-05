@@ -5,8 +5,9 @@ import Breadcrumbs from "@/app/admin/Breadcrumbs";
 import { addGroupAdmin, deleteGroup, removeGroupAdmin, updateGroup } from "@/app/admin/actions";
 import AddAdminForm from "@/components/admin/AddAdminForm";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import ScheduleBadge from "@/components/admin/ScheduleBadge";
 import GroupForm from "@/components/admin/GroupForm";
-import { cardClass, primaryButton } from "@/components/ui";
+import { badgeClass, cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { formatClock, formatEventDate, formatPrice } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
@@ -72,18 +73,23 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ gro
                         <span key={t} className="text-lapis"> · {t}</span>
                       ))}
                       {s.visibility === "PRIVATE" && (
-                        <span className="ml-2 rounded-full bg-gold/30 px-2 py-0.5 text-xs font-medium text-gold-ink">Private</span>
+                        <span className={`${badgeClass} ml-2 bg-mist text-ink-muted`}>Private</span>
                       )}
                     </p>
-                    <p className="text-sm text-ink-muted">
+                    <p className="mt-0.5 text-sm text-ink-muted">
+                      <ScheduleBadge frequency={s.frequency} />{" "}
                       {describeSchedule(ruleOf(s))}, {formatClock(s.startTime)} – {formatClock(s.endTime)} · {s.venueName}
                     </p>
                     <p className="text-sm text-ink-muted">
                       Singer {formatPrice(s.singerPriceCents)} · Listener {formatPrice(s.listenerPriceCents)}
-                      {s.dates[0] ? ` · Next: ${formatEventDate(s.dates[0].startsAt)}` : " · No upcoming dates"}
+                      {s.dates[0]
+                        ? s.frequency === "ONCE"
+                          ? ""
+                          : ` · Next: ${formatEventDate(s.dates[0].startsAt)}`
+                        : " · No upcoming dates"}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-cobalt">Manage →</span>
+                  <span className={secondaryButton}>Manage</span>
                 </Link>
               </li>
             ))}

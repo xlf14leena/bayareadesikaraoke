@@ -7,6 +7,7 @@ import { STATUS_LABEL, type ZelleDetails } from "@/lib/events";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import type { RoundConfig } from "@/lib/rounds";
 import { PICKS_SONGS } from "@/lib/signups";
+import { secondaryButton } from "@/components/ui";
 
 type Props = {
   signUp: SignUp & {
@@ -157,7 +158,10 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
 
       {signUp.status === "UNDER_REVIEW" && editable && (
         <details className="text-sm">
-          <summary className="cursor-pointer text-cobalt">Sent the wrong screenshot? Replace it</summary>
+          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 text-ink-muted [&::-webkit-details-marker]:hidden">
+            Sent the wrong screenshot?
+            <span className={secondaryButton}>Replace it</span>
+          </summary>
           <div className="mt-2">
             <ScreenshotForm action={uploadScreenshot.bind(null, signUp.id)} label="Replace screenshot" />
           </div>

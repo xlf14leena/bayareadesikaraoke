@@ -155,12 +155,16 @@ export function timesFor(rule: Pick<ScheduleRule, "startTime" | "endTime">, ymd:
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const ORDINALS: Record<number, string> = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th", [-1]: "last" };
 
-/** Plain-language schedule, e.g. "Every Saturday" or "2nd Saturday of each month". */
+/**
+ * Plain-language schedule, e.g. "Every Saturday" or "2nd Saturday of each month".
+ * A one-time event gives its date, e.g. "Fri, Nov 13".
+ */
 export function describeSchedule(rule: ScheduleRule): string {
-  const weekday = WEEKDAYS[parseYmd(rule.firstDate).getUTCDay()];
+  const day = parseYmd(rule.firstDate);
+  const weekday = WEEKDAYS[day.getUTCDay()];
   switch (rule.frequency) {
     case "ONCE":
-      return "One time";
+      return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }).format(day);
     case "WEEKLY":
       return `Every ${weekday}`;
     case "BIWEEKLY":

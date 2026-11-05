@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import Breadcrumbs from "@/app/admin/Breadcrumbs";
 import { deleteSeries, resetPrivateLink, updateSeries } from "@/app/admin/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import ScheduleBadge from "@/components/admin/ScheduleBadge";
 import CopyLink from "@/components/admin/CopyLink";
 import SeriesForm from "@/components/admin/SeriesForm";
-import { cardClass } from "@/components/ui";
+import { cardClass, secondaryButton } from "@/components/ui";
 import { eventPath } from "@/lib/event-url";
 import { HOLDS_SPOT, settingsFor, spotsLabel } from "@/lib/events";
 import { roundThemes, roundsFor } from "@/lib/rounds";
@@ -46,7 +47,8 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
           ]}
         />
         <h1 className="font-display text-3xl text-royal">{series.title}</h1>
-        <p className="text-ink-muted">
+        <p className="mt-1 text-ink-muted">
+          <ScheduleBadge frequency={series.frequency} />{" "}
           {describeSchedule(ruleOf(series))}, {formatClock(series.startTime)} – {formatClock(series.endTime)} ·{" "}
           {series.venueName} · {series.visibility === "PRIVATE" ? "Private" : "Public"}
         </p>
@@ -116,15 +118,15 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
                       {spotsLabel(listeners, settings.maxListeners)}
                     </p>
                   </div>
-                  <div className="flex gap-3 text-sm font-medium">
+                  <div className="flex gap-2">
                     <Link
                       href={eventPath({ ...d, series }, series.visibility === "PRIVATE" ? series.privateToken : null)}
-                      className="text-cobalt hover:underline"
+                      className={secondaryButton}
                     >
                       View
                     </Link>
-                    <Link href={`/admin/dates/${d.id}`} className="text-cobalt hover:underline">
-                      Sign-ups and settings
+                    <Link href={`/admin/dates/${d.id}`} className={secondaryButton} title="Sign-ups and settings for this date">
+                      Manage
                     </Link>
                   </div>
                 </li>
@@ -135,7 +137,7 @@ export default async function SeriesAdminPage({ params }: { params: Promise<{ se
       </section>
 
       <section className={cardClass}>
-        <h2 className="mb-1 text-xl font-semibold">Event settings</h2>
+        <h2 className="mb-1 text-xl font-semibold">Event Template settings</h2>
         <p className="mb-4 text-sm text-ink-muted">
           These are the template for every date. A date uses them unless you change a setting for that date; people
           who already registered keep the price they signed up at.

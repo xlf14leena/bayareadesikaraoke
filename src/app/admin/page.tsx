@@ -53,7 +53,7 @@ export default async function AdminPage() {
                     {g._count.admins} {g._count.admins === 1 ? "admin" : "admins"}
                   </p>
                 </div>
-                <span className="text-sm font-medium text-cobalt">Manage →</span>
+                <span className={secondaryButton}>Manage</span>
               </Link>
             </li>
           ))}

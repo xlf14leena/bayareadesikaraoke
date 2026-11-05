@@ -40,7 +40,7 @@ export default function RunningOrder({
           </a>{" "}
           or the{" "}
           <Link href={`/admin/events/${seriesId}`} className="text-cobalt hover:underline">
-            event settings
+            event template settings
           </Link>
           .
         </p>

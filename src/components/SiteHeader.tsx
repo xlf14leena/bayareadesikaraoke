@@ -6,6 +6,7 @@ import ViewAsSelect from "@/components/ViewAsSelect";
 import HeaderShell from "@/components/HeaderShell";
 import { prisma } from "@/lib/prisma";
 import { canSwitchView, getViewer, isAnyAdmin, type Viewer } from "@/lib/roles";
+import { primaryButton } from "@/components/ui";
 
 export default async function SiteHeader() {
   const viewer = await getViewer();
@@ -109,7 +110,7 @@ async function ViewAsBar({ viewer }: { viewer: Viewer }) {
           <ViewAsSelect current={current} options={options} />
           <form action={setViewAs}>
             <input type="hidden" name="viewAs" value="" />
-            <button type="submit" className="rounded-full bg-royal px-3 py-1 text-xs font-medium text-white hover:bg-cobalt">
+            <button type="submit" className={primaryButton}>
               Back to my view
             </button>
           </form>

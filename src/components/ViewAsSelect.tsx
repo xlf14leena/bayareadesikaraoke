@@ -1,6 +1,7 @@
 "use client";
 
 import { setViewAs } from "@/app/view-as-actions";
+import { secondaryButton } from "@/components/ui";
 
 /** Dropdown that switches the "View as" role as soon as an option is picked. */
 export default function ViewAsSelect({
@@ -28,7 +29,7 @@ export default function ViewAsSelect({
         </select>
       </label>
       <noscript>
-        <button type="submit" className="ml-2 underline">
+        <button type="submit" className={`${secondaryButton} ml-2`}>
           Go
         </button>
       </noscript>
