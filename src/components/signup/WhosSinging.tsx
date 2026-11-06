@@ -23,7 +23,7 @@ type Props = {
 };
 
 /**
- * The event page's "Who's singing" table: confirmed singers in payment order
+ * The event page's "Who's coming" table: confirmed singers in payment order
  * with a column per round, then the waitlist and confirmed listeners. On a
  * phone each row stacks, with the round as a label beside each song.
  */

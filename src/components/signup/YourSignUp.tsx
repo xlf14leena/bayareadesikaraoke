@@ -87,7 +87,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
 
       {signUp.status === "CONFIRMED" && (
         <p className="text-sm">
-          You&apos;re in! {signUp.role === "SINGER" ? "Your songs show in the Who's singing tab." : "See you there."}
+          You&apos;re in! {signUp.role === "SINGER" ? "Your songs show in the Who's coming tab." : "See you there."}
           {signUp.paymentNote && <span className="text-ink-muted"> ({signUp.paymentNote})</span>}
         </p>
       )}
@@ -96,7 +96,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
         <p>
           Thanks! The organizers will check your payment
           {signUp.screenshot && <> (screenshot sent {formatDateTime(signUp.screenshot.uploadedAt)})</>}. Your spot is
-          held while they review it. Once they approve it, you and your songs show in the Who&apos;s singing tab.
+          held while they review it. Once they approve it, you and your songs show in the Who&apos;s coming tab.
         </p>
       )}
 

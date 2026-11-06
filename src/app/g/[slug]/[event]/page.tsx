@@ -377,10 +377,10 @@ export default async function EventPage({ params, searchParams }: Props) {
 
   const lineup = showLineup && (
     <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
-      <h2 className="mb-3 text-xl font-semibold">Who&apos;s singing</h2>
+      <h2 className="mb-3 text-xl font-semibold">Who&apos;s coming</h2>
       {!viewer ? (
         <p className="text-ink-muted">
-          <Link href={`/signin?callbackUrl=${encodeURIComponent(`${here}#whos-singing`)}`} className="font-medium text-cobalt hover:underline">
+          <Link href={`/signin?callbackUrl=${encodeURIComponent(`${here}#whos-coming`)}`} className="font-medium text-cobalt hover:underline">
             Sign in
           </Link>{" "}
           to see who has signed up and the songs they picked.
@@ -475,7 +475,15 @@ export default async function EventPage({ params, searchParams }: Props) {
       content: tonight,
     },
     { id: "your-sign-up", label: myActive ? "Your sign-up" : "Sign up", icon: "signup", show: join || yours, content: join || yours },
-    { id: "whos-singing", label: "Who's singing", icon: "singers", count: confirmedSingers.length, show: lineup, content: lineup },
+    {
+      id: "whos-coming",
+      label: "Who's coming",
+      icon: "singers",
+      aliases: ["whos-singing"],
+      count: confirmedSingers.length + listeners.length,
+      show: lineup,
+      content: lineup,
+    },
     { id: "details", label: "Details", icon: "details", show: true, content: details },
     {
       id: "comments",
