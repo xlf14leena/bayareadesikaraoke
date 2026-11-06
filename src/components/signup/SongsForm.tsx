@@ -261,7 +261,11 @@ function TrackInput({ round, defaultUrl, defaultSeconds }: { round: number; defa
       {seconds != null && (
         <span className="mt-1 block text-xs text-ink-muted">
           Track length <TrackLength seconds={seconds} className="font-medium text-ink" />
-          {seconds > LONG_TRACK_SECONDS && <span className="text-red-700"> · longer than 6 minutes</span>}
+          {seconds > LONG_TRACK_SECONDS && (
+            <span className="mt-0.5 block text-red-700">
+              This is a long track (over 6 minutes). Be ready to cut it short if the organizers ask.
+            </span>
+          )}
         </span>
       )}
     </>
