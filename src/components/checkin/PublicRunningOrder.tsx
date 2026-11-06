@@ -5,7 +5,8 @@ import { secondaryButton } from "@/components/ui";
 export type PublicOrderRow = {
   round: number;
   slot: number;
-  signUpId: string;
+  /** The slot holder, or both singers of a merged duet. */
+  signUpIds: string[];
   name: string;
   song: {
     title: string;
@@ -33,11 +34,11 @@ export default function PublicRunningOrder({
   const current = rows.find(isNow);
   const openRound = now?.round ?? rounds[0]?.[0].round;
   // How many singers before the viewer's next turn in the round being sung.
-  const myNext = now ? rows.find((r) => r.signUpId === mySignUpId && r.round === now.round && r.slot > now.slot) : null;
+  const myNext = now ? rows.find((r) => mySignUpId != null && r.signUpIds.includes(mySignUpId) && r.round === now.round && r.slot > now.slot) : null;
   const before = myNext ? rows.filter((r) => r.round === now!.round && r.slot > now!.slot && r.slot < myNext.slot).length : 0;
   return (
     <section className="rounded-xl border border-line bg-white p-4 sm:p-6">
-      <h2 className="mb-1 text-xl font-semibold">Running order</h2>
+      <h2 className="mb-1 text-xl font-semibold">Singing order</h2>
       <p className="mb-4 text-sm text-ink-muted">Singers get a slot after they check in at the venue.</p>
       {now && (
         <div className="mb-4 rounded-lg border border-gold bg-gold/20 px-3 py-2">
@@ -49,7 +50,7 @@ export default function PublicRunningOrder({
           {current?.song && <p className="text-sm text-ink-muted">{current.song.title}</p>}
           {myNext && (
             <p className="mt-1 text-sm font-medium text-ink">
-              {before === 0 ? "You're up next!" : `You're up after ${before} more ${before === 1 ? "singer" : "singers"}.`}
+              {before === 0 ? "You're up next!" : `You're up after ${before} more ${before === 1 ? "turn" : "turns"}.`}
             </p>
           )}
         </div>
@@ -62,7 +63,7 @@ export default function PublicRunningOrder({
               <span>
                 Round {list[0].round}{" "}
                 <span className="text-sm font-normal text-ink-muted">
-                  · {list.length} {list.length === 1 ? "singer" : "singers"}
+                  · {list.length} {list.length === 1 ? "turn" : "turns"}
                 </span>
               </span>
               <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">
@@ -71,7 +72,7 @@ export default function PublicRunningOrder({
             </summary>
             <ol className="mt-2 divide-y divide-line rounded-lg border border-line">
               {list.map((row) => {
-                const mine = row.signUpId === mySignUpId;
+                const mine = mySignUpId != null && row.signUpIds.includes(mySignUpId);
                 const { song } = row;
                 return (
                   <li

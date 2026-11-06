@@ -5,8 +5,10 @@ export type LineupSong = {
   artist: string | null;
   youtubeUrl: string | null;
   duet: boolean;
-  /** The partner's name, or null for a duet whose partner no longer holds a spot. */
+  /** The partner's name, or null for a duet whose partner hasn't accepted or no longer holds a spot. */
   duetWith: string | null;
+  /** Whether the singer named a partner, so a duet without duetWith reads "not confirmed" rather than "not picked". */
+  partnerPicked: boolean;
 };
 export type LineupRound = { round: number; config: RoundConfig | null };
 export type LineupSinger = { id: string; name: string; songs: Map<number, LineupSong> };
@@ -21,7 +23,7 @@ type Props = {
 };
 
 /**
- * The event page's "Who's singing" table: confirmed singers in payment order
+ * The event page's "Who's coming" table: confirmed singers in payment order
  * with a column per round, then the waitlist and confirmed listeners. On a
  * phone each row stacks, with the round as a label beside each song.
  */
@@ -146,7 +148,13 @@ function Song({ song }: { song: LineupSong | undefined }) {
   if (!song) return <span className="italic text-ink-muted">Not picked yet</span>;
   const extra = [
     song.artist,
-    song.duet ? (song.duetWith ? `duet with ${song.duetWith}` : "duet") : null,
+    song.duet
+      ? song.duetWith
+        ? `duet with ${song.duetWith}`
+        : song.partnerPicked
+          ? "duet · partner not confirmed yet"
+          : "duet · partner not picked yet"
+      : null,
   ].filter(Boolean);
   return (
     <>

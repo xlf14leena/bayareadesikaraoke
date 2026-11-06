@@ -32,7 +32,7 @@ export default function RunningOrder({
   return (
     <section className={`${cardClass} space-y-5`}>
       <div>
-        <h2 className="mb-1 text-xl font-semibold">Running order</h2>
+        <h2 className="mb-1 text-xl font-semibold">Singing order</h2>
         <p className="text-sm text-ink-muted">
           Singers get a slot in each round after they check in. Change the rounds and how slots work in{" "}
           <Link href={`/admin/dates/${dateId}/settings`} className="text-cobalt hover:underline">
