@@ -7,6 +7,7 @@ import HeaderShell from "@/components/HeaderShell";
 import { prisma } from "@/lib/prisma";
 import { canSwitchView, getViewer, isAnyAdmin, type Viewer } from "@/lib/roles";
 import { primaryButton } from "@/components/ui";
+import SubmitButton from "@/components/SubmitButton";
 
 export default async function SiteHeader() {
   const viewer = await getViewer();
@@ -44,9 +45,9 @@ export default async function SiteHeader() {
                 await signOut({ redirectTo: "/" });
               }}
             >
-              <button type="submit" className="text-ink-muted hover:text-cobalt group-data-[tone=dark]:text-white/85 group-data-[tone=dark]:hover:text-kicker">
+              <SubmitButton className="inline-flex items-center gap-1.5 text-ink-muted hover:text-cobalt group-data-[tone=dark]:text-white/85 group-data-[tone=dark]:hover:text-kicker">
                 Sign out
-              </button>
+              </SubmitButton>
             </form>
           </div>
         ) : (
@@ -56,13 +57,10 @@ export default async function SiteHeader() {
               await signIn("google");
             }}
           >
-            <button
-              type="submit"
-              className="whitespace-nowrap rounded-full bg-royal px-4 py-2 text-sm font-medium text-white hover:bg-cobalt group-data-[tone=dark]:bg-white group-data-[tone=dark]:text-royal group-data-[tone=dark]:hover:bg-kicker"
-            >
+            <SubmitButton className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-royal px-4 py-2 text-sm font-medium text-white hover:bg-cobalt group-data-[tone=dark]:bg-white group-data-[tone=dark]:text-royal group-data-[tone=dark]:hover:bg-kicker">
               <span className="sm:hidden">Sign in</span>
               <span className="hidden sm:inline">Sign in with Google</span>
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>
@@ -110,9 +108,9 @@ async function ViewAsBar({ viewer }: { viewer: Viewer }) {
           <ViewAsSelect current={current} options={options} />
           <form action={setViewAs}>
             <input type="hidden" name="viewAs" value="" />
-            <button type="submit" className={primaryButton}>
+            <SubmitButton className={primaryButton}>
               Back to my view
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>

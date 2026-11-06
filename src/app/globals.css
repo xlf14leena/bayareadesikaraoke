@@ -47,6 +47,43 @@
   padding-right: 2rem;
 }
 
+/*
+ * Press feedback. The shared buttons in components/ui.ts (class "btn") draw
+ * their own pressed look. Everything else you can tap, like links, tabs and
+ * toggles, dims while it is pressed, so a tap always shows it landed.
+ */
+@layer base {
+  a,
+  button,
+  summary,
+  label,
+  [role="button"] {
+    /* Phones flash grey on tap; tint it in our blue instead. */
+    -webkit-tap-highlight-color: rgb(58 99 196 / 0.18);
+    /* Don't wait to see if a tap is a double-tap zoom. */
+    touch-action: manipulation;
+  }
+  .btn {
+    -webkit-tap-highlight-color: transparent;
+  }
+  summary {
+    cursor: pointer;
+  }
+  :where(a, button, summary, [role="button"]):not(.btn, :disabled) {
+    transition-property: color, background-color, border-color, opacity;
+    transition-duration: 150ms;
+  }
+  :where(a, button, summary, [role="button"]):not(.btn, :disabled):active {
+    opacity: 0.65;
+    transition-duration: 0ms;
+  }
+  /* A clear ring for keyboard users, on anything without its own. */
+  :focus-visible {
+    outline: 2px solid var(--color-lapis);
+    outline-offset: 2px;
+  }
+}
+
 /* Section tabs on the event page land each section below the sticky header and tab bar. */
 section[id] {
   scroll-margin-top: 8.5rem;

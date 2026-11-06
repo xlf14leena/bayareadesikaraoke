@@ -5,6 +5,7 @@ import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import type { Viewer } from "@/lib/roles";
+import SubmitButton from "@/components/SubmitButton";
 
 // "Comments and questions" on an event page. Signed-in members read and post;
 // visitors are asked to sign in. When an admin turns comments off, members
@@ -54,9 +55,9 @@ export default async function EventComments({ date, viewer, isAdmin, privateKey,
         </div>
         {isAdmin && (
           <form action={setCommentsEnabled.bind(null, date.id, !date.commentsEnabled)}>
-            <button type="submit" className={date.commentsEnabled ? secondaryButton : primaryButton}>
+            <SubmitButton className={date.commentsEnabled ? secondaryButton : primaryButton}>
               {date.commentsEnabled ? "Turn off comments" : "Turn on comments"}
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>

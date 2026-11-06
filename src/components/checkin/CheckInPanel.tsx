@@ -8,6 +8,7 @@ import { STATUS_LABEL } from "@/lib/events";
 import { CAN_CHECK_IN, canOpenCheckIn, checkInIsOpen, checkInOpensAt } from "@/lib/checkin";
 import { formatClock, formatDateTime } from "@/lib/format";
 import { pacificTimeOf } from "@/lib/schedule";
+import SubmitButton from "@/components/SubmitButton";
 
 type Person = Pick<SignUp, "id" | "displayName" | "role" | "status" | "checkedInAt" | "checkInMethod"> & {
   checkedInBy: { name: string | null } | null;
@@ -67,9 +68,9 @@ export default function CheckInPanel({
           ) : (
             canOpen && (
               <form action={openCheckIn.bind(null, date.id)}>
-                <button type="submit" className={primaryButton}>
+                <SubmitButton className={primaryButton}>
                   Open check-in
-                </button>
+                </SubmitButton>
               </form>
             )
           )}
@@ -120,9 +121,9 @@ export default function CheckInPanel({
                       </span>
                     </span>
                     <form action={adminCheckIn.bind(null, s.id)}>
-                      <button type="submit" className={secondaryButton}>
+                      <SubmitButton className={secondaryButton}>
                         Check in
-                      </button>
+                      </SubmitButton>
                     </form>
                   </li>
                 ))}

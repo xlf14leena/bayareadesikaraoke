@@ -4,6 +4,7 @@ import { clearNowSinging, clearSlot, setNowSinging, startRound, stepNowSinging }
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { ROUND_KIND_LABEL, type RoundKind, SLOT_MODE_LABEL } from "@/lib/rounds";
+import SubmitButton from "@/components/SubmitButton";
 import { formatDuration, formatTotal } from "@/lib/format";
 
 export type RunningOrderRound = {
@@ -75,30 +76,30 @@ export default function RunningOrder({
         )}
         <div className="flex flex-wrap gap-2">
           <form action={stepNowSinging.bind(null, dateId, 1)}>
-            <button type="submit" className={primaryButton}>
+            <SubmitButton className={primaryButton}>
               {now ? "Next singer ▶" : "Start with the first singer ▶"}
-            </button>
+            </SubmitButton>
           </form>
           {rounds
             .filter((r) => r.round !== now?.round && r.rows.length > 0)
             .map((r) => (
               <form key={r.round} action={startRound.bind(null, dateId, r.round)}>
-                <button type="submit" className={secondaryButton}>
+                <SubmitButton className={secondaryButton}>
                   Start round {r.round}
-                </button>
+                </SubmitButton>
               </form>
             ))}
           {now && (
             <>
               <form action={stepNowSinging.bind(null, dateId, -1)}>
-                <button type="submit" className={secondaryButton}>
+                <SubmitButton className={secondaryButton}>
                   ◀ Back
-                </button>
+                </SubmitButton>
               </form>
               <form action={clearNowSinging.bind(null, dateId)}>
-                <button type="submit" className={secondaryButton}>
+                <SubmitButton className={secondaryButton}>
                   Stop
-                </button>
+                </SubmitButton>
               </form>
             </>
           )}
@@ -160,9 +161,9 @@ export default function RunningOrder({
                         </span>
                       ) : (
                         <form action={setNowSinging.bind(null, dateId, r.round, row.slot)}>
-                          <button type="submit" className={secondaryButton}>
+                          <SubmitButton className={secondaryButton}>
                             Sing now
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                     {row.method === "PICK" && (

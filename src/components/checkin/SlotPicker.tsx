@@ -3,6 +3,7 @@
 import { useFormAction } from "@/components/admin/useFormAction";
 import { primaryButton, secondaryButton, selectClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
+import { Spinner } from "@/components/SubmitButton";
 
 /** A singer's slot choice for one round: the free slots, and a button. */
 export default function SlotPicker({
@@ -33,7 +34,8 @@ export default function SlotPicker({
           </option>
         ))}
       </select>
-      <button type="submit" className={changing ? secondaryButton : primaryButton} disabled={pending}>
+      <button type="submit" className={changing ? secondaryButton : primaryButton} disabled={pending} aria-busy={pending || undefined}>
+        {pending && <Spinner />}
         {pending ? "Saving…" : changing ? "Move" : "Take this slot"}
       </button>
       {state?.error && !pending && (
