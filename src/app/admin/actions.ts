@@ -84,12 +84,19 @@ export async function createGroup(_prev: FormState, form: FormData): Promise<For
   const result = await attempt(async () => {
     const data = groupFields(form);
     const admins = await usersByEmail(emailsIn(String(form.get("adminEmails") ?? "")));
-    await withBanner(form, null, async (bannerUrl) => {
-      const group = await prisma.group.create({
-        data: { ...data, bannerUrl, admins: { create: admins.map((u) => ({ userId: u.id })) } },
-      });
-      id = group.id;
-    });
+    await withBanner(form, null, (bannerUrl) =>
+      withBanner(
+        form,
+        null,
+        async (thumbnailUrl) => {
+          const group = await prisma.group.create({
+            data: { ...data, bannerUrl, thumbnailUrl, admins: { create: admins.map((u) => ({ userId: u.id })) } },
+          });
+          id = group.id;
+        },
+        { field: "thumbnail" },
+      ),
+    );
   });
   if (result) return result;
   redirect(`/admin/groups/${id}`);
@@ -99,10 +106,20 @@ export async function updateGroup(groupId: string, _prev: FormState, form: FormD
   await requireGroupAdmin(groupId);
   const result = await attempt(async () => {
     const data = groupFields(form);
-    const before = await prisma.group.findUniqueOrThrow({ where: { id: groupId }, select: { bannerUrl: true } });
-    await withBanner(form, before.bannerUrl, async (bannerUrl) => {
-      await prisma.group.update({ where: { id: groupId }, data: { ...data, bannerUrl } });
+    const before = await prisma.group.findUniqueOrThrow({
+      where: { id: groupId },
+      select: { bannerUrl: true, thumbnailUrl: true },
     });
+    await withBanner(form, before.bannerUrl, (bannerUrl) =>
+      withBanner(
+        form,
+        before.thumbnailUrl,
+        async (thumbnailUrl) => {
+          await prisma.group.update({ where: { id: groupId }, data: { ...data, bannerUrl, thumbnailUrl } });
+        },
+        { field: "thumbnail" },
+      ),
+    );
   });
   if (result) return result;
   revalidatePath(`/admin/groups/${groupId}`);
@@ -113,10 +130,14 @@ export async function deleteGroup(groupId: string): Promise<void> {
   await requireSuperUser();
   const banners = await prisma.group.findUniqueOrThrow({
     where: { id: groupId },
-    select: { bannerUrl: true, series: { select: { bannerUrl: true, dates: { select: { bannerUrl: true } } } } },
+    select: {
+      bannerUrl: true,
+      thumbnailUrl: true,
+      series: { select: { bannerUrl: true, dates: { select: { bannerUrl: true } } } },
+    },
   });
   await prisma.group.delete({ where: { id: groupId } });
-  await dropBanners([banners.bannerUrl, ...banners.series.flatMap((s) => [s.bannerUrl, ...s.dates.map((d) => d.bannerUrl)])]);
+  await dropBanners([banners.bannerUrl, banners.thumbnailUrl, ...banners.series.flatMap((s) => [s.bannerUrl, ...s.dates.map((d) => d.bannerUrl)])]);
   redirect("/admin");
 }
 

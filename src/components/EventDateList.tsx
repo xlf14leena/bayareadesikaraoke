@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { EventDate, EventSeries, Group } from "@prisma/client";
-import { bannerFor } from "@/lib/banner";
+import GroupThumb from "@/components/GroupThumb";
 import { eventPath } from "@/lib/event-url";
 import { settingsFor } from "@/lib/events";
+import { groupThumbnails } from "@/lib/group-thumbnails";
 import { roundThemes, roundsFor } from "@/lib/rounds";
 import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
@@ -12,7 +13,7 @@ export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
  * Cards for event dates; each opens the event page, and the thumbnail opens the group's page. `privateKey` is added to links for private events.
  * `past` drops what only matters before the night (the sign-ups badge and prices).
  */
-export default function EventDateList({
+export default async function EventDateList({
   dates,
   privateKey,
   past = false,
@@ -21,10 +22,11 @@ export default function EventDateList({
   privateKey?: string;
   past?: boolean;
 }) {
+  const thumbs = await groupThumbnails(dates.map((d) => d.series.group));
   return (
     <ul className="space-y-3">
       {dates.map((d) => {
-        const banner = bannerFor(d.bannerUrl, d.series.bannerUrl, d.series.group.bannerUrl).src;
+        const thumb = thumbs.get(d.series.group.id)!;
         const badge = formatDateBadge(d.startsAt);
         const settings = settingsFor(d, d.series);
         const themes = roundThemes(roundsFor(d, d.series));
@@ -39,16 +41,15 @@ export default function EventDateList({
               <p className="text-[11px] font-semibold uppercase tracking-wider">{badge.month}</p>
               <p className="font-display text-3xl leading-none">{badge.day}</p>
             </div>
-            {/* Square thumbnail, filled edge to edge. It opens the group's page; it sits above the
-                card-wide event link so the two links don't nest. */}
+            {/* The group's square thumbnail (src/lib/group-thumbnail.ts). It opens the group's page; it
+                sits above the card-wide event link so the two links don't nest. */}
             <Link
               href={`/g/${d.series.group.slug}`}
               aria-label={`${d.series.group.name} group page`}
               title={d.series.group.name}
               className="relative z-10 hidden shrink-0 overflow-hidden rounded-xl bg-mist ring-lapis transition hover:ring-2 sm:block"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={banner} alt="" className="h-16 w-16 object-cover" />
+              <GroupThumb thumb={thumb} />
             </Link>
             <div className="min-w-0 flex-1">
               <h3 className="text-lg font-semibold leading-snug">

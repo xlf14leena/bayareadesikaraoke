@@ -33,6 +33,8 @@ Server-side checks live in `src/lib/roles.ts` (`requireViewer`, `requireGroupAdm
 
 A person must sign in once before they can be made a group admin.
 
+**Group thumbnails.** Group details has an optional square **Thumbnail image** beside the banner (uploaded or pasted, stored like banners). It is the group's picture in event lists (home page, group page) and the admin group list. Without one, `thumbnailFor` in `src/lib/group-thumbnail.ts` falls back to the group banner cropped to a square, then the newest event's banner, then a tile with the group's initials in a site color that stays the same for that group.
+
 **View as.** Admins get a "View site as" switch under the header. Super users can view the site as the admin of any one group or as a singer; group admins can view it as a singer (or as the admin of one of their groups, if they run several). It only narrows what the person can do, and is re-checked against their real roles on every request (`getViewer` in `src/lib/roles.ts`), so it can never grant access. "Back to my view" restores their own roles.
 
 ## Recurring dates
