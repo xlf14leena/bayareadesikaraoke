@@ -32,11 +32,14 @@ export default function RunningOrder({
   seriesId,
   dateId,
   now,
+  songLock,
 }: {
   rounds: RunningOrderRound[];
   seriesId: string;
   dateId: string;
   now: { round: number; slot: number } | null;
+  /** With the "When each round starts" song lock: the highest round started so far (0 for none). */
+  songLock?: { lockedThrough: number };
 }) {
   const current = now && rounds.find((r) => r.round === now.round)?.rows.find((row) => row.slot === now.slot);
   const openRound = now?.round ?? rounds[0]?.round;
@@ -73,6 +76,14 @@ export default function RunningOrder({
           <p className="text-sm text-ink-muted">
             {left > 0 && `About ${formatTotal(left)} of tracks left in round ${now!.round}. `}
             {nightTotal > 0 && `All rounds: ${formatTotal(nightTotal)} of tracks.`}
+          </p>
+        )}
+        {songLock && (
+          <p className="text-sm text-ink-muted">
+            {songLock.lockedThrough > 0
+              ? `Songs are locked for ${songLock.lockedThrough === 1 ? "round 1" : `rounds 1 to ${songLock.lockedThrough}`}. `
+              : ""}
+            Singers can&apos;t change a round&apos;s song once you start it.
           </p>
         )}
         <div className="flex flex-wrap gap-2">

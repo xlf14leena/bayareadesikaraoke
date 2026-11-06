@@ -1,8 +1,8 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { Prisma, type Frequency, type Visibility } from "@prisma/client";
-import { OVERRIDE_KEYS, type OverrideKey } from "@/lib/events";
+import { Prisma, type Frequency, type SongLock, type Visibility } from "@prisma/client";
+import { OVERRIDE_KEYS, SONG_LOCKS, type OverrideKey } from "@/lib/events";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -178,8 +178,15 @@ function seriesFields(form: FormData) {
     maxSingers: optionalCap(form, "maxSingers", "Singer cap"),
     maxListeners: optionalCap(form, "maxListeners", "Listener cap"),
     rounds: roundsFromForm(form),
+    songLock: songLock(form),
     ...zelleFields(form),
   };
+}
+
+/** When song changes lock; anything unexpected falls back to the default, per round. */
+function songLock(form: FormData): SongLock {
+  const value = String(form.get("songLock")) as SongLock;
+  return SONG_LOCKS.includes(value) ? value : "ROUND_START";
 }
 
 /** Where members send Zelle payments. Both are optional. */
@@ -361,6 +368,7 @@ export async function updateDate(dateId: string, _prev: FormState, form: FormDat
         maxListeners: own("capacity") ? optionalCap(form, "maxListeners", "Listener cap") : null,
         rounds: rounds ?? Prisma.DbNull,
         ...(own("zelle") ? zelleFields(form) : { zelleName: null, zelleHandle: null }),
+        songLock: own("songLock") ? songLock(form) : null,
     };
     await withBanner(
       form,

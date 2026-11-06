@@ -104,10 +104,19 @@ async function singingOrder(dateId: string) {
   return duetTurns(slots, songs);
 }
 
+/**
+ * Once a round has someone singing, it and every earlier round count as started: with the
+ * "When each round starts" song lock, their songs can't change any more (songsOpen in src/lib/signups.ts).
+ * It never goes back down, even when the admin steps back or clears "now singing".
+ */
+function lockThrough(date: { songsLockedThrough: number }, round: number) {
+  return { songsLockedThrough: Math.max(date.songsLockedThrough, round) };
+}
+
 /** Marks one slot as singing now. */
 export async function setNowSinging(dateId: string, round: number, slot: number): Promise<void> {
-  await adminDate(dateId);
-  await prisma.eventDate.update({ where: { id: dateId }, data: { nowRound: round, nowSlot: slot } });
+  const { date } = await adminDate(dateId);
+  await prisma.eventDate.update({ where: { id: dateId }, data: { nowRound: round, nowSlot: slot, ...lockThrough(date, round) } });
   refresh(dateId);
 }
 
@@ -127,7 +136,9 @@ export async function stepNowSinging(dateId: string, step: 1 | -1): Promise<void
   const target = order[next];
   await prisma.eventDate.update({
     where: { id: dateId },
-    data: target ? { nowRound: target.round, nowSlot: target.slot } : { nowRound: null, nowSlot: null },
+    data: target
+      ? { nowRound: target.round, nowSlot: target.slot, ...lockThrough(date, target.round) }
+      : { nowRound: null, nowSlot: null },
   });
   refresh(dateId);
 }
@@ -137,10 +148,10 @@ export async function stepNowSinging(dateId: string, step: 1 | -1): Promise<void
  * its number. If that's #7, slots 1 to 6 can no longer be picked or given out.
  */
 export async function startRound(dateId: string, round: number): Promise<void> {
-  await adminDate(dateId);
+  const { date } = await adminDate(dateId);
   const first = (await singingOrder(dateId)).find((o) => o.round === round);
   if (!first) return;
-  await prisma.eventDate.update({ where: { id: dateId }, data: { nowRound: round, nowSlot: first.slot } });
+  await prisma.eventDate.update({ where: { id: dateId }, data: { nowRound: round, nowSlot: first.slot, ...lockThrough(date, round) } });
   refresh(dateId);
 }
 

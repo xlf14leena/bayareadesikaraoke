@@ -64,6 +64,7 @@ export default async function DateSettingsPage({ params }: { params: Promise<{ d
         templateRounds={parseRounds(series.rounds)}
         templateBanner={bannerFor(series.bannerUrl, series.group.bannerUrl)}
         templateZelle={{ name: series.zelleName, handle: series.zelleHandle }}
+        templateSongLock={series.songLock}
         when={{
           day: pacificDateOf(date.startsAt),
           startTime: pacificTimeOf(date.startsAt),

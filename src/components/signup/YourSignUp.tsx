@@ -24,7 +24,12 @@ type Props = {
   /** Where to send the payment, from the event template or this date. */
   zelle: ZelleDetails;
   waitlistPosition: number | null;
+  /** Whether payment proof can still be uploaded (until sign-ups close). */
   editable: boolean;
+  /** Per round, round 1 first: whether its song, duet partner and duet answers can still change (songsOpen). */
+  openRounds: boolean[];
+  /** When songs lock on this date, for singers (SONG_LOCK_NOTE). */
+  songLockNote: string;
   /** The date's rounds, for the songs form. */
   rounds: RoundConfig[];
   /** Per round, how many times each singer already sings, without this person's own songs (for "times per singer"). */
@@ -47,7 +52,19 @@ const TONE: Record<string, string> = {
 };
 
 /** The signed-in person's own sign-up for this date: status, how to pay, and their songs. */
-export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition, editable, partners, duetInvites, rounds, appearances }: Props) {
+export default function YourSignUp({
+  signUp,
+  groupName,
+  zelle,
+  waitlistPosition,
+  editable,
+  openRounds,
+  songLockNote,
+  partners,
+  duetInvites,
+  rounds,
+  appearances,
+}: Props) {
   const role = signUp.role === "SINGER" ? "singer" : "listener";
   const needsProof = signUp.status === "RESERVED" || signUp.status === "REJECTED";
   const active = signUp.songs.filter((s) => s.status === "ACTIVE");
@@ -67,6 +84,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
     };
   }
   const sorted = [...active].sort((a, b) => a.round - b.round);
+  const songsEditable = openRounds.some(Boolean);
   const canLeave = ["WAITLISTED", "RESERVED", "REJECTED", "UNDER_REVIEW"].includes(signUp.status);
 
   return (
@@ -197,8 +215,9 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
                   </>
                 )}
               </span>
-              {editable &&
-                (d.accepted ? (
+              {!openRounds[d.round - 1] ? (
+                !d.accepted && <span className="text-xs text-ink-muted">Locked, so you can't answer now.</span>
+              ) : d.accepted ? (
                   <ConfirmButton
                     action={respondToDuet.bind(null, d.songId, false)}
                     label="Back out"
@@ -218,7 +237,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
                       </SubmitButton>
                     </form>
                   </span>
-                ))}
+                )}
             </li>
           ))}
         </ul>
@@ -251,7 +270,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
             </span>
             {/* A labelled button, not just a caret, so it's clear the summary opens the rounds. */}
             <span className="flex shrink-0 items-center gap-1 rounded-full border border-cobalt/40 px-3 py-1 text-sm font-medium text-cobalt group-hover:bg-cobalt/10">
-              <span className="group-open:hidden">{editable ? (sorted.length ? "Edit songs" : "Pick songs") : "Show rounds"}</span>
+              <span className="group-open:hidden">{songsEditable ? (sorted.length ? "Edit songs" : "Pick songs") : "Show rounds"}</span>
               <span className="hidden group-open:inline">Close</span>
               <span aria-hidden className="transition-transform group-open:rotate-180">
                 ▾
@@ -261,7 +280,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
           <div className="space-y-3 border-t border-line p-3">
             <p className="text-xs text-ink-muted">
               {rounds.length === 1 ? "Pick your song." : `Pick one song for each of the ${rounds.length} rounds.`} First pick wins: a song someone already picked for this date can&apos;t be
-              picked again, even spelled a little differently. You can change your songs until sign-ups close.
+              picked again, even spelled a little differently. {songLockNote}
             </p>
             {rejected.map((s) => (
               <p key={s.id} className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -269,10 +288,11 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
                 {s.rejectReason && <>: {s.rejectReason}</>}. Please pick another.
               </p>
             ))}
-            {editable ? (
+            {songsEditable ? (
               <SongsForm
                 action={saveSongs.bind(null, signUp.id)}
                 rounds={rounds}
+                locked={openRounds.map((open) => !open)}
                 defaults={defaults}
                 partners={partners}
                 appearances={appearances}
