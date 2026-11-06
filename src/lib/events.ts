@@ -78,13 +78,6 @@ export const SONG_LOCK_LABEL: Record<SongLock, string> = {
   EVENT_START: "At the start time",
 };
 
-/** What singers are told on the event page about when their songs lock. */
-export const SONG_LOCK_NOTE: Record<SongLock, string> = {
-  ROUND_START: "You can change a round's song until that round starts.",
-  CHECK_IN: "You can change your songs until check-in opens.",
-  EVENT_START: "You can change your songs until the event starts.",
-};
-
 /** The song lock that applies to a date: its own, otherwise the event's. */
 export function songLockFor(
   date: Pick<EventDate, "overrides" | "songLock">,
