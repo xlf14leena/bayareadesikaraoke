@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { CAN_CHECK_IN, canOpenCheckIn, checkInOpensAt, newCheckInSecret } from "@/lib/checkin";
+import { duetTurns } from "@/lib/duet-turns";
 import { FormError } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
@@ -84,13 +85,23 @@ export async function clearSlot(signUpId: string, round: number): Promise<void> 
 
 // ---------- Now singing ----------
 
-/** Every taken slot on the date, in singing order: round 1 by slot, then round 2, and so on. */
+/**
+ * Every turn on the date, in singing order: round 1 by slot, then round 2, and so on.
+ * A merged duet is one turn at the earlier of its two slots (src/lib/duet-turns.ts).
+ */
 async function singingOrder(dateId: string) {
-  return prisma.roundSlot.findMany({
-    where: { eventDateId: dateId, signUp: { status: { in: CAN_CHECK_IN } } },
-    orderBy: [{ round: "asc" }, { slot: "asc" }],
-    select: { round: true, slot: true },
-  });
+  const [slots, songs] = await Promise.all([
+    prisma.roundSlot.findMany({
+      where: { eventDateId: dateId, signUp: { status: { in: CAN_CHECK_IN } } },
+      orderBy: [{ round: "asc" }, { slot: "asc" }],
+      select: { round: true, slot: true, signUpId: true },
+    }),
+    prisma.song.findMany({
+      where: { eventDateId: dateId, status: "ACTIVE" },
+      select: { signUpId: true, round: true, duet: true, duetStatus: true, duetPartnerId: true },
+    }),
+  ]);
+  return duetTurns(slots, songs);
 }
 
 /** Marks one slot as singing now. */

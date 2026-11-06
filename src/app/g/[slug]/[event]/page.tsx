@@ -19,7 +19,8 @@ import EventComments from "@/components/comments/EventComments";
 import FeedbackPrompt from "@/components/feedback/FeedbackPrompt";
 import { ROUND_KIND_LABEL, roundNumbers, roundsFor } from "@/lib/rounds";
 import { paidAt, singerRounds } from "@/lib/slots";
-import WhosSinging from "@/components/signup/WhosSinging";
+import { duetTurns, turnName, turnSinger } from "@/lib/duet-turns";
+import WhosSinging, { type LineupSong } from "@/components/signup/WhosSinging";
 import { signUpForDate } from "./actions";
 import { bannerFor } from "@/lib/banner";
 import { zelleFor } from "@/lib/events";
@@ -183,27 +184,36 @@ export default async function EventPage({ params, searchParams }: Props) {
   const lineupRounds = [...new Set([...roundNumbers(roundConfig), ...singers.map((s) => s.round)])]
     .sort((a, b) => a - b)
     .map((round) => ({ round, config: roundConfig[round - 1] ?? null }));
-  const lineupSingers = confirmedSingers.map((p) => ({
-    id: p.id,
-    name: p.displayName,
-    songs: new Map(
-      singers
-        .filter((s) => s.signUpId === p.id)
-        .map((s) => [
-          s.round,
-          {
-            title: s.title,
-            artist: s.artist,
-            youtubeUrl: s.youtubeUrl,
-            duet: s.duet,
-            duetWith:
-              s.duetPartner && s.duetStatus === "ACCEPTED" && HOLDS_SPOT.includes(s.duetPartner.status)
-                ? s.duetPartner.displayName
-                : null,
-          },
-        ]),
-    ),
-  }));
+  // Each confirmed singer's song per round. A round where they have no song of their own but
+  // have accepted someone's duet shows that duet, so they don't read "Not picked yet".
+  const lineupSingers = confirmedSingers.map((p) => {
+    const songs = new Map<number, LineupSong>();
+    for (const s of singers.filter((x) => x.signUpId === p.id)) {
+      songs.set(s.round, {
+        title: s.title,
+        artist: s.artist,
+        youtubeUrl: s.youtubeUrl,
+        duet: s.duet,
+        duetWith:
+          s.duetPartner && s.duetStatus === "ACCEPTED" && HOLDS_SPOT.includes(s.duetPartner.status)
+            ? s.duetPartner.displayName
+            : null,
+        partnerPicked: s.duetPartnerId != null,
+      });
+    }
+    for (const s of singers.filter((x) => x.duetPartnerId === p.id && x.duetStatus === "ACCEPTED" && x.duet)) {
+      if (songs.has(s.round)) continue;
+      songs.set(s.round, {
+        title: s.title,
+        artist: s.artist,
+        youtubeUrl: s.youtubeUrl,
+        duet: true,
+        duetWith: s.signUp.displayName,
+        partnerPicked: true,
+      });
+    }
+    return { id: p.id, name: p.displayName, songs };
+  });
   // The running order: checked-in singers by slot, with their song for that round.
   const orderSlots = viewer
     ? await prisma.roundSlot.findMany({
@@ -222,6 +232,7 @@ export default async function EventPage({ params, searchParams }: Props) {
                   youtubeUrl: true,
                   duet: true,
                   duetStatus: true,
+                  duetPartnerId: true,
                   duetPartner: { select: { displayName: true, status: true } },
                 },
               },
@@ -230,15 +241,20 @@ export default async function EventPage({ params, searchParams }: Props) {
         },
       })
     : [];
-  const runningOrder = orderSlots.map((r) => ({
+  // Each slot holder's songs, once each, to merge accepted duets into one turn (src/lib/duet-turns.ts).
+  const orderSongs = [...new Map(orderSlots.map((r) => [r.signUpId, r.signUp.songs.map((s) => ({ ...s, signUpId: r.signUpId }))])).values()].flat();
+  const orderName = (id: string) => orderSlots.find((r) => r.signUpId === id)?.signUp.displayName ?? "?";
+  const runningOrder = duetTurns(orderSlots, orderSongs).map((r) => ({
     round: r.round,
     slot: r.slot,
-    signUpId: r.signUpId,
-    name: r.signUp.displayName,
-    // A duet partner shows only once they've accepted.
+    signUpIds: r.pair ? [r.pair.ownerId, r.pair.partnerId] : [r.signUpId],
+    name: turnName(r, orderName),
+    // A duet partner shows only once they've accepted; a merged duet already names both singers.
     song: (() => {
-      const song = r.signUp.songs.find((s) => s.round === r.round);
-      return song ? { ...song, duetPartner: song.duetStatus === "ACCEPTED" ? song.duetPartner : null } : null;
+      const song = orderSongs.find((s) => s.round === r.round && s.signUpId === turnSinger(r));
+      return song
+        ? { ...song, duetPartner: song.duetStatus === "ACCEPTED" && !r.pair ? song.duetPartner : null }
+        : null;
     })(),
   }));
   // Before sign-ups open there's no one to list, so skip the section (it comes back if anyone is confirmed).

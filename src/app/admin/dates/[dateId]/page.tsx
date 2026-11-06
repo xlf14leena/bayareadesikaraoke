@@ -17,6 +17,7 @@ import ReasonForm from "@/components/admin/ReasonForm";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
+import { duetTurns, turnName, turnSinger } from "@/lib/duet-turns";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 import { appearancesByRound, settle } from "@/lib/signups";
@@ -77,6 +78,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
     (s) => s.role === "SINGER" && s.checkedInAt && CAN_CHECK_IN.includes(s.status),
   );
   // The date's rounds, plus any round that still holds slots after the rounds changed (a past date).
+  const activeSongs = date.signUps.flatMap((s) => s.songs.filter((x) => x.status === "ACTIVE"));
+  const nameOf = (id: string) => date.signUps.find((x) => x.id === id)?.displayName ?? "?";
   const orderRounds = [...new Set([...roundNumbers(rounds), ...slotRows.map((r) => r.round)])].sort((a, b) => a - b);
   const runningOrder = orderRounds.map((round) => {
     const inRound = slotRows.filter((r) => r.round === round);
@@ -85,10 +88,17 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
       round,
       mode: config?.slotMode ?? inRound[0]?.method ?? "PICK",
       kind: config?.kind ?? "EITHER",
-      rows: inRound.map((r) => {
-        const s = date.signUps.find((x) => x.id === r.signUpId);
-        const song = s?.songs.find((x) => x.round === round && x.status === "ACTIVE");
-        return { slot: r.slot, signUpId: r.signUpId, name: s?.displayName ?? "?", song: song?.title ?? null, track: song?.youtubeUrl ?? null, method: r.method };
+      // An accepted duet whose partner has no song of their own in the round is one turn.
+      rows: duetTurns(inRound, activeSongs).map((r) => {
+        const song = activeSongs.find((x) => x.round === round && x.signUpId === turnSinger(r));
+        return {
+          slot: r.slot,
+          signUpId: r.signUpId,
+          name: turnName(r, nameOf),
+          song: song?.title ?? null,
+          track: song?.youtubeUrl ?? null,
+          method: r.method,
+        };
       }),
       waiting: arrivedSingers.filter((s) => !inRound.some((r) => r.signUpId === s.id)).map((s) => s.displayName),
     };
