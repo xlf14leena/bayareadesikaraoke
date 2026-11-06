@@ -3,7 +3,7 @@ import type { EventDate, EventSeries, Group } from "@prisma/client";
 import GroupThumb from "@/components/GroupThumb";
 import { eventPath } from "@/lib/event-url";
 import { settingsFor } from "@/lib/events";
-import { groupThumbnails } from "@/lib/group-thumbnails";
+import { thumbnailFor } from "@/lib/group-thumbnail";
 import { roundThemes, roundsFor } from "@/lib/rounds";
 import { formatDateBadge, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
 
@@ -13,7 +13,7 @@ export type ListedDate = EventDate & { series: EventSeries & { group: Group } };
  * Cards for event dates; each opens the event page, and the thumbnail opens the group's page. `privateKey` is added to links for private events.
  * `past` drops what only matters before the night (the sign-ups badge and prices).
  */
-export default async function EventDateList({
+export default function EventDateList({
   dates,
   privateKey,
   past = false,
@@ -22,11 +22,10 @@ export default async function EventDateList({
   privateKey?: string;
   past?: boolean;
 }) {
-  const thumbs = await groupThumbnails(dates.map((d) => d.series.group));
   return (
     <ul className="space-y-3">
       {dates.map((d) => {
-        const thumb = thumbs.get(d.series.group.id)!;
+        const thumb = thumbnailFor(d.series.group);
         const badge = formatDateBadge(d.startsAt);
         const settings = settingsFor(d, d.series);
         const themes = roundThemes(roundsFor(d, d.series));

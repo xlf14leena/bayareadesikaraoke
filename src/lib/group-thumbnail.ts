@@ -1,12 +1,7 @@
-// A group's square picture in event lists. The group's own thumbnail when it
-// has one; otherwise the first of these that exists: its banner (cropped to a
-// square), the banner of its newest event, or a tile with its initials.
-// Safe to import from client components; the database lookup is in
-// src/lib/group-thumbnails.ts.
+// A group's square picture in event lists: the group's own thumbnail when it
+// has one, otherwise a tile with its initials.
 
-export type GroupThumbnail =
-  | { kind: "image"; src: string; source: "thumbnail" | "banner" | "event" }
-  | { kind: "initials"; initials: string; tile: string };
+export type GroupThumbnail = { kind: "image"; src: string } | { kind: "initials"; initials: string; tile: string };
 
 // Tile colors from the site's palette (src/app/globals.css). Each group always
 // gets the same one, so its tile is recognisable from list to list.
@@ -32,12 +27,7 @@ function tileFor(key: string): string {
   return TILES[hash % TILES.length];
 }
 
-export function thumbnailFor(
-  group: { id: string; name: string; thumbnailUrl: string | null; bannerUrl: string | null },
-  latestEventBanner?: string | null,
-): GroupThumbnail {
-  if (group.thumbnailUrl) return { kind: "image", src: group.thumbnailUrl, source: "thumbnail" };
-  if (group.bannerUrl) return { kind: "image", src: group.bannerUrl, source: "banner" };
-  if (latestEventBanner) return { kind: "image", src: latestEventBanner, source: "event" };
+export function thumbnailFor(group: { id: string; name: string; thumbnailUrl: string | null }): GroupThumbnail {
+  if (group.thumbnailUrl) return { kind: "image", src: group.thumbnailUrl };
   return { kind: "initials", initials: initialsOf(group.name), tile: tileFor(group.id) };
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import GroupThumb from "@/components/GroupThumb";
-import { groupThumbnails } from "@/lib/group-thumbnails";
+import { thumbnailFor } from "@/lib/group-thumbnail";
 import { prisma } from "@/lib/prisma";
 import { requireAnyAdmin } from "@/lib/roles";
 import { primaryButton, secondaryButton } from "@/components/ui";
@@ -15,7 +15,6 @@ export default async function AdminPage() {
     orderBy: { name: "asc" },
     include: { _count: { select: { series: true, admins: true } } },
   });
-  const thumbs = await groupThumbnails(groups);
 
   return (
     <div>
@@ -50,7 +49,7 @@ export default async function AdminPage() {
                 className="flex items-center justify-between gap-3 p-4 hover:bg-mist/60"
               >
                 <span className="shrink-0 overflow-hidden rounded-lg bg-mist">
-                  <GroupThumb thumb={thumbs.get(g.id)!} className="h-12 w-12" text="text-xl" />
+                  <GroupThumb thumb={thumbnailFor(g)} className="h-12 w-12" text="text-xl" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{g.name}</p>

@@ -59,7 +59,7 @@ export default function GroupForm({
               </span>
             )
           }
-          hint="Shown beside the group's events on the home page and the group page. Without one, the banner is cropped to fit, or the newest event's banner, or the group's initials."
+          hint="Shown beside the group's events on the home page and the group page. Without one, a tile with the group's initials is shown."
         />
       </div>
       <FormSection title="Links" note="optional">
