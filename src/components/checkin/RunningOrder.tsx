@@ -95,7 +95,7 @@ export default function RunningOrder({
               <span>
                 Round {r.round}{" "}
                 <span className="text-sm font-normal text-ink-muted">
-                  {r.kind !== "EITHER" && `· ${ROUND_KIND_LABEL[r.kind]} `}· {SLOT_MODE_LABEL[r.mode]} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
+                  · {ROUND_KIND_LABEL[r.kind]} · {SLOT_MODE_LABEL[r.mode]} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
                 </span>
               </span>
               <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">

@@ -7,7 +7,7 @@ import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
 import type { FormState, NearMatch } from "@/lib/forms";
-import { type RoundAppearances, type RoundConfig, type RoundKind, timesLabel } from "@/lib/rounds";
+import { ROUND_KIND_LABEL, type RoundAppearances, type RoundConfig, type RoundKind, timesLabel } from "@/lib/rounds";
 
 export type SongDefaults = {
   title: string;
@@ -99,20 +99,18 @@ function RoundFields({
   return (
     <fieldset className="overflow-hidden rounded-lg border border-line">
       {/* A filled header band so each round reads as its own block. */}
-      <legend className="sr-only">Round {r}</legend>
+      <legend className="sr-only">Round {r}: {ROUND_KIND_LABEL[roundKind]}</legend>
       <div aria-hidden className="flex items-center gap-2 bg-royal px-3 py-1.5 text-sm font-semibold text-white">
         <span className="grid size-5 place-items-center rounded-full bg-white text-xs text-royal">{r}</span>
         Round {r}
-        {roundKind !== "EITHER" && (
-          <span className="ml-auto text-xs font-medium text-white/80">{roundKind === "SOLO" ? "Solos" : "Duets"}</span>
-        )}
+        <span className="rounded-full bg-gold px-2 py-0.5 text-xs font-semibold text-royal">{ROUND_KIND_LABEL[roundKind]}</span>
       </div>
       {maxAppearances != null && (
         <p className="border-b border-line bg-white px-3 py-1.5 text-xs text-ink-muted">
           Each singer sings at most {timesLabel(maxAppearances)} this round, counting duets they&apos;re picked for.
         </p>
       )}
-      {theme && (
+      {theme ? (
         <p className="border-b border-gold/40 bg-gold/15 px-3 py-1.5 text-sm text-gold-ink">
           <span className="font-semibold">Theme: {theme}</span>
           <span className="text-gold-ink/70">
@@ -120,6 +118,8 @@ function RoundFields({
             · {themeRequired ? "your song must fit it" : "just a suggestion"}
           </span>
         </p>
+      ) : (
+        <p className="border-b border-gold/40 bg-gold/15 px-3 py-1.5 text-sm text-gold-ink">No theme: sing anything you like</p>
       )}
       {selfFull ? (
         <p className="bg-mist/60 p-3 text-sm">
