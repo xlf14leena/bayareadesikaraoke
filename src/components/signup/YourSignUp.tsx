@@ -8,6 +8,7 @@ import { formatDateTime, formatPrice } from "@/lib/format";
 import type { RoundAppearances, RoundConfig } from "@/lib/rounds";
 import { PICKS_SONGS } from "@/lib/signups";
 import { primaryButton, secondaryButton } from "@/components/ui";
+import SubmitButton from "@/components/SubmitButton";
 
 type Props = {
   signUp: SignUp & {
@@ -205,14 +206,14 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
                 ) : (
                   <span className="flex gap-2">
                     <form action={respondToDuet.bind(null, d.songId, true)}>
-                      <button type="submit" className={primaryButton}>
+                      <SubmitButton className={primaryButton}>
                         Accept
-                      </button>
+                      </SubmitButton>
                     </form>
                     <form action={respondToDuet.bind(null, d.songId, false)}>
-                      <button type="submit" className={secondaryButton}>
+                      <SubmitButton className={secondaryButton}>
                         Decline
-                      </button>
+                      </SubmitButton>
                     </form>
                   </span>
                 ))}

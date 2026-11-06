@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { dangerButton, inputClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
+import SubmitButton, { Spinner } from "@/components/SubmitButton";
 
 type Action = (prev: FormState, form: FormData) => Promise<FormState>;
 
@@ -33,7 +34,8 @@ export function CommentForm({ action }: { action: Action }) {
           <input type="checkbox" name="isQuestion" className="h-4 w-4 accent-royal" />
           This is a question for the organizers
         </label>
-        <button type="submit" className={`${primaryButton} ml-auto`} disabled={pending}>
+        <button type="submit" className={`${primaryButton} ml-auto`} disabled={pending} aria-busy={pending || undefined}>
+          {pending && <Spinner />}
           {pending ? "Posting…" : "Post"}
         </button>
       </div>
@@ -69,7 +71,8 @@ export function ReplyForm({ action }: { action: Action }) {
         className={inputClass}
       />
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" className={primaryButton} disabled={pending}>
+        <button type="submit" className={primaryButton} disabled={pending} aria-busy={pending || undefined}>
+          {pending && <Spinner />}
           {pending ? "Posting…" : "Reply"}
         </button>
         <button type="button" onClick={() => setOpen(false)} className={secondaryButton}>
@@ -90,9 +93,9 @@ export function DeleteCommentButton({ action, hasReplies }: { action: () => Prom
         if (!window.confirm(hasReplies ? "Delete this comment and its replies?" : "Delete this comment?")) e.preventDefault();
       }}
     >
-      <button type="submit" className={dangerButton}>
+      <SubmitButton className={dangerButton}>
         Delete
-      </button>
+      </SubmitButton>
     </form>
   );
 }

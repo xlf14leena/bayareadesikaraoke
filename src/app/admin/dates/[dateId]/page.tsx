@@ -26,6 +26,7 @@ import { feedbackOpen, feedbackSummary } from "@/lib/feedback";
 import { pacificTimeOf } from "@/lib/schedule";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
+import SubmitButton from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -142,9 +143,9 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
       </Link>
       {isPast && scheduled && !date.archivedAt && (
         <form action={setDateArchived.bind(null, date.id, true)}>
-          <button type="submit" className={menuItem}>
+          <SubmitButton className={menuItem}>
             Archive date
-          </button>
+          </SubmitButton>
         </form>
       )}
       <hr className="my-1 border-line" />
@@ -247,9 +248,9 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
             </p>
           </div>
           <form action={setDateArchived.bind(null, date.id, false)}>
-            <button type="submit" className={secondaryButton}>
+            <SubmitButton className={secondaryButton}>
               Unarchive
-            </button>
+            </SubmitButton>
           </form>
         </section>
       )}
@@ -258,9 +259,9 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         {scheduled && (
           <Tile label="Sign-ups" dot={date.signupsOpen ? "bg-emerald-500" : "bg-line"} value={date.signupsOpen ? "Open" : "Not open yet"}>
             <form action={setSignupsOpen.bind(null, date.id, !date.signupsOpen)} className="mt-3">
-              <button type="submit" className={`${date.signupsOpen ? secondaryButton : primaryButton} ${small}`}>
+              <SubmitButton className={`${date.signupsOpen ? secondaryButton : primaryButton} ${small}`}>
                 {date.signupsOpen ? "Close sign-ups" : "Open sign-ups"}
-              </button>
+              </SubmitButton>
             </form>
           </Tile>
         )}
@@ -277,9 +278,9 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
               </Link>
             ) : checkInReady ? (
               <form action={openCheckIn.bind(null, date.id)} className="mt-3">
-                <button type="submit" className={`${primaryButton} ${small}`}>
+                <SubmitButton className={`${primaryButton} ${small}`}>
                   Open check-in
-                </button>
+                </SubmitButton>
               </form>
             ) : null}
           </Tile>
@@ -370,7 +371,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
 }
 
 const small = "!px-3 !py-1 !text-[13px]";
-const barItem = "flex w-full cursor-pointer flex-col items-center gap-0.5 py-2 hover:text-royal";
+const barItem = "flex w-full cursor-pointer flex-col items-center gap-0.5 py-2 hover:text-royal active:bg-lapis/15 active:text-royal";
 
 const ADD_PERSON = "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M22 11h-6";
 const PEOPLE = "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75";
@@ -529,9 +530,9 @@ function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; 
           <div className="flex flex-wrap items-start gap-3 pt-1">
             {["UNDER_REVIEW", "REJECTED", "RESERVED"].includes(s.status) && (
               <form action={approvePayment.bind(null, s.id)}>
-                <button type="submit" className={primaryButton}>
+                <SubmitButton className={primaryButton}>
                   {s.status === "UNDER_REVIEW" ? "Approve payment" : "Mark as paid"}
-                </button>
+                </SubmitButton>
               </form>
             )}
             {s.status === "UNDER_REVIEW" && (

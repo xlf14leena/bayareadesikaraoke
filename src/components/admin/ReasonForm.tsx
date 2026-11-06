@@ -3,6 +3,7 @@
 import { useFormAction } from "@/components/admin/useFormAction";
 import { dangerButton, inputClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
+import { Spinner } from "@/components/SubmitButton";
 
 /** A reason box plus a button, for rejecting a payment or a song. Folded away until opened. */
 export default function ReasonForm({
@@ -20,7 +21,8 @@ export default function ReasonForm({
       <summary className={`${dangerButton} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>{label}</summary>
       <form onSubmit={onSubmit} className="mt-2 flex flex-wrap items-center gap-2">
         <input name="reason" required maxLength={300} placeholder={placeholder} className={`${inputClass} flex-1`} />
-        <button type="submit" className={dangerButton} disabled={pending}>
+        <button type="submit" className={dangerButton} disabled={pending} aria-busy={pending || undefined}>
+          {pending && <Spinner />}
           {pending ? "Saving…" : label}
         </button>
         {state?.error && !pending && (

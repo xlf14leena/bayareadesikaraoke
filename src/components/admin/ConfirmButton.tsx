@@ -1,6 +1,7 @@
 "use client";
 
 import { dangerButton, secondaryButton } from "@/components/ui";
+import SubmitButton from "@/components/SubmitButton";
 
 /** A one-button form that asks before running a server action. */
 export default function ConfirmButton({
@@ -24,9 +25,9 @@ export default function ConfirmButton({
         if (!window.confirm(confirm)) e.preventDefault();
       }}
     >
-      <button type="submit" className={className ?? (danger ? dangerButton : secondaryButton)}>
+      <SubmitButton className={className ?? (danger ? dangerButton : secondaryButton)}>
         {label}
-      </button>
+      </SubmitButton>
     </form>
   );
 }
