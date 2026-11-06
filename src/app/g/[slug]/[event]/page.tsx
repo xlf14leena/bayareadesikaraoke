@@ -468,9 +468,9 @@ export default async function EventPage({ params, searchParams }: Props) {
   const tabs: (EventTab & { show: unknown })[] = [
     {
       id: "tonight",
-      label: past ? "Running order" : "Tonight",
+      label: past ? "Singing order" : "Tonight",
       icon: "tonight",
-      aliases: ["your-slots", "running-order"],
+      aliases: ["your-slots", "running-order", "singing-order"],
       show: tonight,
       content: tonight,
     },
