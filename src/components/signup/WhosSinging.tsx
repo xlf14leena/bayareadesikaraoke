@@ -116,7 +116,7 @@ function RoundName({ round, config }: { round: number; config: RoundConfig | nul
   return (
     <span className="font-semibold text-royal">
       Round {round}
-      {config && config.kind !== "EITHER" && (
+      {config && (
         <span className="ml-2 text-sm font-normal text-ink-muted">{ROUND_KIND_LABEL[config.kind]}</span>
       )}
       {config?.theme && <span className="ml-2 text-sm font-normal text-lapis">· {config.theme}</span>}
