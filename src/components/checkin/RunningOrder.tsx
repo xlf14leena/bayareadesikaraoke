@@ -5,7 +5,8 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { ROUND_KIND_LABEL, type RoundKind, SLOT_MODE_LABEL } from "@/lib/rounds";
 import SubmitButton from "@/components/SubmitButton";
-import { formatDuration, formatTotal } from "@/lib/format";
+import TrackLength from "@/components/TrackLength";
+import { formatTotal } from "@/lib/format";
 
 export type RunningOrderRound = {
   round: number;
@@ -140,7 +141,12 @@ export default function RunningOrder({
                       <span className="font-medium">{row.name}</span>
                       <span className="text-ink-muted">
                         {row.song ? ` · ${row.song}` : " · no song yet"}
-                        {row.seconds != null && <span className="tabular-nums">{` · ${formatDuration(row.seconds)}`}</span>}
+                        {row.seconds != null && (
+                          <>
+                            {" · "}
+                            <TrackLength seconds={row.seconds} />
+                          </>
+                        )}
                         {row.method === "PICK" ? " · picked" : row.method === "PAYMENT_ORDER" ? " · payment order" : " · check-in order"}
                       </span>
                       {row.track && (

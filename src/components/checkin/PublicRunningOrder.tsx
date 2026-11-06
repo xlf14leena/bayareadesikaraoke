@@ -1,7 +1,7 @@
 import { HOLDS_SPOT } from "@/lib/events";
 import type { SignUpStatus } from "@prisma/client";
 import { secondaryButton } from "@/components/ui";
-import { formatDuration } from "@/lib/format";
+import TrackLength from "@/components/TrackLength";
 
 export type PublicOrderRow = {
   round: number;
@@ -97,7 +97,12 @@ export default function PublicRunningOrder({
                           <>
                             {song.title}
                             {song.artist && ` (${song.artist})`}
-                            {song.durationSeconds != null && ` · ${formatDuration(song.durationSeconds)}`}
+                            {song.durationSeconds != null && (
+                              <>
+                                {" · "}
+                                <TrackLength seconds={song.durationSeconds} />
+                              </>
+                            )}
                             {song.duet &&
                               (song.duetPartner && HOLDS_SPOT.includes(song.duetPartner.status)
                                 ? ` · duet with ${song.duetPartner.displayName}`
