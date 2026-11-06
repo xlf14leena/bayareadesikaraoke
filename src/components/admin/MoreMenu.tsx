@@ -3,9 +3,9 @@
 import { useEffect, useRef } from "react";
 
 /** Class for a link or button shown as a row in a MoreMenu. */
-export const menuItem = "block w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-mist";
+export const menuItem = "flex w-full items-center gap-1.5 rounded-lg px-3 py-2 text-left text-sm text-ink cursor-pointer hover:bg-mist active:bg-lapis/15";
 /** A MoreMenu row that removes or cancels something. */
-export const menuDangerItem = "block w-full rounded-lg px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50";
+export const menuDangerItem = "flex w-full items-center gap-1.5 rounded-lg px-3 py-2 text-left text-sm text-red-700 cursor-pointer hover:bg-red-50 active:bg-red-100";
 
 /**
  * A "⋯" button that opens a small menu of less-used actions.

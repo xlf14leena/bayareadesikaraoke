@@ -1,7 +1,9 @@
 "use client";
 
 import { setViewAs } from "@/app/view-as-actions";
+import { useFormStatus } from "react-dom";
 import { secondaryButton } from "@/components/ui";
+import { Spinner } from "@/components/SubmitButton";
 
 /** Dropdown that switches the "View as" role as soon as an option is picked. */
 export default function ViewAsSelect({
@@ -27,6 +29,7 @@ export default function ViewAsSelect({
             </option>
           ))}
         </select>
+        <Switching />
       </label>
       <noscript>
         <button type="submit" className={`${secondaryButton} ml-2`}>
@@ -35,4 +38,10 @@ export default function ViewAsSelect({
       </noscript>
     </form>
   );
+}
+
+/** A spinner beside the dropdown while the new view loads. */
+function Switching() {
+  const { pending } = useFormStatus();
+  return pending ? <Spinner /> : null;
 }

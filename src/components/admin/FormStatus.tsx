@@ -1,11 +1,13 @@
 import { primaryButton } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
+import { Spinner } from "@/components/SubmitButton";
 
 /** Submit button plus the form's error or success message. */
 export default function FormStatus({ state, pending, label }: { state: FormState; pending: boolean; label: string }) {
   return (
     <div className="flex flex-wrap items-center gap-3 pt-2">
-      <button type="submit" className={primaryButton} disabled={pending}>
+      <button type="submit" className={primaryButton} disabled={pending} aria-busy={pending || undefined}>
+        {pending && <Spinner />}
         {pending ? "Saving…" : label}
       </button>
       {state?.error && !pending && (

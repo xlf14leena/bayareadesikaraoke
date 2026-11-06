@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
 import { primaryButton } from "@/components/ui";
+import SubmitButton from "@/components/SubmitButton";
 
 export default async function SignInPage({
   searchParams,
@@ -26,12 +27,9 @@ export default async function SignInPage({
           await signIn("google", { redirectTo });
         }}
       >
-        <button
-          type="submit"
-          className={`${primaryButton} w-full`}
-        >
+        <SubmitButton className={`${primaryButton} w-full`}>
           Sign in with Google
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );
