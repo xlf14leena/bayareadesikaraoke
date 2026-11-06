@@ -28,8 +28,8 @@ type Props = {
   editable: boolean;
   /** Per round, round 1 first: whether its song, duet partner and duet answers can still change (songsOpen). */
   openRounds: boolean[];
-  /** When songs lock on this date, for singers (SONG_LOCK_NOTE). */
-  songLockNote: string;
+  /** Until when songs can change on this date (songLockMessage); null once they're all locked. */
+  songLockNote: string | null;
   /** The date's rounds, for the songs form. */
   rounds: RoundConfig[];
   /** Per round, how many times each singer already sings, without this person's own songs (for "times per singer"). */
@@ -280,7 +280,11 @@ export default function YourSignUp({
           <div className="space-y-3 border-t border-line p-3">
             <p className="text-xs text-ink-muted">
               {rounds.length === 1 ? "Pick your song." : `Pick one song for each of the ${rounds.length} rounds.`} First pick wins: a song someone already picked for this date can&apos;t be
-              picked again, even spelled a little differently. {songLockNote}
+              picked again, even spelled a little differently.
+            </p>
+            <p className="flex gap-2 rounded-lg border border-gold/50 bg-gold/15 px-3 py-2 text-sm text-gold-ink">
+              <span aria-hidden>⏰</span>
+              <span>{songLockNote ?? "Songs for this date are locked, so they can't be changed any more."}</span>
             </p>
             {rejected.map((s) => (
               <p key={s.id} className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">

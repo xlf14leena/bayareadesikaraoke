@@ -4,6 +4,8 @@ import { type RoundAppearances, type RoundConfig, type RoundKind, roundsFor, tim
 import { fillCheckInOrderSlots } from "@/lib/slots";
 import { HOLDS_SPOT, settingsFor, songLockFor } from "@/lib/events";
 import { FormError } from "@/lib/forms";
+import { formatDateTime } from "@/lib/format";
+import { OPENS_BEFORE_MS } from "@/lib/checkin";
 import { prisma } from "@/lib/prisma";
 import { looksAlike, songKey } from "@/lib/song-match";
 
@@ -78,6 +80,31 @@ export function songsOpen(date: SongLockDate, round: number, now = new Date()): 
 /** songsOpen for each of the date's rounds, round 1 first. */
 export function openRounds(date: SongLockDate, roundCount: number, now = new Date()): boolean[] {
   return Array.from({ length: roundCount }, (_, i) => songsOpen(date, i + 1, now));
+}
+
+/**
+ * Tells singers until when they can change their songs on this date, with the time where there
+ * is one. Null once every round is locked.
+ */
+export function songLockMessage(date: SongLockDate, roundCount: number, now = new Date()): string | null {
+  const open = openRounds(date, roundCount, now);
+  if (!open.some(Boolean)) return null;
+  switch (songLockFor(date, date.series)) {
+    case "ROUND_START": {
+      const started = Math.min(date.songsLockedThrough, roundCount);
+      if (started === 0) {
+        return roundCount === 1
+          ? "You can change your song and duet partner until the organizers start the round on the night."
+          : "You can change each round's song and duet partner until the organizers start that round on the night.";
+      }
+      const which = started === 1 ? "Round 1 has" : `Rounds 1 to ${started} have`;
+      return `${which} started, so ${started === 1 ? "its song is" : "their songs are"} locked. You can change the other rounds until each one starts.`;
+    }
+    case "CHECK_IN":
+      return `You can change your songs and duet partners until the organizers open check-in at the venue. That can be as early as ${formatDateTime(new Date(date.startsAt.getTime() - OPENS_BEFORE_MS))}, and no later than ${formatDateTime(closesAt(date))}.`;
+    case "EVENT_START":
+      return `You can change your songs and duet partners until ${formatDateTime(closesAt(date))}.`;
+  }
 }
 
 /** Whether people who already have a spot can still upload payment proof. */
