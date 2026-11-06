@@ -9,6 +9,7 @@ import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
 import RoundsFields from "@/components/admin/RoundsFields";
+import SongLockField from "@/components/admin/SongLockField";
 import { dollars, type FormState } from "@/lib/forms";
 import { DEFAULT_ROUNDS, parseRounds } from "@/lib/rounds";
 
@@ -20,7 +21,7 @@ function ymdOf(d: Date | null | undefined): string {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
-/** Create or edit an event series: details, schedule, prices, caps, Zelle details and banner. */
+/** Create or edit an event series: details, schedule, prices, caps, Zelle details, banner, rounds and song lock. */
 export default function SeriesForm({
   action,
   series,
@@ -168,6 +169,13 @@ export default function SeriesForm({
           How many rounds each date has, and each round&apos;s theme. You can change them for a single date later.
         </p>
         <RoundsFields initial={series ? parseRounds(series.rounds) : DEFAULT_ROUNDS} />
+      </FormSection>
+
+      <FormSection title="Song changes lock">
+        <p className="text-sm text-ink-muted">
+          When singers can no longer change their songs. You can change it for a single date later.
+        </p>
+        <SongLockField defaultValue={series?.songLock ?? "ROUND_START"} />
       </FormSection>
 
       <FormStatus state={state} pending={pending} label={series ? "Save event" : "Create event"} />

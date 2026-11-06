@@ -10,9 +10,11 @@ import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass } from "@/components/ui";
 import { type EventSettings, type OverrideKey, settingsFor } from "@/lib/events";
 import RoundsFields from "@/components/admin/RoundsFields";
+import SongLockField from "@/components/admin/SongLockField";
+import type { SongLock } from "@prisma/client";
 import { dollars, type FormState } from "@/lib/forms";
 import { type RoundConfig, describeRounds } from "@/lib/rounds";
-import { type ZelleDetails, zelleFor } from "@/lib/events";
+import { SONG_LOCK_LABEL, type ZelleDetails, songLockFor, zelleFor } from "@/lib/events";
 
 /**
  * Settings for one event date. Each setting follows the event (the template)
@@ -26,6 +28,7 @@ export default function DateForm({
   templateRounds,
   templateBanner,
   templateZelle,
+  templateSongLock,
   when,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
@@ -38,6 +41,8 @@ export default function DateForm({
   templateBanner: { src: string; isDefault: boolean };
   /** The Zelle details dates get from the event. */
   templateZelle: ZelleDetails;
+  /** When song changes lock on dates that follow the event. */
+  templateSongLock: SongLock;
   when: { day: string; startTime: string; endTime: string };
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
@@ -110,6 +115,10 @@ export default function DateForm({
         inherited={`${templateRounds.length} ${templateRounds.length === 1 ? "round" : "rounds"}\n${describeRounds(templateRounds)}`}
       >
         <RoundsFields initial={rounds} />
+      </Overridable>
+
+      <Overridable name="songLock" title="Song changes lock" date={date} inherited={SONG_LOCK_LABEL[templateSongLock]}>
+        <SongLockField defaultValue={songLockFor(date, { songLock: templateSongLock })} />
       </Overridable>
 
       <Overridable

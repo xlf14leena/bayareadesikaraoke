@@ -19,7 +19,7 @@ import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
 import { duetTurns, turnName, turnSinger } from "@/lib/duet-turns";
-import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
+import { HOLDS_SPOT, STATUS_LABEL, settingsFor, songLockFor, spotsLabel } from "@/lib/events";
 import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice, formatTotal } from "@/lib/format";
 import { appearancesByRound, settle } from "@/lib/signups";
 import { looksAlike } from "@/lib/song-match";
@@ -318,6 +318,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           seriesId={series.id}
           dateId={date.id}
           now={date.nowRound != null && date.nowSlot != null ? { round: date.nowRound, slot: date.nowSlot } : null}
+          songLock={songLockFor(date, series) === "ROUND_START" ? { lockedThrough: date.songsLockedThrough } : undefined}
         />
       )}
 

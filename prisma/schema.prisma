@@ -118,6 +118,14 @@ enum SlotMode {
   PAYMENT_ORDER // slot numbers follow the order singers paid (src/lib/slots.ts)
 }
 
+// When singers can no longer change a round's song or duet partner, and partners
+// can no longer accept or back out (songsOpen in src/lib/signups.ts).
+enum SongLock {
+  ROUND_START // each round locks when an admin starts it; rounds not started lock when the event ends
+  CHECK_IN // every round locks when an admin opens check-in (or at the start time, if they never do)
+  EVENT_START // every round locks at the start time
+}
+
 // Template that generates EventDates. All times are Pacific (America/Los_Angeles).
 model EventSeries {
   id                      String     @id @default(cuid())
@@ -144,6 +152,8 @@ model EventSeries {
   // Where members send Zelle payments; dates use these unless they override "zelle"
   zelleName               String?
   zelleHandle             String? // Zelle email or phone
+  // When song changes lock; dates use this unless they override "songLock"
+  songLock                SongLock   @default(ROUND_START)
   // Sign-up window, relative to each date's start (null = defaults in spec)
   signupOpensHoursBefore  Int?
   signupClosesHoursBefore Int?
@@ -166,7 +176,7 @@ enum EventDateStatus {
 
 // One occurrence. The series is its template: the date uses the series'
 // description, prices, caps and rounds unless that setting is listed in overrides
-// ("description", "pricing", "capacity", "rounds", "banner", "zelle"), in which case the date's
+// ("description", "pricing", "capacity", "rounds", "banner", "zelle", "songLock"), in which case the date's
 // own columns apply. See settingsFor in src/lib/events.ts.
 model EventDate {
   id                 String          @id @default(cuid())
@@ -186,6 +196,7 @@ model EventDate {
   bannerUrl          String? // used when overrides lists "banner"
   zelleName          String? // used when overrides lists "zelle"
   zelleHandle        String?
+  songLock           SongLock? // used when overrides lists "songLock"
   signupOpensAt      DateTime?
   signupClosesAt     DateTime?
   status             EventDateStatus @default(SCHEDULED)
@@ -197,6 +208,9 @@ model EventDate {
   // Who's singing right now, set by an admin from the running order (round and slot)
   nowRound           Int?
   nowSlot            Int?
+  // The highest round an admin has started (made "now singing"); 0 before any.
+  // Never goes down, so songs in a started round stay locked even if the admin steps back.
+  songsLockedThrough Int             @default(0)
   // Comments and questions on the event page; an admin can turn them off per date
   commentsEnabled    Boolean         @default(true)
   // Set when an admin archives a past date: it no longer shows under the

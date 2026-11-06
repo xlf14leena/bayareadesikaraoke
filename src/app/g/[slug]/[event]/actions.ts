@@ -22,6 +22,7 @@ import {
   setSong,
   settleDate,
   songInputs,
+  songsOpen,
   stillEditable,
   withDateLock,
 } from "@/lib/signups";
@@ -158,14 +159,17 @@ export async function uploadScreenshot(signUpId: string, _prev: FormState, form:
   return result;
 }
 
-/** Saves the singer's song for each round. */
+/**
+ * Saves the singer's song for each round that's still open (songsOpen). Locked rounds keep
+ * their song: the page shows them without fields, and a page loaded before a round locked
+ * gets told which rounds weren't changed.
+ */
 export async function saveSongs(signUpId: string, _prev: FormState, form: FormData): Promise<FormState> {
   let dateId = "";
   const result = await attempt(async () => {
     const signUp = await ownSignUp(signUpId);
     dateId = signUp.eventDateId;
     if (signUp.role !== "SINGER") throw new FormError("Only singers pick songs.");
-    if (!stillEditable(signUp.eventDate)) throw new FormError("Songs can't be changed after sign-ups close.");
     const rounds = roundsFor(signUp.eventDate, signUp.eventDate.series);
     const inputs = songInputs(form, rounds);
 
@@ -179,12 +183,23 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
             : "This sign-up no longer holds a spot, so it can't pick songs.",
         );
       }
-      for (const [i, input] of inputs.entries()) await setSong(tx, now, i + 1, input, rounds[i].maxAppearances);
+      // Read inside the lock, so a round an admin just started counts.
+      const date = await tx.eventDate.findUniqueOrThrow({ where: { id: dateId }, include: { series: true } });
+      const open = rounds.map((_, i) => songsOpen(date, i + 1));
+      if (!open.some(Boolean)) throw new FormError("Songs for this date can't be changed any more.");
+      const skipped: number[] = [];
+      for (const [i, input] of inputs.entries()) {
+        if (open[i]) await setSong(tx, now, i + 1, input, rounds[i].maxAppearances);
+        else if (form.has(`title${i + 1}`)) skipped.push(i + 1);
+      }
+      if (skipped.length) {
+        const which = skipped.map((r) => `round ${r}`).join(" and ");
+        const one = skipped.length === 1;
+        return `Songs saved, except ${which}, which ${one ? "has" : "have"} already started, so ${one ? "its song" : "their songs"} didn't change.`;
+      }
       return "Songs saved.";
     });
   });
-  // Look up the new tracks' lengths before the page reloads, so they show straight away.
-  if (dateId) await fillSongLengths({ eventDateId: dateId }).catch(() => 0);
   if (dateId) refresh();
   return result;
 }
@@ -204,19 +219,20 @@ export async function leaveSignUp(signUpId: string): Promise<void> {
 
 /**
  * The duet partner's answer to a duet that names them. A pending ask can be accepted or declined,
- * and an accepted one can still be declined until sign-ups close. A declined duet stays a duet
+ * and an accepted one can still be declined, while the duet's round is open (songsOpen). A declined duet stays a duet
  * with no partner singing it, until the singer picks someone else.
  */
 export async function respondToDuet(songId: string, accept: boolean): Promise<void> {
   const song = await prisma.song.findUnique({ where: { id: songId }, select: { duetPartnerId: true } });
   if (!song?.duetPartnerId) return;
   const partner = await ownSignUp(song.duetPartnerId);
-  if (!stillEditable(partner.eventDate)) return;
   await withDateLock(partner.eventDateId, async (tx) => {
+    const date = await tx.eventDate.findUniqueOrThrow({ where: { id: partner.eventDateId }, include: { series: true } });
     const now = await tx.song.findUnique({ where: { id: songId }, include: { signUp: { select: { status: true } } } });
     const me = await tx.signUp.findUniqueOrThrow({ where: { id: partner.id }, select: { status: true } });
     if (
       !now ||
+      !songsOpen(date, now.round) ||
       now.status !== "ACTIVE" ||
       now.duetPartnerId !== partner.id ||
       !PICKS_SONGS.includes(me.status) ||

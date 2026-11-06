@@ -5,9 +5,9 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import EventTabs, { type EventTab } from "@/components/EventTabs";
 import { notFound, redirect } from "next/navigation";
 import { primaryButton, secondaryButton } from "@/components/ui";
-import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
+import { HOLDS_SPOT, SONG_LOCK_NOTE, mapUrl, settingsFor, songLockFor } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
-import { ENDED, acceptingSignUps, appearancesByRound, settle, stillEditable } from "@/lib/signups";
+import { ENDED, acceptingSignUps, appearancesByRound, openRounds, settle, stillEditable } from "@/lib/signups";
 import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
 import { pacificTimeOf } from "@/lib/schedule";
 import SignUpForm from "@/components/signup/SignUpForm";
@@ -365,6 +365,8 @@ export default async function EventPage({ params, searchParams }: Props) {
       zelle={zelleFor(date, series)}
       waitlistPosition={waitlistPosition}
       editable={stillEditable(date)}
+      openRounds={openRounds(date, roundConfig.length)}
+      songLockNote={SONG_LOCK_NOTE[songLockFor(date, series)]}
       rounds={roundConfig}
       appearances={appearances}
       partners={partnerSignUps.map((p) => ({ id: p.id, name: p.displayName }))}

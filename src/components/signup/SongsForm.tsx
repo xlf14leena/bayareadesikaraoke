@@ -35,6 +35,8 @@ export type DuetPartnerOption = { id: string; name: string };
  * In a round with a "times per singer" limit, `appearances` (without this
  * person's own songs) marks partners who already sing that many times, and
  * when `selfId` is one of them the round has no song fields.
+ * A round marked in `locked` has started (or otherwise can't change): it shows its song without fields,
+ * so saving leaves it as it is.
  */
 export function SongFields({
   rounds,
@@ -43,6 +45,7 @@ export function SongFields({
   nearMatch,
   appearances,
   selfId,
+  locked,
 }: {
   rounds: RoundConfig[];
   defaults?: Record<number, SongDefaults | undefined>;
@@ -50,6 +53,7 @@ export function SongFields({
   nearMatch?: NearMatch;
   appearances?: RoundAppearances[];
   selfId?: string;
+  locked?: boolean[];
 }) {
   return (
     <div className="space-y-5">
@@ -63,6 +67,7 @@ export function SongFields({
           maxAppearances={maxAppearances}
           appearances={appearances?.[i] ?? {}}
           selfId={selfId}
+          locked={!!locked?.[i]}
           defaults={defaults?.[i + 1]}
           partners={partners}
           nearMatchKey={nearMatch?.round === i + 1 ? nearMatch.key : undefined}
@@ -80,6 +85,7 @@ function RoundFields({
   maxAppearances,
   appearances,
   selfId,
+  locked,
   defaults,
   partners,
   nearMatchKey,
@@ -91,6 +97,7 @@ function RoundFields({
   maxAppearances: number | null;
   appearances: RoundAppearances;
   selfId?: string;
+  locked: boolean;
   defaults?: SongDefaults;
   partners: DuetPartnerOption[];
   nearMatchKey?: string;
@@ -125,7 +132,23 @@ function RoundFields({
       ) : (
         <p className="border-b border-gold/40 bg-gold/15 px-3 py-1.5 text-sm text-gold-ink">No theme: sing anything you like</p>
       )}
-      {selfFull ? (
+      {locked ? (
+        <div className="space-y-1 bg-mist/60 p-3 text-sm">
+          <p className="font-medium text-ink-muted">This round has started, so its song is locked.</p>
+          {defaults?.title ? (
+            <p>
+              {defaults.title}
+              {defaults.artist && ` (${defaults.artist})`}
+              {defaults.duet &&
+                (defaults.duetPartnerId
+                  ? ` · duet with ${partners.find((p) => p.id === defaults.duetPartnerId)?.name ?? "your partner"}`
+                  : " · duet")}
+            </p>
+          ) : (
+            <p className="text-ink-muted">No song picked for this round.</p>
+          )}
+        </div>
+      ) : selfFull ? (
         <p className="bg-mist/60 p-3 text-sm">
           You&apos;re already singing {timesLabel(appearances[selfId!] ?? 0)} this round as a duet partner, the most
           allowed, so you can&apos;t add your own song here.
@@ -279,6 +302,7 @@ export default function SongsForm({
   partners,
   appearances,
   selfId,
+  locked,
 }: {
   action: (prev: FormState, form: FormData) => Promise<FormState>;
   rounds: RoundConfig[];
@@ -286,6 +310,7 @@ export default function SongsForm({
   partners: DuetPartnerOption[];
   appearances?: RoundAppearances[];
   selfId?: string;
+  locked?: boolean[];
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
   return (
@@ -297,6 +322,7 @@ export default function SongsForm({
         nearMatch={state?.nearMatch}
         appearances={appearances}
         selfId={selfId}
+        locked={locked}
       />
       <FormStatus state={state} pending={pending} label="Save songs" />
     </form>

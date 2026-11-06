@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Prisma, type AttendeeRole, type DuetStatus, type EventDate, type EventSeries, type SignUpStatus } from "@prisma/client";
 import { type RoundAppearances, type RoundConfig, type RoundKind, roundsFor, timesLabel } from "@/lib/rounds";
 import { fillCheckInOrderSlots } from "@/lib/slots";
-import { HOLDS_SPOT, settingsFor } from "@/lib/events";
+import { HOLDS_SPOT, settingsFor, songLockFor } from "@/lib/events";
 import { FormError } from "@/lib/forms";
 import { prisma } from "@/lib/prisma";
 import { looksAlike, songKey } from "@/lib/song-match";
@@ -41,7 +41,7 @@ export async function withDateLock<T>(dateId: string, fn: (tx: Tx) => Promise<T>
   );
 }
 
-/** When new sign-ups, song changes and screenshot uploads stop: the date's close time, or its start. */
+/** When new sign-ups and screenshot uploads stop: the date's close time, or its start. Songs follow songsOpen below. */
 export function closesAt(date: Pick<EventDate, "signupClosesAt" | "startsAt">): Date {
   return date.signupClosesAt ?? date.startsAt;
 }
@@ -51,7 +51,36 @@ export function acceptingSignUps(date: Pick<EventDate, "status" | "signupsOpen" 
   return date.status === "SCHEDULED" && date.signupsOpen && new Date() < closesAt(date);
 }
 
-/** Whether people who already have a spot can still add songs or upload proof. */
+type SongLockDate = Pick<
+  EventDate,
+  "status" | "signupClosesAt" | "startsAt" | "endsAt" | "overrides" | "songLock" | "checkInOpenedAt" | "songsLockedThrough"
+> & { series: Pick<EventSeries, "songLock"> };
+
+/**
+ * Whether singers can still change their song or duet partner in this round, and named partners
+ * still accept or back out. Depends on the date's song lock (songLockFor):
+ * - ROUND_START: until an admin starts this round (or a later one), or the event ends.
+ * - CHECK_IN: until an admin opens check-in or starts a round, and at the latest the start time.
+ * - EVENT_START: until the start time.
+ */
+export function songsOpen(date: SongLockDate, round: number, now = new Date()): boolean {
+  if (date.status !== "SCHEDULED") return false;
+  switch (songLockFor(date, date.series)) {
+    case "ROUND_START":
+      return round > date.songsLockedThrough && now < date.endsAt;
+    case "CHECK_IN":
+      return !date.checkInOpenedAt && date.songsLockedThrough === 0 && now < closesAt(date);
+    case "EVENT_START":
+      return now < closesAt(date);
+  }
+}
+
+/** songsOpen for each of the date's rounds, round 1 first. */
+export function openRounds(date: SongLockDate, roundCount: number, now = new Date()): boolean[] {
+  return Array.from({ length: roundCount }, (_, i) => songsOpen(date, i + 1, now));
+}
+
+/** Whether people who already have a spot can still upload payment proof. */
 export function stillEditable(date: Pick<EventDate, "status" | "signupClosesAt" | "startsAt">) {
   return date.status === "SCHEDULED" && new Date() < closesAt(date);
 }
