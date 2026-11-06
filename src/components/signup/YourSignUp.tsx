@@ -216,7 +216,7 @@ export default function YourSignUp({
                 )}
               </span>
               {!openRounds[d.round - 1] ? (
-                !d.accepted && <span className="text-xs text-ink-muted">Locked, so you can't answer now.</span>
+                !d.accepted && <span className="text-xs text-ink-muted">Locked, so you can&apos;t answer now.</span>
               ) : d.accepted ? (
                   <ConfirmButton
                     action={respondToDuet.bind(null, d.songId, false)}
