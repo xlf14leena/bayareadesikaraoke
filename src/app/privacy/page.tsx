@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       <ul className="list-disc space-y-1 pl-6">
         <li>From Google sign-in: your name, email address and profile picture.</li>
         <li>Event sign-ups: whether you are a singer or listener, the songs and YouTube links you enter, and when you entered them.</li>
-        <li>Payment proof: the screenshot of your Zelle payment and the memo code. We never see or store your bank login or card details.</li>
+        <li>Payment: the memo code for your sign-up, when you said you paid, and, if you enter it, the name on your Zelle account. We don&apos;t ask for payment screenshots, and we never see or store your bank login, account numbers or card details.</li>
       </ul>
 
       <h2 className="pt-2 text-lg font-semibold">How we use it</h2>
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
 
       <h2 className="pt-2 text-lg font-semibold">Who can see it</h2>
       <p>
-        Payment screenshots are visible only to you, that event&apos;s group admins and site administrators.
+        Your payment details are visible only to you, that event&apos;s group admins and site administrators.
         Your name and songs are visible to signed-in members viewing that event. We do not sell your information
         or share it with advertisers.
       </p>

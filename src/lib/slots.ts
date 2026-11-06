@@ -22,18 +22,18 @@ type PaidFields = {
   status: string;
   registeredAt: Date;
   reviewedAt: Date | null;
-  screenshot: { uploadedAt: Date } | null;
+  paidAt: Date | null;
 };
 
 /**
- * When a singer paid, for payment order: the time they sent the payment
- * screenshot that was approved. A free spot, or one an admin added or marked
+ * When a singer paid, for payment order: the time they ticked "I've paid"
+ * for the payment that was approved. A free spot, or one an admin added or marked
  * paid by hand, counts from when it was confirmed. Anyone not confirmed yet
  * (payment still under review) goes after everyone who is.
  */
 export function paidAt(s: PaidFields): number {
   if (s.status !== "CONFIRMED") return Number.MAX_SAFE_INTEGER;
-  return (s.screenshot?.uploadedAt ?? s.reviewedAt ?? s.registeredAt).getTime();
+  return (s.paidAt ?? s.reviewedAt ?? s.registeredAt).getTime();
 }
 
 /** The slot mode of round n, or null when the event has no such round. */
@@ -103,7 +103,7 @@ export async function fillCheckInOrderSlots(
       checkedInAt: true,
       registeredAt: true,
       reviewedAt: true,
-      screenshot: { select: { uploadedAt: true } },
+      paidAt: true,
     },
   });
   const arrived = singers.filter((s) => s.checkedInAt);

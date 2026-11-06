@@ -2,7 +2,7 @@
 
 import type { AttendeeRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { FormError, type FormState, text } from "@/lib/forms";
+import { FormError, type FormState, optionalText, text } from "@/lib/forms";
 import { eventPathById } from "@/lib/event-url";
 import { prisma } from "@/lib/prisma";
 import { roundsFor } from "@/lib/rounds";
@@ -10,9 +10,7 @@ import { canAdminGroup, requireViewer } from "@/lib/roles";
 import {
   ENDED,
   HOLD_MS,
-  MAX_SCREENSHOT_BYTES,
   PICKS_SONGS,
-  SCREENSHOT_TYPES,
   acceptingSignUps,
   capFor,
   heldCount,
@@ -96,11 +94,12 @@ export async function signUpForDate(
         reviewedAt: null,
         reviewReason: null,
         paymentNote: null,
+        paidAt: null,
+        zelleName: null,
         ...state,
       };
       if (existing) {
         await tx.signUp.update({ where: { id: existing.id }, data });
-        await tx.paymentScreenshot.deleteMany({ where: { signUpId: existing.id } });
       } else {
         await tx.signUp.create({
           data: { ...data, eventDateId: dateId, userId: viewer.id, memoCode: await newMemoCode(tx) },
@@ -120,38 +119,38 @@ async function ownSignUp(signUpId: string) {
   return signUp;
 }
 
-/** Uploads (or replaces) the Zelle payment screenshot and sends the sign-up for review. */
-export async function uploadScreenshot(signUpId: string, _prev: FormState, form: FormData): Promise<FormState> {
+/**
+ * The person says they've sent the Zelle payment (an honor checkbox; no screenshot is
+ * kept). The sign-up goes for review, and an organizer finds the payment in their bank
+ * app by memo code, amount or the optional Zelle name.
+ */
+export async function markPaid(signUpId: string, _prev: FormState, form: FormData): Promise<FormState> {
   let dateId = "";
   const result = await attempt(async () => {
     const signUp = await ownSignUp(signUpId);
     dateId = signUp.eventDateId;
     if (!stillEditable(signUp.eventDate)) throw new FormError("Sign-ups for this date are closed.");
-    const file = form.get("screenshot");
-    if (!(file instanceof File) || file.size === 0) throw new FormError("Choose a screenshot of your Zelle payment.");
-    if (file.size > MAX_SCREENSHOT_BYTES) {
-      throw new FormError("That image is too large. A phone screenshot of the payment works best.");
-    }
-    const type = file.type.toLowerCase();
-    if (!SCREENSHOT_TYPES.includes(type)) throw new FormError("Upload a JPG, PNG or HEIC image.");
-    const bytes = Buffer.from(await file.arrayBuffer());
+    if (form.get("paid") !== "on") throw new FormError("Tick the box once you've sent the payment.");
+    const zelleName = optionalText(form, "zelleName", { max: 80 });
 
     return withDateLock(dateId, async (tx) => {
       await settleDate(tx, dateId);
       const now = await tx.signUp.findUniqueOrThrow({ where: { id: signUpId } });
-      if (!["RESERVED", "REJECTED", "UNDER_REVIEW"].includes(now.status)) {
+      if (now.status === "UNDER_REVIEW") {
+        await tx.signUp.update({ where: { id: signUpId }, data: { zelleName } });
+        return "Saved. The organizers will check your payment.";
+      }
+      if (!["RESERVED", "REJECTED"].includes(now.status)) {
         throw new FormError(
           now.status === "EXPIRED"
             ? "Your 24-hour hold ran out, so the spot was released. You can sign up again if spots are left."
-            : "This sign-up doesn't need a payment screenshot.",
+            : "This sign-up doesn't need a payment.",
         );
       }
-      await tx.paymentScreenshot.upsert({
-        where: { signUpId },
-        create: { signUpId, contentType: type, bytes },
-        update: { contentType: type, bytes, uploadedAt: new Date() },
+      await tx.signUp.update({
+        where: { id: signUpId },
+        data: { status: "UNDER_REVIEW", reservedUntil: null, paidAt: new Date(), zelleName },
       });
-      await tx.signUp.update({ where: { id: signUpId }, data: { status: "UNDER_REVIEW", reservedUntil: null } });
       return "Thanks! The organizers will check your payment.";
     });
   });

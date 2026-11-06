@@ -242,10 +242,10 @@ enum AttendeeRole {
 
 enum SignUpStatus {
   WAITLISTED // event full for this role; waitlistedAt sets the order
-  RESERVED // awaiting screenshot, 24 h
+  RESERVED // awaiting payment, 24 h
   UNDER_REVIEW
   CONFIRMED
-  REJECTED // awaiting new screenshot, 24 h
+  REJECTED // payment not found, 24 h to pay again
   EXPIRED
   CANCELLED
 }
@@ -265,7 +265,8 @@ model SignUp {
   status         SignUpStatus   @default(RESERVED)
   memoCode       String         @unique // e.g. BADK-7Q4M
   amountDueCents Int
-  screenshotKey  String? // unused; the screenshot lives in PaymentScreenshot
+  paidAt         DateTime? // when the person ticked "I've paid" (no screenshot is kept)
+  zelleName      String? // optional name on their Zelle account, to help find the payment
   registeredAt   DateTime       @default(now()) // when the person signed up for this date
   reservedUntil  DateTime?
   waitlistedAt   DateTime?
@@ -287,7 +288,6 @@ model SignUp {
   checkedInBy User?              @relation("SignUpCheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
   songs       Song[]             @relation("SongSinger")
   duetSongs   Song[]             @relation("DuetPartner") // other singers' duets that name this person
-  screenshot  PaymentScreenshot?
   roundSlots  RoundSlot[]
 
   // one sign-up per account per date (no guest sign-ups)
@@ -303,18 +303,6 @@ model BannerImage {
   contentType String
   bytes       Bytes
   createdAt   DateTime @default(now())
-}
-
-// The Zelle payment screenshot for a sign-up, kept in the database so it stays
-// private: only the person, that group's admins and super users can open it
-// (src/app/api/screenshots/[signUpId]/route.ts). A new upload replaces it.
-model PaymentScreenshot {
-  signUpId    String   @id
-  contentType String
-  bytes       Bytes
-  uploadedAt  DateTime @default(now())
-
-  signUp SignUp @relation(fields: [signUpId], references: [id], onDelete: Cascade)
 }
 
 enum SongStatus {

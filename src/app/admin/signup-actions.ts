@@ -63,7 +63,7 @@ export async function approvePayment(signUpId: string): Promise<void> {
   refresh(signUp.eventDateId);
 }
 
-/** Sends the payment back: the person has 24 hours to upload a new screenshot. */
+/** Sends the payment back: the person has 24 hours to pay and tick "I've paid" again. */
 export async function rejectPayment(signUpId: string, _prev: FormState, form: FormData): Promise<FormState> {
   const { signUp, viewer } = await adminSignUp(signUpId);
   const result = await attempt(async () => {
@@ -172,8 +172,9 @@ export async function addPerson(dateId: string, _prev: FormState, form: FormData
         reviewedById: viewer.id,
         reviewedAt: new Date(),
         reviewReason: null,
+        paidAt: null,
+        zelleName: null,
       };
-      if (existing) await tx.paymentScreenshot.deleteMany({ where: { signUpId: existing.id } });
       const signUp = existing
         ? await tx.signUp.update({ where: { id: existing.id }, data })
         : await tx.signUp.create({

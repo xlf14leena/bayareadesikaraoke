@@ -19,10 +19,6 @@ import { looksAlike, songKey } from "@/lib/song-match";
 
 export const HOLD_MS = 24 * 60 * 60 * 1000;
 
-/** Payment screenshots: Vercel caps request bodies at 4.5 MB, and the page shrinks photos before upload. */
-export const MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024;
-export const SCREENSHOT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
-
 /** Statuses whose songs are held (a singer can pick or edit songs while in one of these). */
 export const PICKS_SONGS: SignUpStatus[] = HOLDS_SPOT;
 
@@ -43,7 +39,7 @@ export async function withDateLock<T>(dateId: string, fn: (tx: Tx) => Promise<T>
   );
 }
 
-/** When new sign-ups and screenshot uploads stop: the date's close time, or its start. Songs follow songsOpen below. */
+/** When new sign-ups and "I've paid" confirmations stop: the date's close time, or its start. Songs follow songsOpen below. */
 export function closesAt(date: Pick<EventDate, "signupClosesAt" | "startsAt">): Date {
   return date.signupClosesAt ?? date.startsAt;
 }
@@ -107,7 +103,7 @@ export function songLockMessage(date: SongLockDate, roundCount: number, now = ne
   }
 }
 
-/** Whether people who already have a spot can still upload payment proof. */
+/** Whether people who already have a spot can still say they've paid. */
 export function stillEditable(date: Pick<EventDate, "status" | "signupClosesAt" | "startsAt">) {
   return date.status === "SCHEDULED" && new Date() < closesAt(date);
 }

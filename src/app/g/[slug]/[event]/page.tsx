@@ -82,7 +82,6 @@ export default async function EventPage({ params, searchParams }: Props) {
             orderBy: { enteredAt: "desc" },
             include: { duetPartner: { select: { displayName: true } } },
           },
-          screenshot: { select: { uploadedAt: true } },
         },
       })
     : null;
@@ -153,7 +152,7 @@ export default async function EventPage({ params, searchParams }: Props) {
           registeredAt: true,
           reviewedAt: true,
           waitlistedAt: true,
-          screenshot: { select: { uploadedAt: true } },
+          paidAt: true,
         },
       })
     : [];

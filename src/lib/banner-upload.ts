@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { FormError, optionalUrl } from "@/lib/forms";
 
-// Banner images uploaded from the admin forms are kept in the database (like
-// payment screenshots), so there is no extra storage service to set up. The
+// Banner images uploaded from the admin forms are kept in the database, so there is no extra storage service to set up. The
 // owner's bannerUrl points at /api/banners/<id>; a pasted link works as before.
 
 const PREFIX = "/api/banners/";
