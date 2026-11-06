@@ -327,6 +327,11 @@ model Song {
   artist          String?
   youtubeUrl      String?
   youtubeVideoId  String?
+  // The track's length from YouTube (src/lib/youtube.ts), looked up when the song is saved and by the
+  // daily cron. durationCheckedAt is set once YouTube answered, so a private or deleted video
+  // (no length) isn't asked about again; a new link clears both.
+  durationSeconds   Int?
+  durationCheckedAt DateTime?
   duet            Boolean    @default(false) // solo unless the singer marks it a duet
   duetPartnerId   String? // optional: another sign-up for the same date singing this duet
   // The partner's answer: PENDING until they accept or decline; null with no partner.

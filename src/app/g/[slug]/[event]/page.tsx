@@ -193,6 +193,7 @@ export default async function EventPage({ params, searchParams }: Props) {
         title: s.title,
         artist: s.artist,
         youtubeUrl: s.youtubeUrl,
+        seconds: s.durationSeconds,
         duet: s.duet,
         duetWith:
           s.duetPartner && s.duetStatus === "ACCEPTED" && HOLDS_SPOT.includes(s.duetPartner.status)
@@ -207,6 +208,7 @@ export default async function EventPage({ params, searchParams }: Props) {
         title: s.title,
         artist: s.artist,
         youtubeUrl: s.youtubeUrl,
+        seconds: s.durationSeconds,
         duet: true,
         duetWith: s.signUp.displayName,
         partnerPicked: true,
@@ -230,6 +232,7 @@ export default async function EventPage({ params, searchParams }: Props) {
                   title: true,
                   artist: true,
                   youtubeUrl: true,
+                  durationSeconds: true,
                   duet: true,
                   duetStatus: true,
                   duetPartnerId: true,

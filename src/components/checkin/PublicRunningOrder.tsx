@@ -1,6 +1,7 @@
 import { HOLDS_SPOT } from "@/lib/events";
 import type { SignUpStatus } from "@prisma/client";
 import { secondaryButton } from "@/components/ui";
+import { formatDuration } from "@/lib/format";
 
 export type PublicOrderRow = {
   round: number;
@@ -12,6 +13,7 @@ export type PublicOrderRow = {
     title: string;
     artist: string | null;
     youtubeUrl: string | null;
+    durationSeconds: number | null;
     duet: boolean;
     duetPartner: { displayName: string; status: SignUpStatus } | null;
   } | null;
@@ -95,6 +97,7 @@ export default function PublicRunningOrder({
                           <>
                             {song.title}
                             {song.artist && ` (${song.artist})`}
+                            {song.durationSeconds != null && ` · ${formatDuration(song.durationSeconds)}`}
                             {song.duet &&
                               (song.duetPartner && HOLDS_SPOT.includes(song.duetPartner.status)
                                 ? ` · duet with ${song.duetPartner.displayName}`

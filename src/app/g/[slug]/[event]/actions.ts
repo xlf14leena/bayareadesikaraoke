@@ -25,6 +25,7 @@ import {
   stillEditable,
   withDateLock,
 } from "@/lib/signups";
+import { fillSongLengths } from "@/lib/youtube";
 
 // Member actions on an event page (spec: "Sign-up and Zelle payment", "Songs").
 
@@ -182,6 +183,8 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
       return "Songs saved.";
     });
   });
+  // Look up the new tracks' lengths before the page reloads, so they show straight away.
+  if (dateId) await fillSongLengths({ eventDateId: dateId }).catch(() => 0);
   if (dateId) refresh();
   return result;
 }

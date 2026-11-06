@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DuetStatus } from "@prisma/client";
 import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
+import { formatDuration } from "@/lib/format";
 import type { FormState, NearMatch } from "@/lib/forms";
 import { ROUND_KIND_LABEL, type RoundAppearances, type RoundConfig, type RoundKind, timesLabel } from "@/lib/rounds";
 
@@ -13,6 +14,8 @@ export type SongDefaults = {
   title: string;
   artist: string;
   youtubeUrl: string;
+  /** The saved track's length from YouTube, when known. */
+  durationSeconds?: number | null;
   duet: boolean;
   duetPartnerId: string | null;
   /** The partner's answer: PENDING, ACCEPTED or DECLINED. */
@@ -148,14 +151,7 @@ function RoundFields({
             </label>
           )}
           <Field label="YouTube karaoke track (optional)" className="sm:col-span-2">
-            <input
-              name={`youtube${r}`}
-              type="url"
-              inputMode="url"
-              defaultValue={defaults?.youtubeUrl}
-              placeholder="https://youtu.be/…"
-              className={inputClass}
-            />
+            <TrackInput round={r} defaultUrl={defaults?.youtubeUrl ?? ""} defaultSeconds={defaults?.durationSeconds ?? null} />
           </Field>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:col-span-2">
             {roundKind === "EITHER" ? (
@@ -211,6 +207,62 @@ function RoundFields({
         </div>
       )}
     </fieldset>
+  );
+}
+
+/**
+ * The YouTube link field, with the track's length under it so the singer can check it's the right
+ * one. The saved link shows its stored length; a new link is looked up (/api/youtube/length) once
+ * the singer stops typing. Nothing shows when the length isn't known.
+ */
+function TrackInput({ round, defaultUrl, defaultSeconds }: { round: number; defaultUrl: string; defaultSeconds: number | null }) {
+  const [url, setUrl] = useState(defaultUrl);
+  const input = useRef<HTMLInputElement>(null);
+  // Left uncontrolled so a form reset (the admin's add-person form) clears it; follow the reset too.
+  useEffect(() => {
+    const form = input.current?.form;
+    const onReset = () => setUrl(defaultUrl);
+    form?.addEventListener("reset", onReset);
+    return () => form?.removeEventListener("reset", onReset);
+  }, [defaultUrl]);
+  const [looked, setLooked] = useState<{ url: string; seconds: number | null } | null>(null);
+  const trimmed = url.trim();
+  const isSaved = trimmed === defaultUrl.trim();
+  useEffect(() => {
+    if (isSaved || !/youtu\.?be/i.test(trimmed)) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/youtube/length?url=${encodeURIComponent(trimmed)}`, { signal: ctrl.signal });
+        if (res.ok) setLooked({ url: trimmed, seconds: (await res.json()).seconds ?? null });
+      } catch {
+        // No preview; the length is looked up again when the song is saved.
+      }
+    }, 600);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [trimmed, isSaved]);
+  const seconds = isSaved ? defaultSeconds : looked?.url === trimmed ? looked.seconds : null;
+  return (
+    <>
+      <input
+        name={`youtube${round}`}
+        type="url"
+        inputMode="url"
+        ref={input}
+        defaultValue={defaultUrl}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://youtu.be/…"
+        className={inputClass}
+      />
+      {seconds != null && (
+        <span className="mt-1 block text-xs text-ink-muted">
+          Track length <span className="font-medium tabular-nums text-ink">{formatDuration(seconds)}</span>
+        </span>
+      )}
+    </>
   );
 }
 

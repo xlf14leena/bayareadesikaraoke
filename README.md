@@ -49,6 +49,7 @@ A person must sign in once before they can be made a group admin.
 - Overdue holds expire, and freed spots go to the next person on that role's waitlist, whenever the event page or its admin page is opened, and in the daily cron as a backstop (`settleDate`). Every change to who holds a spot runs under a per-date Postgres advisory lock, so two people can't both take the last spot.
 - Singers pick one song per round, until sign-ups close (the date's start). Admins can reject a song with a reason; songs added after a payment was approved are marked "New song".
 - Admins can add people by hand (confirmed at once, with an optional payment note). Going over a cap needs a tick. If an email is given, the sign-up joins that person's account when they sign in with Google.
+- **Song lengths.** Each song's YouTube track length is looked up with the YouTube Data API (`src/lib/youtube.ts`, needs `YOUTUBE_API_KEY`) when the song is saved, and stored on `Song.durationSeconds`. The daily cron and opening a date's admin page fill in any song not looked up yet (songs picked before this, or a lookup that failed). A private or deleted video is asked about once and then shows no length; changing a song's link looks it up again. Lengths show on the song form (as soon as a link is pasted, via `/api/youtube/length`), the singer's own songs, Who's coming, both running orders (the admin one with each round's total and the track time left in the round being sung), and the admin Singers tile as the total for the night.
 - Emails are not sent yet; they come in the next step.
 
 ## Check-in at the venue
@@ -95,6 +96,7 @@ For Google sign-in locally, add `http://localhost:3000/api/auth/callback/google`
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth client |
 | `SUPER_USER_EMAILS` | Comma-separated emails that become super users |
 | `CRON_SECRET` | Optional; when set, `/api/cron/dates` only accepts Vercel Cron's calls |
+| `YOUTUBE_API_KEY` | Optional; a YouTube Data API v3 key for song lengths. Without it songs show no length |
 
 ## Deploying
 

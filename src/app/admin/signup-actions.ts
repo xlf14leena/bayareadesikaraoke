@@ -19,6 +19,7 @@ import {
   songInputs,
   withDateLock,
 } from "@/lib/signups";
+import { fillSongLengths } from "@/lib/youtube";
 
 // Admin review of sign-ups (spec: "Admin review", "Admin-added people").
 
@@ -182,6 +183,7 @@ export async function addPerson(dateId: string, _prev: FormState, form: FormData
       return `Added ${displayName}.`;
     });
   });
+  await fillSongLengths({ eventDateId: dateId }).catch(() => 0);
   refresh(dateId);
   return result;
 }

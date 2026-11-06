@@ -4,7 +4,7 @@ import ConfirmButton from "@/components/admin/ConfirmButton";
 import ScreenshotForm from "@/components/signup/ScreenshotForm";
 import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";
 import { STATUS_LABEL, type ZelleDetails } from "@/lib/events";
-import { formatDateTime, formatPrice } from "@/lib/format";
+import { formatDateTime, formatDuration, formatPrice } from "@/lib/format";
 import type { RoundAppearances, RoundConfig } from "@/lib/rounds";
 import { PICKS_SONGS } from "@/lib/signups";
 import { primaryButton, secondaryButton } from "@/components/ui";
@@ -59,6 +59,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
       title: s.title,
       artist: s.artist ?? "",
       youtubeUrl: s.youtubeUrl ?? "",
+      durationSeconds: s.durationSeconds,
       duet: s.duet,
       duetPartnerId: s.duetPartnerId,
       duetStatus: s.duetStatus,
@@ -233,6 +234,7 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
                     <span className="shrink-0 text-xs font-semibold text-royal">Round {s.round}</span>
                     <span className="truncate">
                       {s.title}
+                      {s.durationSeconds != null && ` · ${formatDuration(s.durationSeconds)}`}
                       {s.duet && (s.duetPartner ? ` · duet with ${s.duetPartner.displayName}${DUET_NOTE[s.duetStatus ?? "ACCEPTED"]}` : " · duet")}
                     </span>
                   </span>

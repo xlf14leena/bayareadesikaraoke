@@ -1,10 +1,12 @@
 import { syncAllSeries } from "@/lib/schedule";
 import { settleAll } from "@/lib/signups";
+import { fillSongLengths } from "@/lib/youtube";
 
 export const dynamic = "force-dynamic";
 
 // Daily Vercel Cron (vercel.json): keeps recurring events generated 4 weeks ahead,
-// and expires overdue 24-hour holds (pages also do this whenever a date is opened).
+// expires overdue 24-hour holds (pages also do this whenever a date is opened), and looks up
+// the length of any YouTube track not looked up yet (a backfill, and a retry when a lookup failed).
 // Vercel sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET is set.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -13,5 +15,6 @@ export async function GET(request: Request) {
   }
   await syncAllSeries();
   const settled = await settleAll();
-  return Response.json({ ok: true, settled });
+  const songLengths = await fillSongLengths().catch(() => 0);
+  return Response.json({ ok: true, settled, songLengths });
 }

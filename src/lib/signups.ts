@@ -383,6 +383,8 @@ export async function setSong(
           artist: input.artist,
           youtubeUrl: input.youtubeUrl,
           youtubeVideoId: videoId,
+          // A new link needs its length looked up again (src/lib/youtube.ts).
+          ...(videoId !== current.youtubeVideoId && { durationSeconds: null, durationCheckedAt: null }),
           duet: input.duet,
           duetPartnerId: input.duetPartnerId,
           duetStatus,
