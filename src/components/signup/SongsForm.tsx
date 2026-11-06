@@ -110,7 +110,7 @@ function RoundFields({
           Each singer sings at most {timesLabel(maxAppearances)} this round, counting duets they&apos;re picked for.
         </p>
       )}
-      {theme && (
+      {theme ? (
         <p className="border-b border-gold/40 bg-gold/15 px-3 py-1.5 text-sm text-gold-ink">
           <span className="font-semibold">Theme: {theme}</span>
           <span className="text-gold-ink/70">
@@ -118,6 +118,8 @@ function RoundFields({
             · {themeRequired ? "your song must fit it" : "just a suggestion"}
           </span>
         </p>
+      ) : (
+        <p className="border-b border-line bg-white px-3 py-1.5 text-sm text-ink-muted">No theme: sing anything you like</p>
       )}
       {selfFull ? (
         <p className="bg-mist/60 p-3 text-sm">
