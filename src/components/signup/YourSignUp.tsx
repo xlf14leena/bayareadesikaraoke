@@ -101,7 +101,7 @@ export default function YourSignUp({
       {signUp.status === "WAITLISTED" && (
         <p>
           You&apos;re number {waitlistPosition ?? "?"} on the {role} waitlist. If a spot opens up you&apos;ll move into
-          it and get 24 hours to pay. Singers pick songs once they have a spot.
+          it and get 24 hours to pay. Singers pick songs once their payment is confirmed.
         </p>
       )}
 
@@ -116,7 +116,8 @@ export default function YourSignUp({
         <p>
           Thanks! The organizers will check your payment
           {signUp.paidAt && <> (you said you paid {formatDateTime(signUp.paidAt)})</>}. Your spot is
-          held while they review it. Once they approve it, you and your songs show in the Who&apos;s coming tab.
+          held while they review it. Once they approve it, you show in the Who&apos;s coming tab
+          {signUp.role === "SINGER" && " and you can pick your songs"}.
         </p>
       )}
 
@@ -252,6 +253,10 @@ export default function YourSignUp({
             </li>
           ))}
         </ul>
+      )}
+
+      {signUp.role === "SINGER" && ["RESERVED", "REJECTED"].includes(signUp.status) && (
+        <p className="text-sm text-ink-muted">You can pick your songs once the organizers confirm your payment.</p>
       )}
 
       {signUp.role === "SINGER" && PICKS_SONGS.includes(signUp.status) && (

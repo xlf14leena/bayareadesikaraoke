@@ -19,8 +19,11 @@ import { looksAlike, songKey } from "@/lib/song-match";
 
 export const HOLD_MS = 24 * 60 * 60 * 1000;
 
-/** Statuses whose songs are held (a singer can pick or edit songs while in one of these). */
-export const PICKS_SONGS: SignUpStatus[] = HOLDS_SPOT;
+/**
+ * Statuses that can pick or edit songs, answer duet asks and be picked as a duet partner:
+ * only confirmed sign-ups, so nobody takes a song before their payment is approved.
+ */
+export const PICKS_SONGS: SignUpStatus[] = ["CONFIRMED"];
 
 /** Statuses after which a person can sign up again. */
 export const ENDED: SignUpStatus[] = ["EXPIRED", "CANCELLED"];
@@ -354,9 +357,9 @@ export async function setSong(
       !partner ||
       partner.eventDateId !== signUp.eventDateId ||
       partner.role !== "SINGER" ||
-      !HOLDS_SPOT.includes(partner.status)
+      !PICKS_SONGS.includes(partner.status)
     ) {
-      throw new FormError(`Pick a duet partner for round ${round} from the singers signed up for this date.`);
+      throw new FormError(`Pick a duet partner for round ${round} from the confirmed singers on this date.`);
     }
   }
   if (maxAppearances != null) {

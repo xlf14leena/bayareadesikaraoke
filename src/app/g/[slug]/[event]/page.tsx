@@ -7,7 +7,16 @@ import { notFound, redirect } from "next/navigation";
 import { primaryButton, secondaryButton } from "@/components/ui";
 import { HOLDS_SPOT, mapUrl, settingsFor } from "@/lib/events";
 import { formatClock, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
-import { ENDED, acceptingSignUps, appearancesByRound, openRounds, settle, songLockMessage, stillEditable } from "@/lib/signups";
+import {
+  ENDED,
+  PICKS_SONGS,
+  acceptingSignUps,
+  appearancesByRound,
+  openRounds,
+  settle,
+  songLockMessage,
+  stillEditable,
+} from "@/lib/signups";
 import { CAN_CHECK_IN, checkInIsOpen } from "@/lib/checkin";
 import { pacificTimeOf } from "@/lib/schedule";
 import SignUpForm from "@/components/signup/SignUpForm";
@@ -115,11 +124,11 @@ export default async function EventPage({ params, searchParams }: Props) {
         })
       : Promise.resolve([]),
   ]);
-  // Duet partners: other singers holding a spot on this date, and duets that name me.
-  const [partnerSignUps, invites, appearances] = myActive
+  // Duet partners: other confirmed singers on this date, and duets that name me.
+  const [partnerSignUps, invites, appearances] = myActive && PICKS_SONGS.includes(myActive.status)
     ? await Promise.all([
         prisma.signUp.findMany({
-          where: { eventDateId: date.id, role: "SINGER", status: { in: HOLDS_SPOT }, id: { not: myActive.id } },
+          where: { eventDateId: date.id, role: "SINGER", status: { in: PICKS_SONGS }, id: { not: myActive.id } },
           orderBy: { displayName: "asc" },
           select: { id: true, displayName: true },
         }),
@@ -128,7 +137,7 @@ export default async function EventPage({ params, searchParams }: Props) {
             duetPartnerId: myActive.id,
             duetStatus: { not: "DECLINED" },
             status: "ACTIVE",
-            signUp: { status: { in: HOLDS_SPOT } },
+            signUp: { status: { in: PICKS_SONGS } },
           },
           orderBy: { round: "asc" },
           select: { id: true, round: true, title: true, duetStatus: true, signUp: { select: { displayName: true } } },

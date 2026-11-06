@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { FormError, type FormState, optionalText, text } from "@/lib/forms";
 import { eventPathById } from "@/lib/event-url";
 import { prisma } from "@/lib/prisma";
+import { HOLDS_SPOT } from "@/lib/events";
 import { roundsFor } from "@/lib/rounds";
 import { canAdminGroup, requireViewer } from "@/lib/roles";
 import {
@@ -177,9 +178,11 @@ export async function saveSongs(signUpId: string, _prev: FormState, form: FormDa
       const now = await tx.signUp.findUniqueOrThrow({ where: { id: signUpId } });
       if (!PICKS_SONGS.includes(now.status)) {
         throw new FormError(
-          now.status === "WAITLISTED"
-            ? "You can pick songs once you're off the waitlist."
-            : "This sign-up no longer holds a spot, so it can't pick songs.",
+          HOLDS_SPOT.includes(now.status)
+            ? "You can pick songs once the organizers confirm your payment."
+            : now.status === "WAITLISTED"
+              ? "You can pick songs once you're off the waitlist and your payment is confirmed."
+              : "This sign-up no longer holds a spot, so it can't pick songs.",
         );
       }
       // Read inside the lock, so a round an admin just started counts.
