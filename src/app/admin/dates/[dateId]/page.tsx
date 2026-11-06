@@ -19,13 +19,14 @@ import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
 import { duetTurns, turnName, turnSinger } from "@/lib/duet-turns";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
-import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice } from "@/lib/format";
+import { formatClock, formatDateTime, formatDuration, formatEventDate, formatEventTime, formatPrice, formatTotal } from "@/lib/format";
 import { appearancesByRound, settle } from "@/lib/signups";
 import { looksAlike } from "@/lib/song-match";
 import { feedbackOpen, feedbackSummary } from "@/lib/feedback";
 import { pacificTimeOf } from "@/lib/schedule";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
+import { fillSongLengths } from "@/lib/youtube";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,8 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
   if (!found || found.status === "DELETED") notFound();
   await requireGroupAdmin(found.series.groupId, `/admin/dates/${dateId}`);
   if (found.status === "SCHEDULED") await settle(dateId);
+  // Songs picked before lengths existed, or whose lookup failed, get one here (a no-op once all are known).
+  await fillSongLengths({ eventDateId: dateId }).catch(() => 0);
   const date = await prisma.eventDate.findUnique({
     where: { id: dateId },
     include: {
@@ -97,12 +100,19 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
           name: turnName(r, nameOf),
           song: song?.title ?? null,
           track: song?.youtubeUrl ?? null,
+          seconds: song?.durationSeconds ?? null,
           method: r.method,
         };
       }),
       waiting: arrivedSingers.filter((s) => !inRound.some((r) => r.signUpId === s.id)).map((s) => s.displayName),
     };
   });
+  // Total track time of the songs picked by singers holding a spot, to plan the night.
+  const heldSongs = date.signUps
+    .filter((s) => HOLDS_SPOT.includes(s.status))
+    .flatMap((s) => s.songs.filter((x) => x.status === "ACTIVE"));
+  const songSeconds = heldSongs.reduce((sum, x) => sum + (x.durationSeconds ?? 0), 0);
+  const songsWithoutLength = heldSongs.filter((x) => x.durationSeconds == null).length;
   const viewHref = eventPath(date, series.visibility === "PRIVATE" ? series.privateToken : null);
   const feedback = await feedbackSummary(date.id);
   const isPast = date.endsAt < new Date();
@@ -286,6 +296,12 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         )}
         <Tile label="Singers" value={spotsLabel(held("SINGER"), settings.maxSingers)} sub={spotsLeft(held("SINGER"), settings.maxSingers)}>
           <Meter taken={held("SINGER")} cap={settings.maxSingers} />
+          {songSeconds > 0 && (
+            <p className="mt-2 text-sm text-ink-muted">
+              Songs: <span className="font-medium text-ink">{formatTotal(songSeconds)}</span>
+              {songsWithoutLength > 0 && ` + ${songsWithoutLength} without a length`}
+            </p>
+          )}
         </Tile>
         <Tile label="Listeners" value={spotsLabel(held("LISTENER"), settings.maxListeners)} sub={spotsLeft(held("LISTENER"), settings.maxListeners)}>
           <Meter taken={held("LISTENER")} cap={settings.maxListeners} />
@@ -501,6 +517,9 @@ function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; 
                     <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-cobalt hover:underline">
                       Track
                     </a>
+                  )}
+                  {song.durationSeconds != null && (
+                    <span className="ml-1 tabular-nums text-ink-muted">{formatDuration(song.durationSeconds)}</span>
                   )}
                   {isNew && (
                     <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs font-medium text-gold-ink">New song</span>

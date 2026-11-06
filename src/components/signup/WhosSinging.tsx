@@ -1,9 +1,12 @@
+import { formatDuration } from "@/lib/format";
 import { ROUND_KIND_LABEL, type RoundConfig } from "@/lib/rounds";
 
 export type LineupSong = {
   title: string;
   artist: string | null;
   youtubeUrl: string | null;
+  /** The track's length from YouTube, when known. */
+  seconds: number | null;
   duet: boolean;
   /** The partner's name, or null for a duet whose partner hasn't accepted or no longer holds a spot. */
   duetWith: string | null;
@@ -148,6 +151,7 @@ function Song({ song }: { song: LineupSong | undefined }) {
   if (!song) return <span className="italic text-ink-muted">Not picked yet</span>;
   const extra = [
     song.artist,
+    song.seconds != null ? formatDuration(song.seconds) : null,
     song.duet
       ? song.duetWith
         ? `duet with ${song.duetWith}`

@@ -55,3 +55,18 @@ export function formatDateTime(d: Date): string {
     minute: "2-digit",
   }).format(d);
 }
+
+/** "4:12", or "1:02:05" for an hour or more. */
+export function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = String(seconds % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+}
+
+/** "1 hr 5 min" or "42 min", for totals. */
+export function formatTotal(seconds: number): string {
+  const mins = Math.round(seconds / 60);
+  const h = Math.floor(mins / 60);
+  return h > 0 ? `${h} hr ${mins % 60} min` : `${mins} min`;
+}

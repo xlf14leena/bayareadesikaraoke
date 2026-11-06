@@ -4,12 +4,22 @@ import { clearNowSinging, clearSlot, setNowSinging, startRound, stepNowSinging }
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { ROUND_KIND_LABEL, type RoundKind, SLOT_MODE_LABEL } from "@/lib/rounds";
+import { formatDuration, formatTotal } from "@/lib/format";
 
 export type RunningOrderRound = {
   round: number;
   mode: SlotMode;
   kind: RoundKind;
-  rows: { slot: number; signUpId: string; name: string; song: string | null; track: string | null; method: SlotMode }[];
+  rows: {
+    slot: number;
+    signUpId: string;
+    name: string;
+    song: string | null;
+    track: string | null;
+    /** The track's length from YouTube, when known. */
+    seconds: number | null;
+    method: SlotMode;
+  }[];
   /** Checked-in singers who haven't got a slot yet. */
   waiting: string[];
 };
@@ -29,6 +39,10 @@ export default function RunningOrder({
   const current = now && rounds.find((r) => r.round === now.round)?.rows.find((row) => row.slot === now.slot);
   const openRound = now?.round ?? rounds[0]?.round;
   const isNow = (round: number, slot: number) => now?.round === round && now.slot === slot;
+  const total = (rows: RunningOrderRound["rows"]) => rows.reduce((sum, row) => sum + (row.seconds ?? 0), 0);
+  // Track time still to come in the round being sung, from the current singer on.
+  const left = now ? total(rounds.find((r) => r.round === now.round)?.rows.filter((row) => row.slot >= now.slot) ?? []) : 0;
+  const nightTotal = rounds.reduce((sum, r) => sum + total(r.rows), 0);
   return (
     <section className={`${cardClass} space-y-5`}>
       <div>
@@ -53,6 +67,12 @@ export default function RunningOrder({
               }`
             : "Nobody is marked as singing yet."}
         </p>
+        {(left > 0 || nightTotal > 0) && (
+          <p className="text-sm text-ink-muted">
+            {left > 0 && `About ${formatTotal(left)} of tracks left in round ${now!.round}. `}
+            {nightTotal > 0 && `All rounds: ${formatTotal(nightTotal)} of tracks.`}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           <form action={stepNowSinging.bind(null, dateId, 1)}>
             <button type="submit" className={primaryButton}>
@@ -96,6 +116,7 @@ export default function RunningOrder({
                 Round {r.round}{" "}
                 <span className="text-sm font-normal text-ink-muted">
                   · {ROUND_KIND_LABEL[r.kind]} · {SLOT_MODE_LABEL[r.mode]} · {r.rows.length} {r.rows.length === 1 ? "slot" : "slots"} taken
+                  {total(r.rows) > 0 && ` · ${formatTotal(total(r.rows))}`}
                 </span>
               </span>
               <span aria-hidden className="text-ink-muted transition-transform group-open:rotate-180">
@@ -118,6 +139,7 @@ export default function RunningOrder({
                       <span className="font-medium">{row.name}</span>
                       <span className="text-ink-muted">
                         {row.song ? ` · ${row.song}` : " · no song yet"}
+                        {row.seconds != null && <span className="tabular-nums">{` · ${formatDuration(row.seconds)}`}</span>}
                         {row.method === "PICK" ? " · picked" : row.method === "PAYMENT_ORDER" ? " · payment order" : " · check-in order"}
                       </span>
                       {row.track && (
