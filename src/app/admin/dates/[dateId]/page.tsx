@@ -52,7 +52,6 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
             orderBy: [{ round: "asc" }, { enteredAt: "asc" }],
             include: { duetPartner: { select: { displayName: true } } },
           },
-          screenshot: { select: { uploadedAt: true, contentType: true } },
           reviewedBy: { select: { name: true } },
           checkedInBy: { select: { name: true } },
         },
@@ -68,7 +67,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
     : undefined;
   const by = (statuses: string[]) => date.signUps.filter((s) => statuses.includes(s.status));
   const review = by(["UNDER_REVIEW"]).sort(
-    (a, b) => (a.screenshot?.uploadedAt.getTime() ?? 0) - (b.screenshot?.uploadedAt.getTime() ?? 0),
+    (a, b) => (a.paidAt?.getTime() ?? 0) - (b.paidAt?.getTime() ?? 0),
   );
   const awaiting = by(["RESERVED", "REJECTED"]);
   const nearMatches = possibleDuplicates(date.signUps);
@@ -326,7 +325,7 @@ export default async function DateAdminPage({ params }: { params: Promise<{ date
         <div>
           <h2 className="mb-1 text-xl font-semibold">Sign-ups</h2>
           <p className="text-sm text-ink-muted">
-            Spots count held sign-ups. Match each screenshot&apos;s memo code and amount in your bank app before approving.
+            Spots count held sign-ups. People tick &ldquo;I&apos;ve paid&rdquo; instead of sending a screenshot. Find each memo code and amount (or their Zelle name) in your bank app before approving.
           </p>
         </div>
         <SignUpFilter groups={groups} initial={firstChip} />
@@ -440,7 +439,6 @@ function Meter({ taken, cap }: { taken: number; cap: number | null }) {
 
 type Row = SignUp & {
   songs: (Song & { duetPartner: { displayName: string } | null })[];
-  screenshot: { uploadedAt: Date; contentType: string } | null;
   reviewedBy: { name: string | null } | null;
 };
 
@@ -462,23 +460,9 @@ function possibleDuplicates(signUps: { displayName: string; songs: Song[] }[]): 
 function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; nearMatches: NearMatches }) {
   const active = s.songs.filter((x) => x.status === "ACTIVE");
   const rejected = s.songs.filter((x) => x.status === "REJECTED");
-  const shot = s.screenshot ? `/api/screenshots/${s.id}` : null;
-  const showsImage = shot && !/hei[cf]/.test(s.screenshot!.contentType);
   return (
     <div className="rounded-lg border border-line p-3">
       <div className="flex flex-wrap gap-4">
-        {shot && (
-          <a href={shot} target="_blank" rel="noopener noreferrer" className="shrink-0">
-            {showsImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={shot} alt={`Payment screenshot from ${s.displayName}`} className="h-32 w-24 rounded border border-line object-cover" />
-            ) : (
-              <span className="flex h-32 w-24 items-center justify-center rounded border border-line p-2 text-center text-xs text-cobalt">
-                Open screenshot (HEIC)
-              </span>
-            )}
-          </a>
-        )}
         <div className="min-w-0 flex-1 space-y-1 text-sm">
           <p className="text-base font-medium">
             {s.displayName}{" "}
@@ -492,7 +476,12 @@ function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; 
             Memo <span className="font-mono font-semibold">{s.memoCode}</span> · {formatPrice(s.amountDueCents)} · Signed
             up {formatDateTime(s.registeredAt)}
           </p>
-          {s.screenshot && <p className="text-ink-muted">Screenshot sent {formatDateTime(s.screenshot.uploadedAt)}</p>}
+          {s.zelleName && (
+            <p>
+              Zelle name <span className="font-medium">{s.zelleName}</span>
+            </p>
+          )}
+          {s.paidAt && <p className="text-ink-muted">Said they paid {formatDateTime(s.paidAt)}</p>}
           {s.reservedUntil && <p className="text-ink-muted">Held until {formatDateTime(s.reservedUntil)}</p>}
           {s.waitlistedAt && s.status === "WAITLISTED" && (
             <p className="text-ink-muted">On the waitlist since {formatDateTime(s.waitlistedAt)}</p>

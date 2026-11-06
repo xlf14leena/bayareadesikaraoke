@@ -1,7 +1,7 @@
 import type { DuetStatus, SignUp, Song } from "@prisma/client";
-import { leaveSignUp, respondToDuet, saveSongs, uploadScreenshot } from "@/app/g/[slug]/[event]/actions";
+import { leaveSignUp, markPaid, respondToDuet, saveSongs } from "@/app/g/[slug]/[event]/actions";
 import ConfirmButton from "@/components/admin/ConfirmButton";
-import ScreenshotForm from "@/components/signup/ScreenshotForm";
+import PaidForm from "@/components/signup/PaidForm";
 import SongsForm, { type DuetPartnerOption, type SongDefaults } from "@/components/signup/SongsForm";
 import { STATUS_LABEL, type ZelleDetails } from "@/lib/events";
 import TrackLength from "@/components/TrackLength";
@@ -14,7 +14,6 @@ import SubmitButton from "@/components/SubmitButton";
 type Props = {
   signUp: SignUp & {
     songs: (Song & { duetPartner: { displayName: string } | null })[];
-    screenshot: { uploadedAt: Date } | null;
   };
   /** People signed up for this date who can be picked as a duet partner. */
   partners: DuetPartnerOption[];
@@ -24,7 +23,7 @@ type Props = {
   /** Where to send the payment, from the event template or this date. */
   zelle: ZelleDetails;
   waitlistPosition: number | null;
-  /** Whether payment proof can still be uploaded (until sign-ups close). */
+  /** Whether the person can still say they've paid (until sign-ups close). */
   editable: boolean;
   /** Per round, round 1 first: whether its song, duet partner and duet answers can still change (songsOpen). */
   openRounds: boolean[];
@@ -102,7 +101,7 @@ export default function YourSignUp({
       {signUp.status === "WAITLISTED" && (
         <p>
           You&apos;re number {waitlistPosition ?? "?"} on the {role} waitlist. If a spot opens up you&apos;ll move into
-          it and get 24 hours to pay. Singers pick songs once they have a spot.
+          it and get 24 hours to pay. Singers pick songs once their payment is confirmed.
         </p>
       )}
 
@@ -116,8 +115,9 @@ export default function YourSignUp({
       {signUp.status === "UNDER_REVIEW" && (
         <p>
           Thanks! The organizers will check your payment
-          {signUp.screenshot && <> (screenshot sent {formatDateTime(signUp.screenshot.uploadedAt)})</>}. Your spot is
-          held while they review it. Once they approve it, you and your songs show in the Who&apos;s coming tab.
+          {signUp.paidAt && <> (you said you paid {formatDateTime(signUp.paidAt)})</>}. Your spot is
+          held while they review it. Once they approve it, you show in the Who&apos;s coming tab
+          {signUp.role === "SINGER" && " and you can pick your songs"}.
         </p>
       )}
 
@@ -126,7 +126,8 @@ export default function YourSignUp({
           <p className="font-medium">The organizers couldn&apos;t confirm your payment.</p>
           {signUp.reviewReason && <p>Reason: {signUp.reviewReason}</p>}
           {signUp.reservedUntil && (
-            <p className="text-sm">Upload a new screenshot by {formatDateTime(signUp.reservedUntil)} to keep your spot.</p>
+            <p className="text-sm">Check your Zelle payment, then pay and tick the box again by {formatDateTime(signUp.reservedUntil)} to keep
+              your spot.</p>
           )}
         </div>
       )}
@@ -144,8 +145,8 @@ export default function YourSignUp({
           <h3 className="font-semibold">Pay with Zelle</h3>
           {signUp.status === "RESERVED" && signUp.reservedUntil && (
             <p className="text-sm">
-              Your spot is held until <strong>{formatDateTime(signUp.reservedUntil)}</strong>. Pay and upload your
-              screenshot before then.
+              Your spot is held until <strong>{formatDateTime(signUp.reservedUntil)}</strong>. Pay and tick the box below
+              before then.
             </p>
           )}
           <dl className="grid gap-2 text-sm sm:grid-cols-2">
@@ -176,11 +177,16 @@ export default function YourSignUp({
           </dl>
           <ol className="list-decimal space-y-1 pl-5 text-sm text-ink-muted">
             <li>Send the amount with Zelle from your bank app, with the memo code above.</li>
-            <li>Take a screenshot of the payment confirmation.</li>
-            <li>Upload it here.</li>
+            <li>Tick the box below. No screenshot needed: the organizers check their Zelle for your memo code.</li>
           </ol>
           {editable ? (
-            <ScreenshotForm action={uploadScreenshot.bind(null, signUp.id)} label="Upload screenshot" />
+            <PaidForm
+              action={markPaid.bind(null, signUp.id)}
+              amount={formatPrice(signUp.amountDueCents)}
+              memoCode={signUp.memoCode}
+              zelleName={signUp.zelleName}
+              label="I've paid"
+            />
           ) : (
             <p className="text-sm text-ink-muted">Sign-ups for this date are closed.</p>
           )}
@@ -190,11 +196,17 @@ export default function YourSignUp({
       {signUp.status === "UNDER_REVIEW" && editable && (
         <details className="text-sm">
           <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 text-ink-muted [&::-webkit-details-marker]:hidden">
-            Sent the wrong screenshot?
-            <span className={secondaryButton}>Replace it</span>
+            {signUp.zelleName ? <>Zelle name: {signUp.zelleName}</> : "Help the organizers find your payment"}
+            <span className={secondaryButton}>{signUp.zelleName ? "Change it" : "Add your Zelle name"}</span>
           </summary>
           <div className="mt-2">
-            <ScreenshotForm action={uploadScreenshot.bind(null, signUp.id)} label="Replace screenshot" />
+            <PaidForm
+              action={markPaid.bind(null, signUp.id)}
+              amount={formatPrice(signUp.amountDueCents)}
+              memoCode={signUp.memoCode}
+              zelleName={signUp.zelleName}
+              label="Save"
+            />
           </div>
         </details>
       )}
@@ -241,6 +253,10 @@ export default function YourSignUp({
             </li>
           ))}
         </ul>
+      )}
+
+      {signUp.role === "SINGER" && ["RESERVED", "REJECTED"].includes(signUp.status) && (
+        <p className="text-sm text-ink-muted">You can pick your songs once the organizers confirm your payment.</p>
       )}
 
       {signUp.role === "SINGER" && PICKS_SONGS.includes(signUp.status) && (
