@@ -9,6 +9,7 @@ import ScheduleBadge from "@/components/admin/ScheduleBadge";
 import GroupForm from "@/components/admin/GroupForm";
 import { badgeClass, cardClass, primaryButton, secondaryButton } from "@/components/ui";
 import { formatClock, formatEventDate, formatPrice } from "@/lib/format";
+import { thumbnailFor } from "@/lib/group-thumbnail";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin } from "@/lib/roles";
 import { describeSchedule, ruleOf, syncAllSeries } from "@/lib/schedule";
@@ -37,6 +38,8 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ gro
     },
   });
   if (!group) notFound();
+  // What the lists show while the group has no thumbnail of its own.
+  const fallbackThumb = thumbnailFor({ ...group, thumbnailUrl: null });
 
   return (
     <div className="space-y-8">
@@ -99,7 +102,7 @@ export default async function GroupAdminPage({ params }: { params: Promise<{ gro
 
       <section className={cardClass}>
         <h2 className="mb-4 text-xl font-semibold">Group details</h2>
-        <GroupForm action={updateGroup.bind(null, group.id)} group={group} />
+        <GroupForm action={updateGroup.bind(null, group.id)} group={group} fallbackThumb={fallbackThumb} />
       </section>
 
       <section className={cardClass}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { hintClass, inputClass, labelClass, secondaryButton } from "@/components/ui";
 import { shrinkImage, trimLightEdges } from "@/lib/shrink-image";
 
@@ -10,9 +10,24 @@ const isUploaded = (url: string | null) => !!url?.startsWith("/api/banners/");
 /**
  * Banner picker for the group, event and date forms: upload an image, or paste
  * a link as before. Sends bannerFile, bannerUrl and bannerKeep, read by
- * bannerFromForm in src/lib/banner-upload.ts.
+ * bannerFromForm in src/lib/banner-upload.ts. With field="thumbnail" it picks a
+ * group's square thumbnail instead (thumbnailFile, thumbnailUrl, thumbnailKeep),
+ * previewed cropped the way the lists show it; `fallback` shows what is used
+ * while there is none.
  */
-export default function BannerField({ current, hint }: { current: string | null; hint: string }) {
+export default function BannerField({
+  current,
+  hint,
+  field = "banner",
+  fallback,
+}: {
+  current: string | null;
+  hint: string;
+  field?: "banner" | "thumbnail";
+  fallback?: ReactNode;
+}) {
+  const square = field === "thumbnail";
+  const noun = square ? "thumbnail" : "banner";
   const fileInput = useRef<HTMLInputElement>(null);
   const [keep, setKeep] = useState(isUploaded(current));
   const [link, setLink] = useState(isUploaded(current) ? "" : (current ?? ""));
@@ -64,26 +79,39 @@ export default function BannerField({ current, hint }: { current: string | null;
 
   return (
     <div className="space-y-3">
-      <span className={labelClass}>Banner image (optional)</span>
+      <span className={labelClass}>{square ? "Thumbnail image" : "Banner image"} (optional)</span>
       {preview ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="Banner preview" className="h-auto max-h-64 w-full max-w-md rounded-lg border border-line bg-mist object-contain" />
+        <img
+          src={preview}
+          alt={square ? "Thumbnail preview" : "Banner preview"}
+          className={
+            square
+              ? "h-28 w-28 rounded-xl border border-line bg-mist object-cover"
+              : "h-auto max-h-64 w-full max-w-md rounded-lg border border-line bg-mist object-contain"
+          }
+        />
+      ) : fallback ? (
+        <div className="flex items-center gap-3">
+          {fallback}
+          <p className="text-sm text-ink-muted">No {noun} of its own. Lists show this for now.</p>
+        </div>
       ) : (
-        <p className="text-sm text-ink-muted">No banner of its own.</p>
+        <p className="text-sm text-ink-muted">No {noun} of its own.</p>
       )}
       <div className="flex flex-wrap items-center gap-3">
         <input
           ref={fileInput}
           type="file"
-          name="bannerFile"
-          aria-label="Upload a banner image"
+          name={`${field}File`}
+          aria-label={`Upload a ${noun} image`}
           accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.heic,.heif"
           onChange={onFile}
           className={`${inputClass} max-w-md file:mr-3 file:rounded-full file:border-0 file:bg-mist file:px-3 file:py-1 file:text-sm`}
         />
         {preview && (
           <button type="button" onClick={remove} className={secondaryButton}>
-            Remove banner
+            Remove {noun}
           </button>
         )}
       </div>
@@ -96,7 +124,8 @@ export default function BannerField({ current, hint }: { current: string | null;
       <label className="block">
         <span className="text-sm text-ink-muted">Or paste an image link</span>
         <input
-          name="bannerUrl"
+          name={`${field}Url`}
+          aria-label={`${square ? "Thumbnail" : "Banner"} image link`}
           type="url"
           value={link}
           onChange={(e) => {
@@ -107,9 +136,12 @@ export default function BannerField({ current, hint }: { current: string | null;
           className={`${inputClass} mt-1`}
         />
       </label>
-      {keep && !filePreview && !link && <input type="hidden" name="bannerKeep" value={current ?? ""} />}
+      {keep && !filePreview && !link && <input type="hidden" name={`${field}Keep`} value={current ?? ""} />}
       <span className={`block ${hintClass}`}>
-        A wide image works best. It is shown whole, nothing is cut off. {hint}
+        {square
+          ? "A square image works best. The middle is shown, cropped to a square."
+          : "A wide image works best. It is shown whole, nothing is cut off."}{" "}
+        {hint}
       </span>
     </div>
   );

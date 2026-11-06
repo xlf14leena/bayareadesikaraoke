@@ -1,4 +1,6 @@
 import Link from "next/link";
+import GroupThumb from "@/components/GroupThumb";
+import { thumbnailFor } from "@/lib/group-thumbnail";
 import { prisma } from "@/lib/prisma";
 import { requireAnyAdmin } from "@/lib/roles";
 import { primaryButton, secondaryButton } from "@/components/ui";
@@ -46,7 +48,10 @@ export default async function AdminPage() {
                 href={`/admin/groups/${g.id}`}
                 className="flex items-center justify-between gap-3 p-4 hover:bg-mist/60"
               >
-                <div className="min-w-0">
+                <span className="shrink-0 overflow-hidden rounded-lg bg-mist">
+                  <GroupThumb thumb={thumbnailFor(g)} className="h-12 w-12" text="text-xl" />
+                </span>
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold">{g.name}</p>
                   <p className="text-sm text-ink-muted">
                     /g/{g.slug} · {g._count.series} {g._count.series === 1 ? "event" : "events"} ·{" "}

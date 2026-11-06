@@ -75,6 +75,9 @@ model Group {
   slug        String   @unique
   description String?
   bannerUrl   String?
+  // Square picture for the group in event lists; without one a tile with the
+  // group's initials is shown (thumbnailFor in src/lib/group-thumbnail.ts)
+  thumbnailUrl String?
   // Optional links shown on the group page
   websiteUrl   String?
   facebookUrl  String?
@@ -292,8 +295,8 @@ model SignUp {
   @@index([eventDateId, status])
 }
 
-// A banner image an admin uploaded for a group, event or date. The owner's
-// bannerUrl points at it as /api/banners/<id> (src/lib/banner-upload.ts), so
+// A banner image an admin uploaded for a group, event or date (or a group's
+// thumbnail). The owner's bannerUrl (or thumbnailUrl) points at it as /api/banners/<id> (src/lib/banner-upload.ts), so
 // banners given as links keep working. Banners are public, like the pages.
 model BannerImage {
   id          String   @id @default(cuid())

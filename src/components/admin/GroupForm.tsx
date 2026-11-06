@@ -6,13 +6,26 @@ import Field from "@/components/admin/Field";
 import FormSection from "@/components/admin/FormSection";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
+import GroupThumb from "@/components/GroupThumb";
 import { inputClass } from "@/components/ui";
 import type { FormState } from "@/lib/forms";
+import type { GroupThumbnail } from "@/lib/group-thumbnail";
 
 type Action = (prev: FormState, form: FormData) => Promise<FormState>;
 
-/** Create or edit a group. The admin emails box shows only when creating. */
-export default function GroupForm({ action, group }: { action: Action; group?: Group }) {
+/**
+ * Create or edit a group. The admin emails box shows only when creating.
+ * `fallbackThumb` is what the lists show while the group has no thumbnail.
+ */
+export default function GroupForm({
+  action,
+  group,
+  fallbackThumb,
+}: {
+  action: Action;
+  group?: Group;
+  fallbackThumb?: GroupThumbnail;
+}) {
   const { state, onSubmit, pending } = useFormAction(action);
 
   return (
@@ -31,10 +44,24 @@ export default function GroupForm({ action, group }: { action: Action; group?: G
       <Field label="Description (optional)">
         <textarea name="description" rows={3} defaultValue={group?.description ?? ""} className={inputClass} />
       </Field>
-      <BannerField
-        current={group?.bannerUrl ?? null}
-        hint="Shown on the group page and used for events that have no banner of their own. Without one, the default singing photo is used."
-      />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <BannerField
+          current={group?.bannerUrl ?? null}
+          hint="Shown on the group page and used for events that have no banner of their own. Without one, the default singing photo is used."
+        />
+        <BannerField
+          field="thumbnail"
+          current={group?.thumbnailUrl ?? null}
+          fallback={
+            fallbackThumb && (
+              <span className="shrink-0 overflow-hidden rounded-xl border border-line bg-mist">
+                <GroupThumb thumb={fallbackThumb} className="h-28 w-28" text="text-4xl" />
+              </span>
+            )
+          }
+          hint="Shown beside the group's events on the home page and the group page. Without one, a tile with the group's initials is shown."
+        />
+      </div>
       <FormSection title="Links" note="optional">
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Website">
