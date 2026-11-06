@@ -16,7 +16,7 @@ export const cardClass = "rounded-xl border border-line bg-white p-4 sm:p-6";
  * only for links inside a sentence and for navigation.
  */
 const buttonBase =
-  "btn inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium select-none transition duration-150 active:scale-[0.96] active:duration-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 aria-busy:cursor-progress";
+  "btn inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium select-none transition duration-150 active:scale-[0.96] active:duration-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lapis disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 aria-busy:cursor-progress disabled:aria-busy:opacity-85";
 /*
  * Each button has three looks: hover (mouse only; Tailwind skips hover on
  * touch screens), pressed (darker fill while a finger or the mouse is down,
