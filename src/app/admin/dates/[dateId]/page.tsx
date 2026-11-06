@@ -10,6 +10,7 @@ import { approvePayment, addPerson, cancelSignUp, rejectPayment, rejectSong } fr
 import AddPersonForm from "@/components/admin/AddPersonForm";
 import CheckInPanel from "@/components/checkin/CheckInPanel";
 import RunningOrder from "@/components/checkin/RunningOrder";
+import TrackLength from "@/components/TrackLength";
 import { openCheckIn } from "@/app/admin/checkin-actions";
 import { CAN_CHECK_IN, canOpenCheckIn, checkInIsOpen, checkInOpensAt } from "@/lib/checkin";
 import { type RoundConfig, roundNumbers, roundsFor } from "@/lib/rounds";
@@ -19,7 +20,7 @@ import type { SignUp, Song } from "@prisma/client";
 import { eventPath } from "@/lib/event-url";
 import { duetTurns, turnName, turnSinger } from "@/lib/duet-turns";
 import { HOLDS_SPOT, STATUS_LABEL, settingsFor, spotsLabel } from "@/lib/events";
-import { formatClock, formatDateTime, formatDuration, formatEventDate, formatEventTime, formatPrice, formatTotal } from "@/lib/format";
+import { formatClock, formatDateTime, formatEventDate, formatEventTime, formatPrice, formatTotal } from "@/lib/format";
 import { appearancesByRound, settle } from "@/lib/signups";
 import { looksAlike } from "@/lib/song-match";
 import { feedbackOpen, feedbackSummary } from "@/lib/feedback";
@@ -520,7 +521,7 @@ function SignUpRow({ s, rounds, nearMatches }: { s: Row; rounds: RoundConfig[]; 
                     </a>
                   )}
                   {song.durationSeconds != null && (
-                    <span className="ml-1 tabular-nums text-ink-muted">{formatDuration(song.durationSeconds)}</span>
+                    <TrackLength seconds={song.durationSeconds} className="ml-1 text-ink-muted" />
                   )}
                   {isNew && (
                     <span className="ml-2 rounded-full bg-gold px-2 py-0.5 text-xs font-medium text-gold-ink">New song</span>

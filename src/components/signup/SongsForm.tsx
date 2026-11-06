@@ -6,7 +6,8 @@ import Field from "@/components/admin/Field";
 import FormStatus from "@/components/admin/FormStatus";
 import { useFormAction } from "@/components/admin/useFormAction";
 import { inputClass, selectClass } from "@/components/ui";
-import { formatDuration } from "@/lib/format";
+import TrackLength from "@/components/TrackLength";
+import { LONG_TRACK_SECONDS } from "@/lib/format";
 import type { FormState, NearMatch } from "@/lib/forms";
 import { ROUND_KIND_LABEL, type RoundAppearances, type RoundConfig, type RoundKind, timesLabel } from "@/lib/rounds";
 
@@ -259,7 +260,12 @@ function TrackInput({ round, defaultUrl, defaultSeconds }: { round: number; defa
       />
       {seconds != null && (
         <span className="mt-1 block text-xs text-ink-muted">
-          Track length <span className="font-medium tabular-nums text-ink">{formatDuration(seconds)}</span>
+          Track length <TrackLength seconds={seconds} className="font-medium text-ink" />
+          {seconds > LONG_TRACK_SECONDS && (
+            <span className="mt-0.5 block text-red-700">
+              This is a long track (over 6 minutes). Be ready to cut it short if the organizers ask.
+            </span>
+          )}
         </span>
       )}
     </>

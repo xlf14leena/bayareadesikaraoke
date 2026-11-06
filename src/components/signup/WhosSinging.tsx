@@ -1,4 +1,4 @@
-import { formatDuration } from "@/lib/format";
+import TrackLength from "@/components/TrackLength";
 import { ROUND_KIND_LABEL, type RoundConfig } from "@/lib/rounds";
 
 export type LineupSong = {
@@ -151,7 +151,6 @@ function Song({ song }: { song: LineupSong | undefined }) {
   if (!song) return <span className="italic text-ink-muted">Not picked yet</span>;
   const extra = [
     song.artist,
-    song.seconds != null ? formatDuration(song.seconds) : null,
     song.duet
       ? song.duetWith
         ? `duet with ${song.duetWith}`
@@ -187,6 +186,12 @@ function Song({ song }: { song: LineupSong | undefined }) {
         </a>
       ) : (
         <span className="font-medium">{song.title}</span>
+      )}
+      {song.seconds != null && (
+        <span className="text-sm text-ink-muted">
+          {" · "}
+          <TrackLength seconds={song.seconds} />
+        </span>
       )}
       {extra.length > 0 && <span className="text-sm text-ink-muted"> · {extra.join(" · ")}</span>}
     </>

@@ -70,3 +70,6 @@ export function formatTotal(seconds: number): string {
   const h = Math.floor(mins / 60);
   return h > 0 ? `${h} hr ${mins % 60} min` : `${mins} min`;
 }
+
+/** Tracks longer than this (6 minutes) are shown in red, so organizers and singers notice them. */
+export const LONG_TRACK_SECONDS = 6 * 60;
