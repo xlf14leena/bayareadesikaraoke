@@ -103,7 +103,7 @@ function RoundFields({
       <div aria-hidden className="flex items-center gap-2 bg-royal px-3 py-1.5 text-sm font-semibold text-white">
         <span className="grid size-5 place-items-center rounded-full bg-white text-xs text-royal">{r}</span>
         Round {r}
-        <span className="rounded-full bg-gold px-2 py-0.5 text-xs font-semibold text-royal">{ROUND_KIND_LABEL[roundKind]}</span>
+        <span className="ml-auto rounded-full bg-gold px-2 py-0.5 text-xs font-semibold text-royal">{ROUND_KIND_LABEL[roundKind]}</span>
       </div>
       {maxAppearances != null && (
         <p className="border-b border-line bg-white px-3 py-1.5 text-xs text-ink-muted">

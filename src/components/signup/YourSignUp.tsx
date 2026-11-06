@@ -240,8 +240,13 @@ export default function YourSignUp({ signUp, groupName, zelle, waitlistPosition,
                 <span className="block text-ink-muted">No songs picked yet</span>
               )}
             </span>
-            <span aria-hidden className="shrink-0 text-cobalt transition-transform group-open:rotate-180">
-              ▾
+            {/* A labelled button, not just a caret, so it's clear the summary opens the rounds. */}
+            <span className="flex shrink-0 items-center gap-1 rounded-full border border-cobalt/40 px-3 py-1 text-sm font-medium text-cobalt group-hover:bg-cobalt/10">
+              <span className="group-open:hidden">{editable ? (sorted.length ? "Edit songs" : "Pick songs") : "Show rounds"}</span>
+              <span className="hidden group-open:inline">Close</span>
+              <span aria-hidden className="transition-transform group-open:rotate-180">
+                ▾
+              </span>
             </span>
           </summary>
           <div className="space-y-3 border-t border-line p-3">
